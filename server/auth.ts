@@ -29,17 +29,14 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // Use environment variable for session secret or fallback to a default (for development only)
-  const sessionSecret = process.env.SESSION_SECRET || "salesforce-metadata-analyzer-session-secret";
-  
   const sessionSettings: session.SessionOptions = {
-    secret: sessionSecret,
+    secret: process.env.SESSION_SECRET || "salesforce-metadata-analyzer-secret",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
-    cookie: {
+    cookie: { 
       secure: process.env.NODE_ENV === "production",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
     }
   };
 
@@ -80,11 +77,6 @@ export function setupAuth(app: Express) {
         return res.status(400).send("Username already exists");
       }
 
-      const existingEmail = await storage.getUserByEmail(req.body.email);
-      if (existingEmail) {
-        return res.status(400).send("Email already exists");
-      }
-
       const user = await storage.createUser({
         ...req.body,
         password: await hashPassword(req.body.password),
@@ -92,7 +84,9 @@ export function setupAuth(app: Express) {
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json(user);
+        // Exclude password from response
+        const { password, ...userWithoutPassword } = user;
+        res.status(201).json(userWithoutPassword);
       });
     } catch (error) {
       next(error);
@@ -100,7 +94,9 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
+    // Exclude password from response
+    const { password, ...userWithoutPassword } = req.user!;
+    res.status(200).json(userWithoutPassword);
   });
 
   app.post("/api/logout", (req, res, next) => {
@@ -112,6 +108,8 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
+    // Exclude password from response
+    const { password, ...userWithoutPassword } = req.user!;
+    res.json(userWithoutPassword);
   });
 }

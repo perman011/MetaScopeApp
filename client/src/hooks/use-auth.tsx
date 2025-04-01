@@ -14,45 +14,21 @@ type AuthContextType = {
   error: Error | null;
   loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<SelectUser, Error, RegisterData>;
+  registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
 };
 
 type LoginData = Pick<InsertUser, "username" | "password">;
-type RegisterData = InsertUser;
 
 export const AuthContext = createContext<AuthContextType | null>(null);
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const {
     data: user,
     error,
     isLoading,
-  } = useQuery<SelectUser | null, Error>({
+  } = useQuery<SelectUser | undefined, Error>({
     queryKey: ["/api/user"],
-    queryFn: async ({ queryKey }) => {
-      try {
-        const res = await fetch(queryKey[0] as string, {
-          credentials: "include",
-        });
-        
-        if (res.status === 401) {
-          return null;
-        }
-        
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`${res.status}: ${text || res.statusText}`);
-        }
-        
-        return await res.json();
-      } catch (error) {
-        if (error instanceof Error && error.message.includes("401")) {
-          return null;
-        }
-        throw error;
-      }
-    },
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const loginMutation = useMutation({
@@ -62,32 +38,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      toast({
+        title: "Login successful",
+        description: `Welcome back, ${user.username}!`,
+        variant: "default",
+      });
     },
     onError: (error: Error) => {
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message || "Invalid username or password",
         variant: "destructive",
       });
     },
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (userData: RegisterData) => {
-      const res = await apiRequest("POST", "/api/register", userData);
+    mutationFn: async (credentials: InsertUser) => {
+      const res = await apiRequest("POST", "/api/register", credentials);
       return await res.json();
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Registration successful",
-        description: "Your account has been created.",
+        description: `Welcome, ${user.username}!`,
+        variant: "default",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Registration failed",
-        description: error.message,
+        description: error.message || "Unable to create account",
         variant: "destructive",
       });
     },
@@ -99,7 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
-      queryClient.clear();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+        variant: "default",
+      });
     },
     onError: (error: Error) => {
       toast({

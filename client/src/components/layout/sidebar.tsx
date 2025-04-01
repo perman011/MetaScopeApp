@@ -142,9 +142,9 @@ export default function Sidebar() {
                         : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
                     }`}>
                       <div className={`w-2 h-2 rounded-full mr-2 ${
-                        org.type === 'production' 
+                        org.name.toLowerCase().includes('production') 
                           ? 'bg-emerald-500' 
-                          : org.type === 'sandbox' 
+                          : org.name.toLowerCase().includes('sandbox') 
                             ? 'bg-amber-500' 
                             : 'bg-neutral-400'
                       }`} />

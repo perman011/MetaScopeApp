@@ -1,45 +1,56 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Database, LineChart, Shield, Code, Zap } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
+// Login form schema
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
+type LoginFormValues = z.infer<typeof loginSchema>;
+
+// Registration form schema
 const registerSchema = insertUserSchema.extend({
-  confirmPassword: z.string().min(1, "Please confirm your password"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  passwordConfirm: z.string().min(1, "Please confirm your password"),
+}).refine(data => data.password === data.passwordConfirm, {
+  message: "Passwords do not match",
+  path: ["passwordConfirm"],
 });
 
-type LoginValues = z.infer<typeof loginSchema>;
-type RegisterValues = z.infer<typeof registerSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
-  const [activeTab, setActiveTab] = useState<string>("login");
   const [, navigate] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
 
-  const loginForm = useForm<LoginValues>({
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
+  // Login form
+  const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
@@ -47,274 +58,257 @@ export default function AuthPage() {
     },
   });
 
-  const registerForm = useForm<RegisterValues>({
+  const onLoginSubmit = (data: LoginFormValues) => {
+    loginMutation.mutate(data);
+  };
+
+  // Registration form
+  const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: "",
-      email: "",
-      name: "",
       password: "",
-      confirmPassword: "",
+      passwordConfirm: "",
+      fullName: "",
+      email: "",
     },
   });
 
-  useEffect(() => {
-    if (user) {
-      navigate("/dashboard");
-    }
-  }, [user, navigate]);
-
-  const onLoginSubmit = (values: LoginValues) => {
-    loginMutation.mutate(values);
-  };
-
-  const onRegisterSubmit = (values: RegisterValues) => {
-    const { confirmPassword, ...userData } = values;
-    registerMutation.mutate(userData);
+  const onRegisterSubmit = (data: RegisterFormValues) => {
+    const { passwordConfirm, ...formData } = data;
+    registerMutation.mutate(formData);
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-white border-b border-neutral-200 h-16 flex items-center px-4 lg:px-6">
-        <div className="flex items-center">
-          <svg className="h-8 w-8 text-primary-500" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-          </svg>
-          <h1 className="ml-2 text-lg font-semibold text-neutral-800">Salesforce Metadata Analyzer</h1>
-        </div>
-      </header>
-      
-      <main className="flex-1 flex lg:flex-row flex-col">
-        <div className="w-full lg:w-1/2 p-6 lg:p-12 flex items-center justify-center">
-          <div className="w-full max-w-md">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Welcome back</CardTitle>
-                    <CardDescription>
-                      Login to your account to manage your Salesforce org metadata
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Form {...loginForm}>
-                      <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                        <FormField
-                          control={loginForm.control}
-                          name="username"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Username</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter your username" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={loginForm.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Enter your password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button 
-                          type="submit" 
-                          className="w-full mt-6"
-                          disabled={loginMutation.isPending}
-                        >
-                          {loginMutation.isPending ? "Logging in..." : "Login"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </CardContent>
-                  <CardFooter className="border-t border-neutral-100 p-4 text-sm text-neutral-500 text-center">
-                    Don't have an account? <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("register")}>Register</Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="register">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Create an account</CardTitle>
-                    <CardDescription>
-                      Register to start analyzing your Salesforce orgs
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Form {...registerForm}>
-                      <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                        <FormField
-                          control={registerForm.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Full Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Enter your full name" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input type="email" placeholder="Enter your email" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="username"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Username</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Choose a username" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="password"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Choose a password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={registerForm.control}
-                          name="confirmPassword"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Confirm Password</FormLabel>
-                              <FormControl>
-                                <Input type="password" placeholder="Confirm your password" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <Button 
-                          type="submit" 
-                          className="w-full mt-6"
-                          disabled={registerMutation.isPending}
-                        >
-                          {registerMutation.isPending ? "Creating account..." : "Create Account"}
-                        </Button>
-                      </form>
-                    </Form>
-                  </CardContent>
-                  <CardFooter className="border-t border-neutral-100 p-4 text-sm text-neutral-500 text-center">
-                    Already have an account? <Button variant="link" className="p-0 h-auto" onClick={() => setActiveTab("login")}>Login</Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
-        
-        <div className="w-full lg:w-1/2 bg-gradient-to-br from-primary-600 to-primary-800 p-6 lg:p-12 flex items-center justify-center text-white">
-          <div className="max-w-lg">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">Salesforce Metadata Analyzer</h2>
-            <p className="text-lg mb-8 text-primary-50">
-              Gain unprecedented visibility into your Salesforce org with powerful tools for metadata analysis, visualization, and optimization.
+    <div className="flex min-h-screen bg-neutral-50">
+      <div className="flex flex-col justify-center flex-1 px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+        <div className="w-full max-w-sm mx-auto lg:w-96">
+          <div className="mb-10">
+            <div className="flex items-center text-primary-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+              </svg>
+              <span className="text-2xl font-bold">MetaAnalyzer</span>
+            </div>
+            <h2 className="mt-6 text-3xl font-bold tracking-tight text-neutral-800">
+              Welcome to MetaAnalyzer
+            </h2>
+            <p className="mt-2 text-sm text-neutral-500">
+              Your complete Salesforce metadata management solution
             </p>
+          </div>
+
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
             
-            <div className="space-y-6">
-              <div className="flex items-start">
-                <div className="mt-1 bg-white bg-opacity-10 p-2 rounded-lg">
-                  <Database className="h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <h3 className="font-semibold text-lg">Data Model Visualization</h3>
-                  <p className="text-primary-50">Interactive visualization of object relationships and dependencies</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="mt-1 bg-white bg-opacity-10 p-2 rounded-lg">
-                  <Code className="h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <h3 className="font-semibold text-lg">Advanced SOQL/SOSL Editor</h3>
-                  <p className="text-primary-50">Query builder with syntax highlighting and optimization suggestions</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="mt-1 bg-white bg-opacity-10 p-2 rounded-lg">
-                  <Shield className="h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <h3 className="font-semibold text-lg">Security Analysis</h3>
-                  <p className="text-primary-50">Understand access controls and identify security vulnerabilities</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="mt-1 bg-white bg-opacity-10 p-2 rounded-lg">
-                  <LineChart className="h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <h3 className="font-semibold text-lg">Health Score Analytics</h3>
-                  <p className="text-primary-50">Monitor organization health with actionable insights</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start">
-                <div className="mt-1 bg-white bg-opacity-10 p-2 rounded-lg">
-                  <Zap className="h-6 w-6" />
-                </div>
-                <div className="ml-4">
-                  <h3 className="font-semibold text-lg">AI-Powered Recommendations</h3>
-                  <p className="text-primary-50">Get intelligent suggestions to optimize your Salesforce implementation</p>
-                </div>
-              </div>
-            </div>
+            <TabsContent value="login">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Login</CardTitle>
+                  <CardDescription>
+                    Enter your credentials to access your account
+                  </CardDescription>
+                </CardHeader>
+                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)}>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Username</Label>
+                      <Input
+                        id="username"
+                        type="text"
+                        {...loginForm.register("username")}
+                        placeholder="Your username"
+                      />
+                      {loginForm.formState.errors.username && (
+                        <p className="text-sm text-red-500">
+                          {loginForm.formState.errors.username.message}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        {...loginForm.register("password")}
+                        placeholder="Your password"
+                      />
+                      {loginForm.formState.errors.password && (
+                        <p className="text-sm text-red-500">
+                          {loginForm.formState.errors.password.message}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                  
+                  <CardFooter>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={loginMutation.isPending}
+                    >
+                      {loginMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Logging in...
+                        </>
+                      ) : (
+                        "Sign in"
+                      )}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
+            </TabsContent>
             
-            <div className="mt-10">
-              <Button variant="secondary" size="lg" className="group" onClick={() => setActiveTab("register")}>
-                Get Started <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </div>
+            <TabsContent value="register">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create an account</CardTitle>
+                  <CardDescription>
+                    Register to start analyzing your Salesforce metadata
+                  </CardDescription>
+                </CardHeader>
+                <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)}>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="register-username">Username</Label>
+                      <Input
+                        id="register-username"
+                        type="text"
+                        {...registerForm.register("username")}
+                        placeholder="Choose a username"
+                      />
+                      {registerForm.formState.errors.username && (
+                        <p className="text-sm text-red-500">
+                          {registerForm.formState.errors.username.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="full-name">Full Name</Label>
+                      <Input
+                        id="full-name"
+                        type="text"
+                        {...registerForm.register("fullName")}
+                        placeholder="Your full name"
+                      />
+                      {registerForm.formState.errors.fullName && (
+                        <p className="text-sm text-red-500">
+                          {registerForm.formState.errors.fullName.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        {...registerForm.register("email")}
+                        placeholder="Your email address"
+                      />
+                      {registerForm.formState.errors.email && (
+                        <p className="text-sm text-red-500">
+                          {registerForm.formState.errors.email.message}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="register-password">Password</Label>
+                      <Input
+                        id="register-password"
+                        type="password"
+                        {...registerForm.register("password")}
+                        placeholder="Create a password"
+                      />
+                      {registerForm.formState.errors.password && (
+                        <p className="text-sm text-red-500">
+                          {registerForm.formState.errors.password.message}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="password-confirm">Confirm Password</Label>
+                      <Input
+                        id="password-confirm"
+                        type="password"
+                        {...registerForm.register("passwordConfirm")}
+                        placeholder="Confirm your password"
+                      />
+                      {registerForm.formState.errors.passwordConfirm && (
+                        <p className="text-sm text-red-500">
+                          {registerForm.formState.errors.passwordConfirm.message}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                  
+                  <CardFooter>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={registerMutation.isPending}
+                    >
+                      {registerMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : (
+                        "Create account"
+                      )}
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+      
+      <div className="relative flex-1 hidden lg:block">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-secondary-500">
+          <div className="flex flex-col justify-center h-full max-w-2xl px-8 mx-auto text-white">
+            <h1 className="text-4xl font-bold mb-4">
+              Take control of your Salesforce metadata
+            </h1>
+            <ul className="space-y-4 text-lg">
+              <li className="flex items-start">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Interactive visualization of objects, fields, and relationships</span>
+              </li>
+              <li className="flex items-start">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Advanced SOQL/SOSL editor with execution capabilities</span>
+              </li>
+              <li className="flex items-start">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Comprehensive security and access analysis</span>
+              </li>
+              <li className="flex items-start">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>Detailed health score metrics with actionable insights</span>
+              </li>
+            </ul>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

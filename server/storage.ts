@@ -1,324 +1,193 @@
-import { users, type User, type InsertUser, salesforceOrgs, type SalesforceOrg, type InsertSalesforceOrg, metadata, type Metadata, type InsertMetadata, healthScores, type HealthScore, type InsertHealthScore, savedQueries, type SavedQuery, type InsertSavedQuery, issues, type Issue, type InsertIssue, filterTemplates, type FilterTemplate, type InsertFilterTemplate } from "@shared/schema";
+import {
+  User, InsertUser,
+  SalesforceOrg, InsertSalesforceOrg,
+  Metadata, InsertMetadata,
+  HealthScore, InsertHealthScore,
+  HealthScoreIssue
+} from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
 const MemoryStore = createMemoryStore(session);
 
-// Export the interface for the storage
+// Storage interface
 export interface IStorage {
-  // Session store
-  sessionStore: session.SessionStore;
-  
-  // User methods
+  // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
-  // Salesforce Org methods
-  getSalesforceOrg(id: number): Promise<SalesforceOrg | undefined>;
-  getSalesforceOrgsByUserId(userId: number): Promise<SalesforceOrg[]>;
-  createSalesforceOrg(org: InsertSalesforceOrg): Promise<SalesforceOrg>;
-  updateSalesforceOrgSyncTime(id: number): Promise<SalesforceOrg | undefined>;
+  // Salesforce org operations
+  getOrg(id: number): Promise<SalesforceOrg | undefined>;
+  getUserOrgs(userId: number): Promise<SalesforceOrg[]>;
+  createOrg(org: InsertSalesforceOrg): Promise<SalesforceOrg>;
+  updateOrg(id: number, updates: Partial<InsertSalesforceOrg>): Promise<SalesforceOrg | undefined>;
+  deleteOrg(id: number): Promise<boolean>;
   
-  // Metadata methods
+  // Metadata operations
   getMetadata(id: number): Promise<Metadata | undefined>;
-  getMetadataByOrgId(orgId: number, filter?: { type?: string }): Promise<Metadata[]>;
-  createOrUpdateMetadata(metadata: InsertMetadata): Promise<Metadata>;
+  getOrgMetadata(orgId: number, type?: string): Promise<Metadata[]>;
+  createMetadata(metadata: InsertMetadata): Promise<Metadata>;
+  updateMetadata(id: number, updates: Partial<InsertMetadata>): Promise<Metadata | undefined>;
+  deleteMetadata(id: number): Promise<boolean>;
   
-  // Health Score methods
+  // Health score operations
   getHealthScore(id: number): Promise<HealthScore | undefined>;
-  getLatestHealthScoreByOrgId(orgId: number): Promise<HealthScore | undefined>;
-  createHealthScore(healthScore: InsertHealthScore): Promise<HealthScore>;
+  getLatestHealthScore(orgId: number): Promise<HealthScore | undefined>;
+  createHealthScore(score: InsertHealthScore): Promise<HealthScore>;
   
-  // Saved Query methods
-  getSavedQuery(id: number): Promise<SavedQuery | undefined>;
-  getSavedQueriesByOrgId(orgId: number): Promise<SavedQuery[]>;
-  createSavedQuery(query: InsertSavedQuery): Promise<SavedQuery>;
-  
-  // Issue methods
-  getIssue(id: number): Promise<Issue | undefined>;
-  getIssuesByOrgId(orgId: number): Promise<Issue[]>;
-  createIssue(issue: InsertIssue): Promise<Issue>;
-  updateIssueStatus(id: number, status: string): Promise<Issue | undefined>;
-  
-  // Filter Template methods
-  getFilterTemplate(id: number): Promise<FilterTemplate | undefined>;
-  getFilterTemplatesByUserId(userId: number): Promise<FilterTemplate[]>;
-  createFilterTemplate(template: InsertFilterTemplate): Promise<FilterTemplate>;
+  // Session store
+  sessionStore: any; // Express session store type
 }
 
 export class MemStorage implements IStorage {
-  private userMap: Map<number, User>;
-  private salesforceOrgMap: Map<number, SalesforceOrg>;
-  private metadataMap: Map<number, Metadata>;
-  private healthScoreMap: Map<number, HealthScore>;
-  private savedQueryMap: Map<number, SavedQuery>;
-  private issueMap: Map<number, Issue>;
-  private filterTemplateMap: Map<number, FilterTemplate>;
-  
-  private nextUserId: number;
-  private nextOrgId: number;
-  private nextMetadataId: number;
-  private nextHealthScoreId: number;
-  private nextSavedQueryId: number;
-  private nextIssueId: number;
-  private nextFilterTemplateId: number;
-  
-  sessionStore: session.SessionStore;
+  private users: Map<number, User>;
+  private orgs: Map<number, SalesforceOrg>;
+  private metadata: Map<number, Metadata>;
+  private healthScores: Map<number, HealthScore>;
+  private userIdCounter: number;
+  private orgIdCounter: number;
+  private metadataIdCounter: number;
+  private healthScoreIdCounter: number;
+  sessionStore: any; // Express session store
 
   constructor() {
-    this.userMap = new Map();
-    this.salesforceOrgMap = new Map();
-    this.metadataMap = new Map();
-    this.healthScoreMap = new Map();
-    this.savedQueryMap = new Map();
-    this.issueMap = new Map();
-    this.filterTemplateMap = new Map();
-    
-    this.nextUserId = 1;
-    this.nextOrgId = 1;
-    this.nextMetadataId = 1;
-    this.nextHealthScoreId = 1;
-    this.nextSavedQueryId = 1;
-    this.nextIssueId = 1;
-    this.nextFilterTemplateId = 1;
-    
+    this.users = new Map();
+    this.orgs = new Map();
+    this.metadata = new Map();
+    this.healthScores = new Map();
+    this.userIdCounter = 1;
+    this.orgIdCounter = 1;
+    this.metadataIdCounter = 1;
+    this.healthScoreIdCounter = 1;
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // 24 hours
     });
   }
-  
-  // User methods
+
+  // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.userMap.get(id);
+    return this.users.get(id);
   }
-  
+
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.userMap.values()).find(
+    return Array.from(this.users.values()).find(
       (user) => user.username.toLowerCase() === username.toLowerCase()
     );
   }
-  
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.userMap.values()).find(
-      (user) => user.email.toLowerCase() === email.toLowerCase()
-    );
-  }
-  
-  async createUser(userData: InsertUser): Promise<User> {
-    const now = new Date();
-    const user: User = {
-      ...userData,
-      id: this.nextUserId++,
-      createdAt: now
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const id = this.userIdCounter++;
+    const user: User = { 
+      ...insertUser, 
+      id,
+      fullName: insertUser.fullName || null,
+      email: insertUser.email || null
     };
-    this.userMap.set(user.id, user);
+    this.users.set(id, user);
     return user;
   }
-  
-  // Salesforce Org methods
-  async getSalesforceOrg(id: number): Promise<SalesforceOrg | undefined> {
-    return this.salesforceOrgMap.get(id);
+
+  // Salesforce org operations
+  async getOrg(id: number): Promise<SalesforceOrg | undefined> {
+    return this.orgs.get(id);
   }
-  
-  async getSalesforceOrgsByUserId(userId: number): Promise<SalesforceOrg[]> {
-    return Array.from(this.salesforceOrgMap.values()).filter(
+
+  async getUserOrgs(userId: number): Promise<SalesforceOrg[]> {
+    return Array.from(this.orgs.values()).filter(
       (org) => org.userId === userId
     );
   }
-  
-  async createSalesforceOrg(orgData: InsertSalesforceOrg): Promise<SalesforceOrg> {
-    const now = new Date();
+
+  async createOrg(insertOrg: InsertSalesforceOrg): Promise<SalesforceOrg> {
+    const id = this.orgIdCounter++;
     const org: SalesforceOrg = {
-      ...orgData,
-      id: this.nextOrgId++,
-      createdAt: now,
-      lastSyncedAt: null
+      ...insertOrg,
+      id,
+      accessToken: insertOrg.accessToken || null,
+      refreshToken: insertOrg.refreshToken || null,
+      tokenType: insertOrg.tokenType || null,
+      isActive: insertOrg.isActive ?? null,
+      lastMetadataSync: null
     };
-    this.salesforceOrgMap.set(org.id, org);
+    this.orgs.set(id, org);
     return org;
   }
-  
-  async updateSalesforceOrgSyncTime(id: number): Promise<SalesforceOrg | undefined> {
-    const org = this.salesforceOrgMap.get(id);
+
+  async updateOrg(id: number, updates: Partial<InsertSalesforceOrg>): Promise<SalesforceOrg | undefined> {
+    const org = this.orgs.get(id);
     if (!org) return undefined;
     
     const updatedOrg: SalesforceOrg = {
       ...org,
-      lastSyncedAt: new Date()
+      ...updates,
     };
-    
-    this.salesforceOrgMap.set(id, updatedOrg);
+    this.orgs.set(id, updatedOrg);
     return updatedOrg;
   }
-  
-  // Metadata methods
-  async getMetadata(id: number): Promise<Metadata | undefined> {
-    return this.metadataMap.get(id);
+
+  async deleteOrg(id: number): Promise<boolean> {
+    return this.orgs.delete(id);
   }
-  
-  async getMetadataByOrgId(orgId: number, filter?: { type?: string }): Promise<Metadata[]> {
-    let metadata = Array.from(this.metadataMap.values()).filter(
-      (md) => md.orgId === orgId
+
+  // Metadata operations
+  async getMetadata(id: number): Promise<Metadata | undefined> {
+    return this.metadata.get(id);
+  }
+
+  async getOrgMetadata(orgId: number, type?: string): Promise<Metadata[]> {
+    return Array.from(this.metadata.values()).filter(
+      (meta) => meta.orgId === orgId && (!type || meta.type === type)
     );
-    
-    if (filter?.type) {
-      metadata = metadata.filter((md) => md.type === filter.type);
-    }
-    
+  }
+
+  async createMetadata(insertMetadata: InsertMetadata): Promise<Metadata> {
+    const id = this.metadataIdCounter++;
+    const metadata: Metadata = { ...insertMetadata, id };
+    this.metadata.set(id, metadata);
     return metadata;
   }
-  
-  async createOrUpdateMetadata(metadataData: InsertMetadata): Promise<Metadata> {
-    // Check if metadata with same org, type, and name exists
-    const existingMetadata = Array.from(this.metadataMap.values()).find(
-      (md) => md.orgId === metadataData.orgId && md.type === metadataData.type && md.name === metadataData.name
+
+  async updateMetadata(id: number, updates: Partial<InsertMetadata>): Promise<Metadata | undefined> {
+    const metadata = this.metadata.get(id);
+    if (!metadata) return undefined;
+    
+    const updatedMetadata: Metadata = {
+      ...metadata,
+      ...updates,
+    };
+    this.metadata.set(id, updatedMetadata);
+    return updatedMetadata;
+  }
+
+  async deleteMetadata(id: number): Promise<boolean> {
+    return this.metadata.delete(id);
+  }
+
+  // Health score operations
+  async getHealthScore(id: number): Promise<HealthScore | undefined> {
+    return this.healthScores.get(id);
+  }
+
+  async getLatestHealthScore(orgId: number): Promise<HealthScore | undefined> {
+    const orgScores = Array.from(this.healthScores.values()).filter(
+      (score) => score.orgId === orgId
     );
     
-    const now = new Date();
+    if (orgScores.length === 0) return undefined;
     
-    if (existingMetadata) {
-      // Update existing metadata
-      const updatedMetadata: Metadata = {
-        ...existingMetadata,
-        data: metadataData.data,
-        updatedAt: now
-      };
-      
-      this.metadataMap.set(existingMetadata.id, updatedMetadata);
-      return updatedMetadata;
-    } else {
-      // Create new metadata
-      const metadata: Metadata = {
-        ...metadataData,
-        id: this.nextMetadataId++,
-        createdAt: now,
-        updatedAt: now
-      };
-      
-      this.metadataMap.set(metadata.id, metadata);
-      return metadata;
-    }
+    return orgScores.reduce((latest, score) => 
+      latest.lastAnalyzed > score.lastAnalyzed ? latest : score
+    );
   }
-  
-  // Health Score methods
-  async getHealthScore(id: number): Promise<HealthScore | undefined> {
-    return this.healthScoreMap.get(id);
-  }
-  
-  async getLatestHealthScoreByOrgId(orgId: number): Promise<HealthScore | undefined> {
-    const orgScores = Array.from(this.healthScoreMap.values())
-      .filter((score) => score.orgId === orgId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    
-    return orgScores.length > 0 ? orgScores[0] : undefined;
-  }
-  
-  async createHealthScore(healthScoreData: InsertHealthScore): Promise<HealthScore> {
-    const now = new Date();
-    const healthScore: HealthScore = {
-      ...healthScoreData,
-      id: this.nextHealthScoreId++,
-      createdAt: now
-    };
-    
-    this.healthScoreMap.set(healthScore.id, healthScore);
-    return healthScore;
-  }
-  
-  // Saved Query methods
-  async getSavedQuery(id: number): Promise<SavedQuery | undefined> {
-    return this.savedQueryMap.get(id);
-  }
-  
-  async getSavedQueriesByOrgId(orgId: number): Promise<SavedQuery[]> {
-    return Array.from(this.savedQueryMap.values())
-      .filter((query) => query.orgId === orgId)
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-  }
-  
-  async createSavedQuery(queryData: InsertSavedQuery): Promise<SavedQuery> {
-    const now = new Date();
-    const savedQuery: SavedQuery = {
-      ...queryData,
-      id: this.nextSavedQueryId++,
-      createdAt: now,
-      updatedAt: now
-    };
-    
-    this.savedQueryMap.set(savedQuery.id, savedQuery);
-    return savedQuery;
-  }
-  
-  // Issue methods
-  async getIssue(id: number): Promise<Issue | undefined> {
-    return this.issueMap.get(id);
-  }
-  
-  async getIssuesByOrgId(orgId: number): Promise<Issue[]> {
-    return Array.from(this.issueMap.values())
-      .filter((issue) => issue.orgId === orgId)
-      .sort((a, b) => {
-        // Sort by severity (critical, warning, info)
-        const severityOrder: Record<string, number> = { critical: 0, warning: 1, info: 2 };
-        const severityDiff = severityOrder[a.severity] - severityOrder[b.severity];
-        
-        if (severityDiff !== 0) return severityDiff;
-        
-        // Then by creation date (newest first)
-        return b.createdAt.getTime() - a.createdAt.getTime();
-      });
-  }
-  
-  async createIssue(issueData: InsertIssue): Promise<Issue> {
-    const now = new Date();
-    const issue: Issue = {
-      ...issueData,
-      id: this.nextIssueId++,
-      createdAt: now
-    };
-    
-    this.issueMap.set(issue.id, issue);
-    return issue;
-  }
-  
-  async updateIssueStatus(id: number, status: string): Promise<Issue | undefined> {
-    const issue = this.issueMap.get(id);
-    if (!issue) return undefined;
-    
-    const updatedIssue: Issue = {
-      ...issue,
-      status
-    };
-    
-    this.issueMap.set(id, updatedIssue);
-    return updatedIssue;
-  }
-  
-  // Filter Template methods
-  async getFilterTemplate(id: number): Promise<FilterTemplate | undefined> {
-    return this.filterTemplateMap.get(id);
-  }
-  
-  async getFilterTemplatesByUserId(userId: number): Promise<FilterTemplate[]> {
-    return Array.from(this.filterTemplateMap.values())
-      .filter((template) => template.userId === userId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }
-  
-  async createFilterTemplate(templateData: InsertFilterTemplate): Promise<FilterTemplate> {
-    const now = new Date();
-    const template: FilterTemplate = {
-      ...templateData,
-      id: this.nextFilterTemplateId++,
-      createdAt: now
-    };
-    
-    this.filterTemplateMap.set(template.id, template);
-    return template;
+
+  async createHealthScore(insertScore: InsertHealthScore): Promise<HealthScore> {
+    const id = this.healthScoreIdCounter++;
+    const score: HealthScore = { ...insertScore, id };
+    this.healthScores.set(id, score);
+    return score;
   }
 }
 
-// Create and export a singleton instance
+// Export a singleton instance
 export const storage = new MemStorage();
