@@ -39,22 +39,16 @@ export class SalesforceService {
       
       // Try to authenticate with provided credentials
       try {
-        // In a real implementation, this would use actual credentials
-        // For now, use mock authentication since we don't have real Salesforce credentials
-        // await conn.login(credentials.email, credentials.password + credentials.securityToken);
+        // Use actual credentials to connect to Salesforce
+        await conn.login(credentials.email, credentials.password + credentials.securityToken);
         
         console.log("Authentication successful");
         
-        // Use sandbox or production URL based on environment
-        const instanceUrl = credentials.environment === 'sandbox'
-          ? `https://${credentials.email.split('@')[0]}-dev-ed.my.salesforce.com`
-          : `https://${credentials.email.split('@')[0]}.my.salesforce.com`;
-        
         return {
-          accessToken: 'sf_access_token_' + Date.now(), 
-          instanceUrl: instanceUrl,
-          refreshToken: 'sf_refresh_token_' + Date.now(),
-          userId: 'sf_user_' + credentials.email.split('@')[0]
+          accessToken: conn.accessToken || '',
+          instanceUrl: conn.instanceUrl || '',
+          refreshToken: null,
+          userId: conn.userInfo?.id || 'unknown'
         };
       } catch (loginError) {
         console.error('Login error:', loginError);
@@ -535,59 +529,94 @@ export class SalesforceService {
   // Get metadata for a Salesforce org
   async getMetadata(org: SalesforceOrg, types: string[] = []): Promise<any> {
     try {
-      // In a real implementation, this would make API calls to Salesforce
-      // For now, we'll return mock data for demonstration
+      console.log(`Fetching metadata from org ${org.id} for types: ${types.length > 0 ? types.join(', ') : 'all'}`);
       
-      // Sample object metadata
-      const objectMetadata = {
-        type: "CustomObject",
-        objects: [
-          {
-            name: "Account",
-            label: "Account",
-            fields: [
-              { name: "Name", type: "Text", length: 255 },
-              { name: "Industry", type: "Picklist" },
-              { name: "AnnualRevenue", type: "Currency" }
-            ],
-            relationships: [
-              { name: "Contacts", type: "Child", object: "Contact" },
-              { name: "Opportunities", type: "Child", object: "Opportunity" }
-            ]
-          },
-          {
-            name: "Contact",
-            label: "Contact",
-            fields: [
-              { name: "FirstName", type: "Text", length: 80 },
-              { name: "LastName", type: "Text", length: 80 },
-              { name: "Email", type: "Email" }
-            ],
-            relationships: [
-              { name: "Account", type: "Parent", object: "Account" }
-            ]
-          },
-          {
-            name: "Opportunity",
-            label: "Opportunity",
-            fields: [
-              { name: "Name", type: "Text", length: 120 },
-              { name: "Amount", type: "Currency" },
-              { name: "CloseDate", type: "Date" }
-            ],
-            relationships: [
-              { name: "Account", type: "Parent", object: "Account" }
-            ]
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
+      
+      // Default to standard objects if none specified
+      const objectTypes = types.length > 0 ? types : ['ApexClass', 'ApexTrigger', 'CustomObject', 'CustomField'];
+      
+      // List of metadata to return
+      const metadataItems = [];
+      
+      // Fetch metadata for specified types
+      try {
+        // For ApexClass and ApexTrigger, use the tooling API
+        if (objectTypes.includes('ApexClass') || objectTypes.includes('ApexTrigger')) {
+          // Fetch Apex classes
+          if (objectTypes.includes('ApexClass')) {
+            const classes = await conn.tooling.query('SELECT Id, Name, Body FROM ApexClass LIMIT 100');
+            classes.records.forEach((cls: any) => {
+              metadataItems.push({
+                name: cls.Name,
+                type: 'ApexClass',
+                id: cls.Id,
+                body: cls.Body
+              });
+            });
           }
-        ]
-      };
+          
+          // Fetch Apex triggers
+          if (objectTypes.includes('ApexTrigger')) {
+            const triggers = await conn.tooling.query('SELECT Id, Name, Body FROM ApexTrigger LIMIT 100');
+            triggers.records.forEach((trg: any) => {
+              metadataItems.push({
+                name: trg.Name,
+                type: 'ApexTrigger',
+                id: trg.Id,
+                body: trg.Body
+              });
+            });
+          }
+        }
+        
+        // For CustomObjects, describe the standard and custom objects
+        if (objectTypes.includes('CustomObject')) {
+          // Get the list of objects
+          const objectsResult = await conn.describeGlobal();
+          const objects = objectsResult.sobjects.slice(0, 10); // Limit for demo purposes
+          
+          for (const obj of objects) {
+            const objDescribe = await conn.describe(obj.name);
+            metadataItems.push({
+              name: obj.name,
+              type: 'CustomObject',
+              id: obj.name,
+              label: obj.label,
+              fields: objDescribe.fields.map((field: any) => ({
+                name: field.name,
+                type: field.type,
+                label: field.label
+              }))
+            });
+          }
+        }
+        
+        // For custom fields, would need to extract them from object describes
+        if (objectTypes.includes('CustomField')) {
+          // This is extracted as part of the CustomObject logic above
+          // Could be separated if needed
+        }
+      } catch (apiError) {
+        console.error('Error fetching metadata from Salesforce API:', apiError);
+        // Return what we have so far instead of failing completely
+      }
       
       // Store the metadata in the database
+      const metadata = {
+        type: types.length > 0 ? types[0] : 'Mixed',
+        items: metadataItems
+      };
+      
       await storage.createMetadata({
         orgId: org.id,
-        type: "CustomObject",
-        name: "Objects",
-        data: objectMetadata,
+        type: types.length > 0 ? types[0] : 'Mixed',
+        name: 'Metadata',
+        data: metadata,
         lastUpdated: new Date()
       });
       
@@ -596,7 +625,7 @@ export class SalesforceService {
         lastSyncedAt: new Date().toISOString()
       });
       
-      return objectMetadata;
+      return metadataItems;
     } catch (error) {
       console.error('Error fetching Salesforce metadata:', error);
       throw error;
@@ -761,44 +790,30 @@ export class SalesforceService {
   // Execute a SOQL query against a Salesforce org
   async executeQuery(org: SalesforceOrg, query: string): Promise<any> {
     try {
-      // In a real implementation, this would make API calls to Salesforce
-      // For now, we'll return mock data for demonstration
+      console.log(`Executing SOQL query on org ${org.id}: ${query}`);
       
-      if (query.includes('Account')) {
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
+      
+      // Execute the SOQL query directly
+      try {
+        const results = await conn.query(query);
+        console.log(`Query executed successfully: ${results.totalSize} records found`);
+        return results;
+      } catch (queryError: any) {
+        console.error('Error executing query:', queryError);
+        
+        // Return an empty result set in case of error, but with error message
         return {
-          totalSize: 3,
+          totalSize: 0,
           done: true,
-          records: [
-            {
-              Id: "001xx000003DGb1AAG",
-              Name: "Acme Corporation",
-              Type: "Customer - Direct",
-              Industry: "Technology",
-              AnnualRevenue: 5000000
-            },
-            {
-              Id: "001xx000003DGb2AAG",
-              Name: "Universal Containers",
-              Type: "Customer - Channel",
-              Industry: "Manufacturing",
-              AnnualRevenue: 3500000
-            },
-            {
-              Id: "001xx000003DGb3AAG",
-              Name: "Salesforce Inc",
-              Type: "Customer - Direct",
-              Industry: "Technology",
-              AnnualRevenue: 8000000
-            }
-          ]
+          records: [],
+          error: queryError?.message || 'Unknown query error'
         };
       }
-      
-      return {
-        totalSize: 0,
-        done: true,
-        records: []
-      };
     } catch (error) {
       console.error('Error executing SOQL query:', error);
       throw error;
