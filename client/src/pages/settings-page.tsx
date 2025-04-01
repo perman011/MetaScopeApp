@@ -221,10 +221,13 @@ export default function SettingsPage() {
                             Automatically log out after a period of inactivity.
                           </p>
                         </div>
-                        <select className="flex h-10 w-40 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                        <select 
+                          defaultValue="60" 
+                          className="flex h-10 w-40 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
                           <option value="15">15 minutes</option>
                           <option value="30">30 minutes</option>
-                          <option value="60" selected>1 hour</option>
+                          <option value="60">1 hour</option>
                           <option value="120">2 hours</option>
                           <option value="240">4 hours</option>
                         </select>
@@ -281,9 +284,12 @@ export default function SettingsPage() {
                       <p className="text-sm text-neutral-500 mb-2">
                         Select the default Salesforce API version to use for queries.
                       </p>
-                      <select className="flex h-10 w-full max-w-xs items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                      <select
+                        defaultValue="59.0"
+                        className="flex h-10 w-full max-w-xs items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                      >
                         <option value="60.0">API v60.0 (Spring '24)</option>
-                        <option value="59.0" selected>API v59.0 (Winter '24)</option>
+                        <option value="59.0">API v59.0 (Winter '24)</option>
                         <option value="58.0">API v58.0 (Summer '23)</option>
                         <option value="57.0">API v57.0 (Spring '23)</option>
                       </select>
@@ -299,9 +305,12 @@ export default function SettingsPage() {
                             Choose how compact the UI should be.
                           </p>
                         </div>
-                        <select className="flex h-10 w-32 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                        <select
+                          defaultValue="normal"
+                          className="flex h-10 w-32 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        >
                           <option value="compact">Compact</option>
-                          <option value="normal" selected>Normal</option>
+                          <option value="normal">Normal</option>
                           <option value="comfortable">Comfortable</option>
                         </select>
                       </div>
