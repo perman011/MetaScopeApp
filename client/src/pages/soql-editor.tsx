@@ -105,11 +105,7 @@ export default function SOQLEditor() {
                 <CardTitle>Query Editor</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <QueryEditor 
-                  value={query} 
-                  onChange={setQuery} 
-                  isLoading={executeQueryMutation.isPending}
-                />
+                <QueryEditor value={query} onChange={setQuery} />
                 
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Button
