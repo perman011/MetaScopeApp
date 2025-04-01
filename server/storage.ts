@@ -7,6 +7,7 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import crypto from "crypto";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -72,11 +73,15 @@ export class MemStorage implements IStorage {
   private async setupAdminUser() {
     const existingAdmin = await this.getUserByUsername('admin');
     if (!existingAdmin) {
+      // Create an admin user with preset credentials using proper password hashing
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hash = crypto.scryptSync('admin123', salt, 64).toString('hex');
+      const hashedPassword = `${hash}.${salt}`;
+      
       // Create an admin user with preset credentials
-      // In production, this would use environment variables or secure secrets
       await this.createUser({
         username: 'admin',
-        password: '$2b$10$UEZ5JX2ow62GvMXjNMZJRO2S3uVMnxbAgHwhJPa3y6WkQPR3u4yxi', // hashed 'admin123'
+        password: hashedPassword,
         fullName: 'System Administrator',
         email: 'admin@metascope.com',
         isAdmin: true
