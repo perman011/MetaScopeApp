@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import TopNavBar from "@/components/layout/top-nav-bar";
-import SideNavigation from "@/components/layout/side-navigation";
 import HealthScoreOverview from "@/components/dashboard/health-score-overview";
 import DataModelOverview from "@/components/dashboard/data-model-overview";
 import SOQLEditorPreview from "@/components/dashboard/soql-editor-preview";
@@ -184,257 +182,250 @@ export default function Dashboard() {
   }, [activeOrg, metadata, isMetadataLoading]);
 
   return (
-    <div className="flex flex-col h-screen">
-      <TopNavBar />
-      <div className="flex flex-1 overflow-hidden">
-        <SideNavigation />
-        <main className="flex-1 overflow-y-auto bg-neutral-50 p-4 md:p-6">
-          <div className="max-w-7xl mx-auto">
-            
-            {/* Dashboard Header */}
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold text-neutral-800">Dashboard</h1>
-              <p className="mt-1 text-sm text-neutral-500">
-                Overview of your Salesforce org's health and metadata
-              </p>
+    <div className="p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Dashboard Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-neutral-800">Dashboard</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Overview of your Salesforce org's health and metadata
+          </p>
+        </div>
+        
+        {/* Health Score Overview */}
+        <HealthScoreOverview healthScore={healthScore} isLoading={isHealthScoreLoading} />
+        
+        {/* Advanced Metadata Analytics */}
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+              <div>
+                <CardTitle className="text-xl">Metadata Analytics</CardTitle>
+                <CardDescription>
+                  Analyze metadata distribution and trends across your org
+                </CardDescription>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <ToggleGroup type="single" value={viewType} onValueChange={(value) => value && setViewType(value)}>
+                  <ToggleGroupItem value="table" aria-label="Toggle table view">
+                    Table
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="bar" aria-label="Toggle bar chart view">
+                    Bar
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="pie" aria-label="Toggle pie chart view">
+                    Pie
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                
+                <Button variant="outline" size="sm" onClick={() => {
+                  setSearchTerm("");
+                  setSelectedCategory(null);
+                  setSortBy("count");
+                }}>
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            {/* Filters Section */}
+            <div className="mb-6 space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative w-full sm:w-1/2">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search metadata..."
+                    className="pl-8"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                
+                <div className="flex gap-4 w-full sm:w-1/2">
+                  <Select value={selectedCategory || "all"} onValueChange={(val) => setSelectedCategory(val === "all" ? null : val)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Filter by category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="Apex">Apex</SelectItem>
+                      <SelectItem value="Metadata">Metadata</SelectItem>
+                      <SelectItem value="UI">UI</SelectItem>
+                      <SelectItem value="Automation">Automation</SelectItem>
+                      <SelectItem value="Security">Security</SelectItem>
+                      <SelectItem value="Reporting">Reporting</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="count">Count (Highest First)</SelectItem>
+                      <SelectItem value="name">Name (A-Z)</SelectItem>
+                      <SelectItem value="lastModified">Last Modified</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {selectedCategory && (
+                <div className="flex items-center">
+                  <span className="text-sm mr-2">Active filter:</span>
+                  <Badge 
+                    variant="outline" 
+                    className="flex items-center gap-1 px-3 py-1"
+                  >
+                    {selectedCategory}
+                    <button
+                      onClick={() => setSelectedCategory(null)}
+                      className="ml-1 rounded-full hover:bg-neutral-100 p-1"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </Badge>
+                </div>
+              )}
+              
+              <div className="text-sm text-muted-foreground">
+                Showing {filteredMetadata.length} of {processedMetadataList.length} metadata types
+              </div>
             </div>
             
-            {/* Health Score Overview */}
-            <HealthScoreOverview healthScore={healthScore} isLoading={isHealthScoreLoading} />
+            {/* Data Visualization Section */}
+            {viewType === "table" && (
+              <div className="border rounded-md">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-neutral-50">
+                      <th className="text-left p-3 text-xs font-medium text-neutral-600">Name</th>
+                      <th className="text-left p-3 text-xs font-medium text-neutral-600">Category</th>
+                      <th className="text-left p-3 text-xs font-medium text-neutral-600">Count</th>
+                      <th className="text-left p-3 text-xs font-medium text-neutral-600">Last Modified</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMetadata.map((item, index) => (
+                      <tr key={index} className="border-b hover:bg-neutral-50">
+                        <td className="p-3 text-sm font-medium">
+                          {item.name}
+                        </td>
+                        <td className="p-3 text-sm">
+                          <Badge variant="outline" style={{
+                            color: categoryColors[item.category as keyof typeof categoryColors],
+                            backgroundColor: `${categoryColors[item.category as keyof typeof categoryColors]}15`,
+                            borderColor: `${categoryColors[item.category as keyof typeof categoryColors]}30`,
+                          }}>
+                            {item.category}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-sm">{item.count.toLocaleString()}</td>
+                        <td className="p-3 text-sm">{item.lastModified}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             
-            {/* Advanced Metadata Analytics */}
-            <Card className="mb-6">
-              <CardHeader className="pb-2">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-                  <div>
-                    <CardTitle className="text-xl">Metadata Analytics</CardTitle>
-                    <CardDescription>
-                      Analyze metadata distribution and trends across your org
-                    </CardDescription>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <ToggleGroup type="single" value={viewType} onValueChange={(value) => value && setViewType(value)}>
-                      <ToggleGroupItem value="table" aria-label="Toggle table view">
-                        Table
-                      </ToggleGroupItem>
-                      <ToggleGroupItem value="bar" aria-label="Toggle bar chart view">
-                        Bar
-                      </ToggleGroupItem>
-                      <ToggleGroupItem value="pie" aria-label="Toggle pie chart view">
-                        Pie
-                      </ToggleGroupItem>
-                    </ToggleGroup>
-                    
-                    <Button variant="outline" size="sm" onClick={() => {
-                      setSearchTerm("");
-                      setSelectedCategory(null);
-                      setSortBy("count");
-                    }}>
-                      <RefreshCw className="h-4 w-4 mr-1" />
-                      Reset
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent>
-                {/* Filters Section */}
-                <div className="mb-6 space-y-4">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="relative w-full sm:w-1/2">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="search"
-                        placeholder="Search metadata..."
-                        className="pl-8"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+            {viewType === "bar" && (
+              <div className="w-full h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={filteredMetadata.slice(0, 10)}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis 
+                      dataKey="name" 
+                      angle={-45} 
+                      textAnchor="end" 
+                      height={70} 
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value: number, name, props) => [value.toLocaleString(), 'Count']}
+                      labelFormatter={(label) => `Metadata: ${label}`}
+                    />
+                    <Bar 
+                      dataKey="count" 
+                      name="Count" 
+                      fill="#6366F1" 
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            
+            {viewType === "pie" && (
+              <div className="w-full h-80 flex flex-col md:flex-row items-center justify-center">
+                <div className="w-full md:w-1/2 h-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={80}
+                        outerRadius={120}
+                        paddingAngle={2}
+                        dataKey="value"
+                        // Use shorter labels directly on pie chart
+                        label={({name, percent}) => `${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number, name: string, props: any) => {
+                          // Show full category name and count in tooltip
+                          return [`${value.toLocaleString()} components`, props.payload.name];
+                        }}
+                        labelFormatter={(label) => `Category: ${label}`}
                       />
-                    </div>
-                    
-                    <div className="flex gap-4 w-full sm:w-1/2">
-                      <Select value={selectedCategory || "all"} onValueChange={(val) => setSelectedCategory(val === "all" ? null : val)}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Filter by category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Categories</SelectItem>
-                          <SelectItem value="Apex">Apex</SelectItem>
-                          <SelectItem value="Metadata">Metadata</SelectItem>
-                          <SelectItem value="UI">UI</SelectItem>
-                          <SelectItem value="Automation">Automation</SelectItem>
-                          <SelectItem value="Security">Security</SelectItem>
-                          <SelectItem value="Reporting">Reporting</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      
-                      <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Sort by" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="count">Count (Highest First)</SelectItem>
-                          <SelectItem value="name">Name (A-Z)</SelectItem>
-                          <SelectItem value="lastModified">Last Modified</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  {selectedCategory && (
-                    <div className="flex items-center">
-                      <span className="text-sm mr-2">Active filter:</span>
-                      <Badge 
-                        variant="outline" 
-                        className="flex items-center gap-1 px-3 py-1"
-                      >
-                        {selectedCategory}
-                        <button
-                          onClick={() => setSelectedCategory(null)}
-                          className="ml-1 rounded-full hover:bg-neutral-100 p-1"
-                        >
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                          </svg>
-                        </button>
-                      </Badge>
-                    </div>
-                  )}
-                  
-                  <div className="text-sm text-muted-foreground">
-                    Showing {filteredMetadata.length} of {processedMetadataList.length} metadata types
-                  </div>
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-                
-                {/* Data Visualization Section */}
-                {viewType === "table" && (
-                  <div className="border rounded-md">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b bg-neutral-50">
-                          <th className="text-left p-3 text-xs font-medium text-neutral-600">Name</th>
-                          <th className="text-left p-3 text-xs font-medium text-neutral-600">Category</th>
-                          <th className="text-left p-3 text-xs font-medium text-neutral-600">Count</th>
-                          <th className="text-left p-3 text-xs font-medium text-neutral-600">Last Modified</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredMetadata.map((item, index) => (
-                          <tr key={index} className="border-b hover:bg-neutral-50">
-                            <td className="p-3 text-sm font-medium">
-                              {item.name}
-                            </td>
-                            <td className="p-3 text-sm">
-                              <Badge variant="outline" style={{
-                                color: categoryColors[item.category as keyof typeof categoryColors],
-                                backgroundColor: `${categoryColors[item.category as keyof typeof categoryColors]}15`,
-                                borderColor: `${categoryColors[item.category as keyof typeof categoryColors]}30`,
-                              }}>
-                                {item.category}
-                              </Badge>
-                            </td>
-                            <td className="p-3 text-sm">{item.count.toLocaleString()}</td>
-                            <td className="p-3 text-sm">{item.lastModified}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                
-                {viewType === "bar" && (
-                  <div className="w-full h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={filteredMetadata.slice(0, 10)}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis 
-                          dataKey="name" 
-                          angle={-45} 
-                          textAnchor="end" 
-                          height={70} 
-                          tick={{ fontSize: 12 }}
-                        />
-                        <YAxis />
-                        <Tooltip 
-                          formatter={(value: number, name, props) => [value.toLocaleString(), 'Count']}
-                          labelFormatter={(label) => `Metadata: ${label}`}
-                        />
-                        <Bar 
-                          dataKey="count" 
-                          name="Count" 
-                          fill="#6366F1" 
-                          radius={[4, 4, 0, 0]}
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-                
-                {viewType === "pie" && (
-                  <div className="w-full h-80 flex flex-col md:flex-row items-center justify-center">
-                    <div className="w-full md:w-1/2 h-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={categoryData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={80}
-                            outerRadius={120}
-                            paddingAngle={2}
-                            dataKey="value"
-                            // Use shorter labels directly on pie chart
-                            label={({name, percent}) => `${(percent * 100).toFixed(0)}%`}
-                            labelLine={false}
-                          >
-                            {categoryData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip 
-                            formatter={(value: number, name: string, props: any) => {
-                              // Show full category name and count in tooltip
-                              return [`${value.toLocaleString()} components`, props.payload.name];
-                            }}
-                            labelFormatter={(label) => `Category: ${label}`}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="w-full md:w-1/2 flex flex-col gap-2 md:pl-8">
-                      <h3 className="text-sm font-medium">Metadata by Category</h3>
-                      <ul className="space-y-2">
-                        {categoryData.map((item, index) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                            <span className="text-sm font-medium">{item.name}:</span>
-                            <span className="text-sm">{item.value.toLocaleString()}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            {/* Data Model Overview */}
-            <DataModelOverview metadata={metadata} isLoading={isMetadataLoading} />
-            
-            {/* Key Components */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* SOQL/SOSL Editor Preview */}
-              <SOQLEditorPreview />
-              
-              {/* Security Analyzer Preview */}
-              <SecurityAnalyzerPreview issues={healthScore?.issues} isLoading={isHealthScoreLoading} />
-            </div>
-          </div>
-        </main>
+                <div className="w-full md:w-1/2 flex flex-col gap-2 md:pl-8">
+                  <h3 className="text-sm font-medium">Metadata by Category</h3>
+                  <ul className="space-y-2">
+                    {categoryData.map((item, index) => (
+                      <li key={index} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+                        <span className="text-sm font-medium">{item.name}:</span>
+                        <span className="text-sm">{item.value.toLocaleString()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Data Model Overview */}
+        <DataModelOverview metadata={metadata} isLoading={isMetadataLoading} />
+        
+        {/* Key Components */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* SOQL/SOSL Editor Preview */}
+          <SOQLEditorPreview />
+          
+          {/* Security Analyzer Preview */}
+          <SecurityAnalyzerPreview issues={healthScore?.issues} isLoading={isHealthScoreLoading} />
+        </div>
       </div>
     </div>
   );
