@@ -75,8 +75,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Salesforce Metadata Manager</Text>
-          <Text style={styles.subtitle}>Mobile Data Management Solution</Text>
+          <Text style={styles.title}>MetaScope</Text>
+          <Text style={styles.subtitle}>Salesforce Metadata Management Solution</Text>
         </View>
         
         <View style={styles.formContainer}>
@@ -149,7 +149,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         </View>
         
         <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>© 2025 Salesforce Metadata Manager</Text>
+          <Text style={styles.footerText}>© 2025 MetaScope</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

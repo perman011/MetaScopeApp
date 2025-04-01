@@ -23,7 +23,7 @@ export default function HomePage() {
         <main className="flex-1 overflow-y-auto bg-neutral-50 p-4 md:p-6">
           <div className="max-w-7xl mx-auto">
             <div className="text-center py-12">
-              <h1 className="text-4xl font-bold text-primary-600 mb-4">Welcome to MetaAnalyzer</h1>
+              <h1 className="text-4xl font-bold text-primary-600 mb-4">Welcome to MetaScope</h1>
               <p className="text-xl text-neutral-500 mb-8">Connect to a Salesforce org to get started</p>
               
               <div className="max-w-3xl mx-auto bg-white shadow-sm rounded-lg overflow-hidden border border-neutral-200">
