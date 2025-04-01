@@ -122,7 +122,7 @@ export default function TopNavBar() {
               variant="ghost"
               className="w-full justify-start"
               onClick={() => {
-                navigate("/");
+                navigate("/dashboard");
                 setIsMobileMenuOpen(false);
               }}
             >
@@ -157,6 +157,56 @@ export default function TopNavBar() {
               }}
             >
               Security Analyzer
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                navigate("/automation-analyzer");
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              Automation Analyzer
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                navigate("/ui-component-analyzer");
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              UI Component Analyzer
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                navigate("/metadata-dependency-analyzer");
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              Dependency Analyzer
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                navigate("/permissions-analyzer");
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              Permissions Analyzer
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => {
+                navigate("/apex-debug-analyzer");
+                setIsMobileMenuOpen(false);
+              }}
+            >
+              Apex Debug Analyzer
             </Button>
           </div>
         </div>

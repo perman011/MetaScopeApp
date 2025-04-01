@@ -28,7 +28,11 @@ function AuthenticatedRoutes() {
   const { user, isLoading } = useAuth();
   
   if (isLoading) {
-    return null; // Show nothing while loading
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="w-12 h-12 border-4 border-t-primary rounded-full animate-spin"></div>
+      </div>
+    );
   }
   
   if (!user) {
@@ -45,23 +49,31 @@ function AuthenticatedRoutes() {
   // User is authenticated, wrap protected routes with OrgProvider
   return (
     <OrgProvider>
-      <Switch>
-        <Route path="/" component={HomePage} />
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/data-model-analyzer" component={DataModelAnalyzer} />
-        <Route path="/soql-editor" component={SOQLEditor} />
-        <Route path="/security-analyzer" component={SecurityAnalyzer} />
-        <Route path="/automation-analyzer" component={AutomationAnalyzer} />
-        <Route path="/ui-component-analyzer" component={UIComponentAnalyzer} />
-        <Route path="/metadata-dependency-analyzer" component={MetadataDependencyAnalyzer} />
-        <Route path="/permissions-analyzer" component={PermissionsAnalyzer} />
-        <Route path="/apex-debug-analyzer" component={ApexDebugAnalyzer} />
-        <Route path="/settings" component={SettingsPage} />
-        <Route path="/support" component={Support} />
-        <Route path="/subscription" component={Subscription} />
-        <Route path="/admin" component={AdminPage} />
-        <Route component={NotFound} />
-      </Switch>
+      <div className="flex flex-col h-screen">
+        <TopNavBar />
+        <div className="flex flex-1 overflow-hidden">
+          <SideNavigation />
+          <main className="flex-1 overflow-y-auto bg-neutral-50">
+            <Switch>
+              <Route path="/" component={HomePage} />
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="/data-model-analyzer" component={DataModelAnalyzer} />
+              <Route path="/soql-editor" component={SOQLEditor} />
+              <Route path="/security-analyzer" component={SecurityAnalyzer} />
+              <Route path="/automation-analyzer" component={AutomationAnalyzer} />
+              <Route path="/ui-component-analyzer" component={UIComponentAnalyzer} />
+              <Route path="/metadata-dependency-analyzer" component={MetadataDependencyAnalyzer} />
+              <Route path="/permissions-analyzer" component={PermissionsAnalyzer} />
+              <Route path="/apex-debug-analyzer" component={ApexDebugAnalyzer} />
+              <Route path="/settings" component={SettingsPage} />
+              <Route path="/support" component={Support} />
+              <Route path="/subscription" component={Subscription} />
+              <Route path="/admin" component={AdminPage} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
+        </div>
+      </div>
     </OrgProvider>
   );
 }
