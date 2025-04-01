@@ -15,9 +15,17 @@ import { useState } from "react";
 
 export default function TopNavBar() {
   const { user, logoutMutation } = useAuth();
-  const { activeOrg } = useOrgContext();
   const [, navigate] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Safely access org context only if we're within an OrgProvider
+  let activeOrg = null;
+  try {
+    const orgContext = useOrgContext();
+    activeOrg = orgContext.activeOrg;
+  } catch (e) {
+    // OrgContext not available, activeOrg remains null
+  }
 
   const handleLogout = () => {
     logoutMutation.mutate();

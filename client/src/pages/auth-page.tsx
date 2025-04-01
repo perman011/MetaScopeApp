@@ -45,6 +45,7 @@ export default function AuthPage() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
+      console.log("User authenticated, redirecting to home");
       navigate("/");
     }
   }, [user, navigate]);

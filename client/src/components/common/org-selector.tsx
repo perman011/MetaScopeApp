@@ -53,7 +53,18 @@ type ConnectOrgFormValues = z.infer<typeof connectOrgSchema>;
 
 export default function OrgSelector() {
   const { toast } = useToast();
-  const { activeOrg, setActiveOrg } = useOrgContext();
+  // Wrap with try/catch to handle case where OrgContext is not available
+  let activeOrg = null;
+  let setActiveOrg = (org: any) => {}; // Default no-op function
+  
+  try {
+    const orgContext = useOrgContext();
+    activeOrg = orgContext.activeOrg;
+    setActiveOrg = orgContext.setActiveOrg;
+  } catch (e) {
+    // OrgContext not available
+  }
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // Fetch orgs

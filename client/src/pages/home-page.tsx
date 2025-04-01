@@ -3,10 +3,22 @@ import { useLocation } from "wouter";
 import TopNavBar from "@/components/layout/top-nav-bar";
 import SideNavigation from "@/components/layout/side-navigation";
 import { useOrgContext } from "@/hooks/use-org";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function HomePage() {
   const [, navigate] = useLocation();
-  const { activeOrg } = useOrgContext();
+  const { user } = useAuth();
+  
+  // Try to use org context only if we're sure we're authenticated
+  const orgContext = (() => {
+    try {
+      return useOrgContext();
+    } catch (e) {
+      return { activeOrg: null };
+    }
+  })();
+  
+  const { activeOrg } = orgContext;
   
   // Redirect to dashboard if an org is selected, otherwise stay on home
   useEffect(() => {
