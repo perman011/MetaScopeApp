@@ -13,7 +13,8 @@ import {
   CreditCard,
   UserCog,
   Link2,
-  Lock
+  Lock,
+  Terminal
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,10 @@ export default function SideNavigation() {
         
         <NavItem href="/permissions-analyzer" icon={Lock} active={location === "/permissions-analyzer"}>
           Permissions Analyzer
+        </NavItem>
+        
+        <NavItem href="/apex-debug-analyzer" icon={Terminal} active={location === "/apex-debug-analyzer"}>
+          Apex Debug Analyzer
         </NavItem>
         
         <div className="pt-4 mt-4 border-t border-neutral-200">

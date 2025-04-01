@@ -55,13 +55,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/orgs", ensureAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertSalesforceOrgSchema.parse({
-        ...req.body,
-        userId: req.user.id
-      });
+      const { 
+        authMethod, 
+        // Credential-based auth fields 
+        email,
+        password,
+        securityToken,
+        environment
+      } = req.body;
       
-      const org = await storage.createOrg(validatedData);
-      res.status(201).json(org);
+      if (authMethod === 'credentials') {
+        if (!email || !password) {
+          return res.status(400).send("Email and password are required for credential authentication");
+        }
+        
+        try {
+          // Authenticate with Salesforce
+          const authResult = await salesforceService.authenticateWithCredentials({
+            email,
+            password,
+            securityToken: securityToken || '',
+            environment: environment || 'production'
+          });
+          
+          // Add the auth result to the org data
+          const orgData = {
+            ...req.body,
+            userId: req.user.id,
+            instanceUrl: authResult.instanceUrl,
+            accessToken: authResult.accessToken,
+            refreshToken: authResult.refreshToken || undefined
+          };
+          
+          // Validate and create the org
+          const validatedData = insertSalesforceOrgSchema.parse(orgData);
+          const org = await storage.createOrg(validatedData);
+          res.status(201).json(org);
+        } catch (authError) {
+          console.error("Salesforce authentication error:", authError);
+          return res.status(401).send("Failed to authenticate with Salesforce: " + authError.message);
+        }
+      } else {
+        // Token-based authentication (original flow)
+        const validatedData = insertSalesforceOrgSchema.parse({
+          ...req.body,
+          userId: req.user.id
+        });
+        
+        const org = await storage.createOrg(validatedData);
+        res.status(201).json(org);
+      }
     } catch (error) {
       console.error("Error creating org:", error);
       if (error instanceof z.ZodError) {
@@ -233,6 +276,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(results);
     } catch (error) {
       console.error("Error executing query:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  // Apex Debug Analyzer Routes
+  
+  // Get users for trace flag selection
+  app.get("/api/orgs/:id/users", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const users = await salesforceService.getOrgUsers(org);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  // Get apex logs
+  app.get("/api/orgs/:id/apex-logs", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const logs = await salesforceService.getApexLogs(org);
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching apex logs:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  // Get specific apex log details
+  app.get("/api/orgs/:id/apex-logs/:logId", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const logDetail = await salesforceService.getApexLogDetail(org, req.params.logId);
+      res.json(logDetail);
+    } catch (error) {
+      console.error("Error fetching apex log detail:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  // Delete apex log
+  app.delete("/api/orgs/:id/apex-logs/:logId", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      await salesforceService.deleteApexLog(org, req.params.logId);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error("Error deleting apex log:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  // Get trace flags
+  app.get("/api/orgs/:id/trace-flags", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const traceFlags = await salesforceService.getTraceFlags(org);
+      res.json(traceFlags);
+    } catch (error) {
+      console.error("Error fetching trace flags:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  // Create trace flag
+  app.post("/api/orgs/:id/trace-flags", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const { tracedEntityId, debugLevelId, debugLevel, expirationMinutes } = req.body;
+      
+      if (!tracedEntityId) {
+        return res.status(400).send("Traced entity ID is required");
+      }
+      
+      const traceFlag = await salesforceService.createTraceFlag(
+        org, 
+        tracedEntityId, 
+        debugLevelId, 
+        debugLevel, 
+        expirationMinutes
+      );
+      
+      res.status(201).json(traceFlag);
+    } catch (error) {
+      console.error("Error creating trace flag:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+
+  // Delete trace flag
+  app.delete("/api/orgs/:id/trace-flags/:flagId", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      await salesforceService.deleteTraceFlag(org, req.params.flagId);
+      res.sendStatus(204);
+    } catch (error) {
+      console.error("Error deleting trace flag:", error);
       res.status(500).send("Internal Server Error");
     }
   });
