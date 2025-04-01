@@ -131,27 +131,52 @@ export class MemStorage implements IStorage {
 
   async createOrg(insertOrg: InsertSalesforceOrg): Promise<SalesforceOrg> {
     const id = this.orgIdCounter++;
+    
+    // Extract domain from instanceUrl if not provided
+    let domain = insertOrg.domain;
+    if (!domain && insertOrg.instanceUrl) {
+      try {
+        const url = new URL(insertOrg.instanceUrl);
+        domain = url.hostname;
+      } catch (e) {
+        domain = null;
+      }
+    }
+    
     const org: SalesforceOrg = {
       ...insertOrg,
       id,
+      domain: domain || null,
+      type: insertOrg.type || "production",
       accessToken: insertOrg.accessToken || null,
       refreshToken: insertOrg.refreshToken || null,
       tokenType: insertOrg.tokenType || null,
-      isActive: insertOrg.isActive ?? null,
-      lastMetadataSync: null
+      isActive: insertOrg.isActive ?? true,
+      lastMetadataSync: null,
+      lastSyncedAt: null,
+      lastAccessedAt: new Date() as Date,
     };
     this.orgs.set(id, org);
     return org;
   }
 
-  async updateOrg(id: number, updates: Partial<InsertSalesforceOrg>): Promise<SalesforceOrg | undefined> {
+  async updateOrg(id: number, updates: Partial<InsertSalesforceOrg> & { lastSyncedAt?: string }): Promise<SalesforceOrg | undefined> {
     const org = this.orgs.get(id);
     if (!org) return undefined;
+    
+    // Handle lastSyncedAt separately if it's provided as a string
+    let lastSyncedAt = org.lastSyncedAt;
+    if (updates.lastSyncedAt) {
+      lastSyncedAt = new Date(updates.lastSyncedAt) as Date;
+      delete updates.lastSyncedAt;
+    }
     
     const updatedOrg: SalesforceOrg = {
       ...org,
       ...updates,
+      lastSyncedAt,
     };
+    
     this.orgs.set(id, updatedOrg);
     return updatedOrg;
   }

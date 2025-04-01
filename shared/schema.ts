@@ -24,17 +24,23 @@ export const salesforceOrgs = pgTable("salesforce_orgs", {
   userId: integer("user_id").notNull().references(() => users.id),
   name: text("name").notNull(),
   instanceUrl: text("instance_url").notNull(),
+  domain: text("domain"),
+  type: text("type").default("production"), // "production", "sandbox", "developer"
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   tokenType: text("token_type"),
   isActive: boolean("is_active").default(true),
   lastMetadataSync: timestamp("last_metadata_sync"),
+  lastSyncedAt: timestamp("last_synced_at"),
+  lastAccessedAt: timestamp("last_accessed_at"),
 });
 
 export const insertSalesforceOrgSchema = createInsertSchema(salesforceOrgs).pick({
   userId: true,
   name: true,
   instanceUrl: true,
+  domain: true,
+  type: true,
   accessToken: true,
   refreshToken: true,
   tokenType: true,

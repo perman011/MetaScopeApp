@@ -2,8 +2,12 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import TopNavBar from "@/components/layout/top-nav-bar";
 import SideNavigation from "@/components/layout/side-navigation";
+import SalesforceOrgManager from "@/components/salesforce-org-manager";
+import ConnectSalesforceOrgDialog from "@/components/connect-salesforce-org-dialog";
 import { useOrgContext } from "@/hooks/use-org";
 import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 export default function HomePage() {
   const [, navigate] = useLocation();
@@ -43,16 +47,8 @@ export default function HomePage() {
                   <h2 className="text-lg font-medium text-neutral-800">Connect your Salesforce org</h2>
                   <p className="mt-1 text-sm text-neutral-500">Select an existing org or add a new one to begin</p>
                 </div>
-                <div className="p-6 text-center">
-                  <button
-                    onClick={() => {}}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                    </svg>
-                    Add new Salesforce org
-                  </button>
+                <div className="p-6">
+                  <SalesforceOrgManager />
                 </div>
               </div>
               

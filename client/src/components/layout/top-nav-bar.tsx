@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useOrgContext } from "@/hooks/use-org";
-import OrgSelector from "@/components/common/org-selector";
+import OrgSelectorDropdown from "@/components/org-selector-dropdown";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -71,7 +71,7 @@ export default function TopNavBar() {
         
         <div className="flex items-center space-x-4">
           {/* Org Selector */}
-          {user && <OrgSelector />}
+          {user && <OrgSelectorDropdown />}
           
           {/* User Menu */}
           {user && (
