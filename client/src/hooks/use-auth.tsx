@@ -38,11 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
       toast({
         title: "Login successful",
         description: `Welcome back, ${user.username}!`,
         variant: "default",
       });
+      
+      // Force a query invalidation to trigger authentication state updates
+      setTimeout(() => {
+        window.location.href = "/"; // Redirect to home page after successful login
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
@@ -60,11 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Registration successful",
         description: `Welcome, ${user.username}!`,
         variant: "default",
       });
+      
+      // Force a query invalidation to trigger authentication state updates
+      setTimeout(() => {
+        window.location.href = "/"; // Redirect to home page after successful registration
+      }, 500);
     },
     onError: (error: Error) => {
       toast({
