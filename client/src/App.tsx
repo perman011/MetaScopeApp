@@ -1,6 +1,4 @@
 import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -10,8 +8,9 @@ import DataModelAnalyzer from "@/pages/data-model-analyzer";
 import SOQLEditor from "@/pages/soql-editor";
 import SecurityAnalyzer from "@/pages/security-analyzer";
 import { ProtectedRoute } from "./lib/protected-route";
+import { AuthProvider } from "./hooks/use-auth";
 
-function Router() {
+function AppRoutes() {
   return (
     <Switch>
       <ProtectedRoute path="/" component={HomePage} />
@@ -27,10 +26,10 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router />
+    <AuthProvider>
+      <AppRoutes />
       <Toaster />
-    </QueryClientProvider>
+    </AuthProvider>
   );
 }
 

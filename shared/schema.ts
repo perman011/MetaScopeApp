@@ -65,6 +65,12 @@ export const healthScores = pgTable("health_scores", {
   automationScore: integer("automation_score").notNull(),
   apexScore: integer("apex_score").notNull(),
   uiComponentScore: integer("ui_component_score").notNull(),
+  // New complexity metrics for Mood Ring
+  complexityScore: integer("complexity_score").notNull().default(50),
+  performanceRisk: integer("performance_risk").notNull().default(50),
+  technicalDebt: integer("technical_debt").notNull().default(50),
+  metadataVolume: integer("metadata_volume").notNull().default(50),
+  customizationLevel: integer("customization_level").notNull().default(50),
   issues: json("issues").notNull(),
   lastAnalyzed: timestamp("last_analyzed").notNull(),
 });
@@ -77,6 +83,12 @@ export const insertHealthScoreSchema = createInsertSchema(healthScores).pick({
   automationScore: true,
   apexScore: true,
   uiComponentScore: true,
+  // New complexity metrics for Mood Ring
+  complexityScore: true,
+  performanceRisk: true,
+  technicalDebt: true,
+  metadataVolume: true,
+  customizationLevel: true,
   issues: true,
   lastAnalyzed: true,
 });

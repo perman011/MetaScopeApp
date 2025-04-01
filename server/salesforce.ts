@@ -125,6 +125,12 @@ export class SalesforceService {
       // In a real implementation, this would analyze the actual metadata
       // For now, we'll create a mock health score
       
+      // Get org's metadata for analysis
+      const metadata = await storage.getOrgMetadata(orgId);
+      
+      // Calculate complexity metrics
+      const complexityMetrics = this.calculateComplexityMetrics(metadata);
+      
       const issues = [
         {
           id: "SEC-001",
@@ -161,6 +167,24 @@ export class SalesforceService {
           description: "Finance records have inconsistent sharing rules across objects",
           impact: "May result in inconsistent data access",
           recommendation: "Standardize sharing rules across related objects"
+        },
+        {
+          id: "COMP-001",
+          severity: "warning",
+          category: "dataModel",
+          title: "Complex Object Relationships",
+          description: "Account object has excessive number of child objects (10+)",
+          impact: "May lead to query performance issues and trigger complexity",
+          recommendation: "Review data model and consider simplification or restructuring"
+        },
+        {
+          id: "COMP-002",
+          severity: "info",
+          category: "apex",
+          title: "High Technical Debt in Legacy Code",
+          description: "Several Apex classes are over 1000 lines with low test coverage",
+          impact: "Increases maintenance burden and risk of bugs during changes",
+          recommendation: "Refactor large classes into smaller, more maintainable units"
         }
       ];
       
@@ -172,6 +196,12 @@ export class SalesforceService {
         automationScore: 88,
         apexScore: 85,
         uiComponentScore: 64,
+        // Add complexity metrics
+        complexityScore: complexityMetrics.complexityScore,
+        performanceRisk: complexityMetrics.performanceRisk,
+        technicalDebt: complexityMetrics.technicalDebt,
+        metadataVolume: complexityMetrics.metadataVolume,
+        customizationLevel: complexityMetrics.customizationLevel,
         issues,
         lastAnalyzed: new Date()
       };
@@ -184,6 +214,64 @@ export class SalesforceService {
       console.error('Error generating health score:', error);
       throw error;
     }
+  }
+  
+  // Calculate complexity metrics based on org metadata
+  private calculateComplexityMetrics(metadata: any[]): {
+    complexityScore: number;
+    performanceRisk: number;
+    technicalDebt: number;
+    metadataVolume: number;
+    customizationLevel: number;
+  } {
+    // In a real implementation, this would do a detailed analysis of the metadata
+    // For this example, we'll create realistic complexity metrics based on simulated patterns
+
+    // If no metadata, return default values
+    if (!metadata || metadata.length === 0) {
+      return {
+        complexityScore: 50,  // Medium complexity
+        performanceRisk: 40,  // Moderate risk
+        technicalDebt: 35,    // Some technical debt
+        metadataVolume: 45,   // Moderate volume
+        customizationLevel: 55 // Moderate customization
+      };
+    }
+    
+    // Example logic to calculate complexity:
+    // 1. Count total objects and custom fields
+    // 2. Analyze relationship complexity (lookups vs master-detail)
+    // 3. Check for complex automations (flows, triggers, etc.)
+    // 4. Evaluate code quality and test coverage
+    
+    // For this demo, we'll use random values between 30-85 to simulate a real org
+    // In a production version, these would be calculated from actual metadata analysis
+    const randomBetween = (min: number, max: number) => 
+      Math.floor(Math.random() * (max - min + 1) + min);
+    
+    const complexityScore = randomBetween(40, 85);  // Overall complexity
+    
+    // Make other metrics somewhat correlated with complexity
+    const variance = 15; // How much metrics can vary from complexityScore
+    const performanceRisk = Math.min(100, Math.max(0, 
+      complexityScore + randomBetween(-variance, variance)));
+      
+    const technicalDebt = Math.min(100, Math.max(0, 
+      complexityScore + randomBetween(-variance, variance)));
+      
+    const metadataVolume = Math.min(100, Math.max(0, 
+      complexityScore + randomBetween(-variance, variance)));
+      
+    const customizationLevel = Math.min(100, Math.max(0, 
+      complexityScore + randomBetween(-variance, variance)));
+    
+    return {
+      complexityScore,
+      performanceRisk,
+      technicalDebt,
+      metadataVolume,
+      customizationLevel
+    };
   }
   
   // Execute a SOQL query against a Salesforce org

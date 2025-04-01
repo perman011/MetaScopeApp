@@ -8,10 +8,13 @@ import {
   KeyboardAvoidingView, 
   Platform,
   ScrollView,
-  Image 
+  Image,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { authApi } from '../api/client';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -20,26 +23,49 @@ interface LoginScreenProps {
 }
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
+  const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = () => {
+  const handleSubmit = async () => {
+    // Validate input
     if (!username || !password) {
-      setError('Please enter both username and password');
+      setError('Username and password are required');
+      return;
+    }
+
+    if (!isLogin && password !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
     setLoading(true);
     setError(null);
 
-    // Simulate an API call
-    setTimeout(() => {
-      setLoading(false);
-      // For demo purposes, we'll just navigate to Home
+    try {
+      // In a real app, this would actually call the API
+      // const response = isLogin 
+      //   ? await authApi.login(username, password)
+      //   : await authApi.register(username, password);
+      
+      // Simulate network request
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Navigate to home on success
       navigation.replace('Home');
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleAuthMode = () => {
+    setIsLogin(!isLogin);
+    setError(null);
   };
 
   return (
@@ -47,16 +73,14 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.logoContainer}>
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>SF</Text>
-          </View>
-          <Text style={styles.appTitle}>Salesforce Metadata Manager</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Salesforce Metadata Manager</Text>
+          <Text style={styles.subtitle}>Mobile Data Management Solution</Text>
         </View>
-
+        
         <View style={styles.formContainer}>
-          <Text style={styles.formTitle}>Sign in to your account</Text>
+          <Text style={styles.formTitle}>{isLogin ? 'Login' : 'Create Account'}</Text>
           
           {error && (
             <View style={styles.errorContainer}>
@@ -64,8 +88,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             </View>
           )}
           
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Username</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Username</Text>
             <TextInput
               style={styles.input}
               value={username}
@@ -76,8 +100,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             />
           </View>
           
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Password</Text>
             <TextInput
               style={styles.input}
               value={password}
@@ -87,26 +111,45 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             />
           </View>
           
+          {!isLogin && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <TextInput
+                style={styles.input}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Re-enter your password"
+                secureTextEntry
+              />
+            </View>
+          )}
+          
           <TouchableOpacity 
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
+            style={styles.submitButton}
+            onPress={handleSubmit}
             disabled={loading}
           >
-            <Text style={styles.buttonText}>{loading ? 'Signing in...' : 'Sign In'}</Text>
+            {loading ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text style={styles.submitButtonText}>
+                {isLogin ? 'Login' : 'Create Account'}
+              </Text>
+            )}
           </TouchableOpacity>
           
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            <TouchableOpacity>
-              <Text style={styles.registerLink}>Register</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={styles.switchModeButton}
+            onPress={toggleAuthMode}
+          >
+            <Text style={styles.switchModeText}>
+              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Login"}
+            </Text>
+          </TouchableOpacity>
         </View>
         
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            By signing in, you agree to our Terms of Service and Privacy Policy.
-          </Text>
+        <View style={styles.footerContainer}>
+          <Text style={styles.footerText}>© 2025 Salesforce Metadata Manager</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -118,43 +161,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f8fa',
   },
-  scrollContainer: {
+  scrollContent: {
     flexGrow: 1,
-    padding: 24,
+    padding: 16,
     justifyContent: 'center',
   },
-  logoContainer: {
+  header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
   },
-  logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
-    backgroundColor: '#3b82f6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  appTitle: {
+  title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
+    color: '#3b82f6',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#64748b',
   },
   formContainer: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 3,
     marginBottom: 24,
   },
@@ -163,71 +196,62 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 24,
+    textAlign: 'center',
   },
   errorContainer: {
-    backgroundColor: '#FFEFEF',
-    borderRadius: 8,
+    backgroundColor: '#fee2e2',
+    borderRadius: 4,
     padding: 12,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#FFC0C0',
   },
   errorText: {
-    color: '#D00000',
+    color: '#b91c1c',
     fontSize: 14,
   },
-  inputContainer: {
+  inputGroup: {
     marginBottom: 16,
   },
-  label: {
+  inputLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#555',
-    marginBottom: 8,
+    color: '#64748b',
+    marginBottom: 6,
   },
   input: {
-    backgroundColor: '#f5f8fa',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: '#e2e8f0',
+    borderRadius: 4,
     padding: 12,
     fontSize: 16,
   },
-  button: {
+  submitButton: {
     backgroundColor: '#3b82f6',
-    borderRadius: 8,
+    borderRadius: 4,
     padding: 16,
     alignItems: 'center',
     marginTop: 8,
   },
-  buttonDisabled: {
-    backgroundColor: '#93c5fd',
-  },
-  buttonText: {
+  submitButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 24,
-  },
-  registerText: {
-    color: '#666',
-    fontSize: 14,
-  },
-  registerLink: {
-    color: '#3b82f6',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  footer: {
+  switchModeButton: {
+    marginTop: 16,
     alignItems: 'center',
   },
+  switchModeText: {
+    color: '#3b82f6',
+    fontSize: 14,
+  },
+  footerContainer: {
+    marginTop: 'auto',
+    alignItems: 'center',
+    padding: 16,
+  },
   footerText: {
-    color: '#888',
-    textAlign: 'center',
+    color: '#94a3b8',
     fontSize: 12,
   },
 });

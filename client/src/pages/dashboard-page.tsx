@@ -11,7 +11,8 @@ import DataModelAnalyzer from "@/components/dashboard/data-model-analyzer";
 import SoqlEditor from "@/components/dashboard/soql-editor";
 import SecurityAnalyzer from "@/components/dashboard/security-analyzer";
 import ActionableInsights from "@/components/dashboard/actionable-insights";
-import { SalesforceOrg } from "@shared/schema";
+import ConfigurationMoodRingCard from "@/components/configuration-mood-ring-card";
+import { SalesforceOrg, HealthScore } from "@shared/schema";
 import { Loader2 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -62,6 +63,11 @@ export default function DashboardPage() {
     setProfileFilter(profile);
   };
 
+  const { data: healthScore, isLoading: healthScoreLoading } = useQuery<HealthScore>({
+    queryKey: [`/api/orgs/${selectedOrgId}/health-scores`],
+    enabled: Boolean(selectedOrgId),
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -96,6 +102,13 @@ export default function DashboardPage() {
               />
               
               <HealthScoreDashboard orgId={selectedOrgId} />
+              
+              {/* Configuration Mood Ring Card */}
+              {healthScore && !healthScoreLoading && (
+                <div className="mt-6">
+                  <ConfigurationMoodRingCard healthScore={healthScore} />
+                </div>
+              )}
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                 <DataModelAnalyzer orgId={selectedOrgId} />
