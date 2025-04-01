@@ -11,7 +11,9 @@ import {
   Layers, 
   FileCode, 
   CreditCard,
-  UserCog
+  UserCog,
+  Link2,
+  Lock
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -78,12 +80,20 @@ export default function SideNavigation() {
           Security Analyzer
         </NavItem>
         
-        <NavItem href="/automation-analyzer" icon={Layers}>
+        <NavItem href="/automation-analyzer" icon={Layers} active={location === "/automation-analyzer"}>
           Automation Analyzer
         </NavItem>
         
-        <NavItem href="/ui-components" icon={FileCode}>
+        <NavItem href="/ui-component-analyzer" icon={FileCode} active={location === "/ui-component-analyzer"}>
           UI Component Analyzer
+        </NavItem>
+        
+        <NavItem href="/metadata-dependency-analyzer" icon={Link2} active={location === "/metadata-dependency-analyzer"}>
+          Dependency Analyzer
+        </NavItem>
+        
+        <NavItem href="/permissions-analyzer" icon={Lock} active={location === "/permissions-analyzer"}>
+          Permissions Analyzer
         </NavItem>
         
         <div className="pt-4 mt-4 border-t border-neutral-200">

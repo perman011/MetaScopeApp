@@ -9,6 +9,8 @@ import SOQLEditor from "@/pages/soql-editor";
 import SecurityAnalyzer from "@/pages/security-analyzer";
 import AutomationAnalyzer from "@/pages/automation-analyzer";
 import UIComponentAnalyzer from "@/pages/ui-component-analyzer";
+import MetadataDependencyAnalyzer from "@/pages/metadata-dependency-analyzer";
+import PermissionsAnalyzer from "@/pages/permissions-analyzer";
 import SettingsPage from "@/pages/settings-page";
 import Support from "@/pages/support";
 import Subscription from "@/pages/subscription";
@@ -50,6 +52,8 @@ function AuthenticatedRoutes() {
         <Route path="/security-analyzer" component={SecurityAnalyzer} />
         <Route path="/automation-analyzer" component={AutomationAnalyzer} />
         <Route path="/ui-component-analyzer" component={UIComponentAnalyzer} />
+        <Route path="/metadata-dependency-analyzer" component={MetadataDependencyAnalyzer} />
+        <Route path="/permissions-analyzer" component={PermissionsAnalyzer} />
         <Route path="/settings" component={SettingsPage} />
         <Route path="/support" component={Support} />
         <Route path="/subscription" component={Subscription} />

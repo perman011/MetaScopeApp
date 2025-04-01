@@ -229,12 +229,12 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="flex gap-4 w-full sm:w-1/2">
-                      <Select value={selectedCategory || ""} onValueChange={(val) => setSelectedCategory(val === "" ? null : val)}>
+                      <Select value={selectedCategory || "all"} onValueChange={(val) => setSelectedCategory(val === "all" ? null : val)}>
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Filter by category" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Categories</SelectItem>
+                          <SelectItem value="all">All Categories</SelectItem>
                           <SelectItem value="Apex">Apex</SelectItem>
                           <SelectItem value="Metadata">Metadata</SelectItem>
                           <SelectItem value="UI">UI</SelectItem>
