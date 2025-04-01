@@ -439,6 +439,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Metadata Dependencies Routes
+  app.get("/api/orgs/:id/metadata/dependencies", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const metadataType = req.query.type as string | undefined;
+      const dependencies = await salesforceService.getMetadataDependencies(org, metadataType);
+      res.json(dependencies);
+    } catch (error) {
+      console.error("Error fetching metadata dependencies:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  app.get("/api/orgs/:id/metadata/dependencies/reverse", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const componentName = req.query.name as string;
+      if (!componentName) {
+        return res.status(400).send("Component name is required");
+      }
+      
+      const reverseDependencies = await salesforceService.getReverseDependencies(org, componentName);
+      res.json(reverseDependencies);
+    } catch (error) {
+      console.error("Error fetching reverse dependencies:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
   // Admin Routes - Protected by admin middleware
   app.get("/api/admin/users", ensureAdmin, async (req, res) => {
     try {

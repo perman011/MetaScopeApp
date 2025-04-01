@@ -93,8 +93,26 @@ export default function Dashboard() {
     enabled: !!activeOrg,
   });
 
+  // Define the expected type for metadata items
+  interface MetadataItem {
+    name: string;
+    count: number;
+    lastModified: string;
+    category: string;
+  }
+  
+  // Create a processed metadata list using real API data if available, otherwise use mock data
+  const processedMetadataList: MetadataItem[] = metadata && Array.isArray(metadata) && metadata.length > 0 ? 
+    metadata.map((item: any) => ({
+      name: item.name || 'Unknown',
+      count: item.count || 0,
+      lastModified: item.lastModified || new Date().toISOString().split('T')[0],
+      category: item.type || 'Metadata'
+    })) : 
+    mockMetadataTypes;
+  
   // Filter and sort metadata based on user selections
-  const filteredMetadata = mockMetadataTypes
+  const filteredMetadata = processedMetadataList
     .filter(item => {
       // Apply search filter
       if (searchTerm && !item.name.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -118,9 +136,16 @@ export default function Dashboard() {
       return 0;
     });
 
-  // Calculate aggregate data for charts
-  const categoryData = Object.entries(
-    mockMetadataTypes.reduce((acc, item) => {
+  // Define the chart data type
+  interface ChartDataItem {
+    name: string;
+    value: number;
+    color: string;
+  }
+  
+  // Calculate aggregate data for charts using real API data if available
+  const categoryData: ChartDataItem[] = Object.entries(
+    processedMetadataList.reduce((acc: Record<string, number>, item: MetadataItem) => {
       acc[item.category] = (acc[item.category] || 0) + item.count;
       return acc;
     }, {} as Record<string, number>)
@@ -278,7 +303,7 @@ export default function Dashboard() {
                   )}
                   
                   <div className="text-sm text-muted-foreground">
-                    Showing {filteredMetadata.length} of {mockMetadataTypes.length} metadata types
+                    Showing {filteredMetadata.length} of {processedMetadataList.length} metadata types
                   </div>
                 </div>
                 
@@ -362,7 +387,8 @@ export default function Dashboard() {
                             outerRadius={120}
                             paddingAngle={2}
                             dataKey="value"
-                            label={({name, percent}) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                            // Use shorter labels directly on pie chart
+                            label={({name, percent}) => `${(percent * 100).toFixed(0)}%`}
                             labelLine={false}
                           >
                             {categoryData.map((entry, index) => (
@@ -370,7 +396,11 @@ export default function Dashboard() {
                             ))}
                           </Pie>
                           <Tooltip 
-                            formatter={(value: number) => [value.toLocaleString(), 'Count']}
+                            formatter={(value: number, name: string, props: any) => {
+                              // Show full category name and count in tooltip
+                              return [`${value.toLocaleString()} components`, props.payload.name];
+                            }}
+                            labelFormatter={(label) => `Category: ${label}`}
                           />
                         </PieChart>
                       </ResponsiveContainer>

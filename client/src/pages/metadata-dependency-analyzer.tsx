@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import TopNavBar from "@/components/layout/top-nav-bar";
 import SideNavigation from "@/components/layout/side-navigation";
 import { useOrgContext } from "@/hooks/use-org";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -53,89 +54,11 @@ import {
   Eye,
   Code,
   Database,
-  ArrowDownUp
+  ArrowDownUp,
+  Loader2
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-// Mock dependency references data
-const mockDependencyReferences = {
-  apex: [
-    { 
-      id: 1, 
-      name: "AccountService", 
-      type: "ApexClass",
-      references: [
-        { id: 1, name: "ContactService", type: "ApexClass", referenceType: "Method Call" },
-        { id: 2, name: "OpportunityService", type: "ApexClass", referenceType: "Method Call" },
-        { id: 3, name: "AccountTrigger", type: "ApexTrigger", referenceType: "Trigger Handler" },
-        { id: 4, name: "Lead Conversion Flow", type: "Flow", referenceType: "Apex Action" },
-      ]
-    },
-    { 
-      id: 2, 
-      name: "ContactService", 
-      type: "ApexClass",
-      references: [
-        { id: 1, name: "LeadService", type: "ApexClass", referenceType: "Method Call" },
-        { id: 2, name: "ContactTrigger", type: "ApexTrigger", referenceType: "Trigger Handler" },
-      ]
-    },
-    { 
-      id: 3, 
-      name: "OpportunityTrigger", 
-      type: "ApexTrigger",
-      references: [
-        { id: 1, name: "OpportunityService", type: "ApexClass", referenceType: "Class Reference" },
-        { id: 2, name: "QuoteService", type: "ApexClass", referenceType: "Method Call" },
-      ]
-    },
-  ],
-  fields: [
-    { 
-      id: 1, 
-      name: "Account.CustomField__c", 
-      type: "CustomField",
-      references: [
-        { id: 1, name: "AccountService", type: "ApexClass", referenceType: "Field Reference" },
-        { id: 2, name: "Account Layout", type: "Layout", referenceType: "Layout Field" },
-        { id: 3, name: "AccountTrigger", type: "ApexTrigger", referenceType: "Field Reference" },
-        { id: 4, name: "Account Page", type: "LightningPage", referenceType: "Component Data" },
-      ]
-    },
-    { 
-      id: 2, 
-      name: "Contact.ExternalId__c", 
-      type: "CustomField",
-      references: [
-        { id: 1, name: "ContactService", type: "ApexClass", referenceType: "Field Reference" },
-        { id: 2, name: "Data Import Flow", type: "Flow", referenceType: "Assignment" },
-      ]
-    },
-  ],
-  objects: [
-    { 
-      id: 1, 
-      name: "CustomObject__c", 
-      type: "CustomObject",
-      references: [
-        { id: 1, name: "CustomObjectService", type: "ApexClass", referenceType: "Object Reference" },
-        { id: 2, name: "CustomObjectTrigger", type: "ApexTrigger", referenceType: "Object Reference" },
-        { id: 3, name: "Data Process Flow", type: "Flow", referenceType: "Object Reference" },
-        { id: 4, name: "Custom Object Tab", type: "CustomTab", referenceType: "Tab Reference" },
-      ]
-    },
-    { 
-      id: 2, 
-      name: "ExternalSystem__c", 
-      type: "CustomObject",
-      references: [
-        { id: 1, name: "IntegrationService", type: "ApexClass", referenceType: "Object Reference" },
-        { id: 2, name: "Integration Settings", type: "CustomMetadata", referenceType: "Metadata Reference" },
-      ]
-    },
-  ],
-};
 
 // Interface for the dependency reference types
 interface DependencyReference {
@@ -152,34 +75,56 @@ interface MetadataItem {
   references: DependencyReference[];
 }
 
-// Sample reverse dependency data - showing what components this item depends on
-const mockReverseDependencies = {
-  "AccountService": [
-    { id: 1, name: "Account", type: "CustomObject", referenceType: "Object Reference" },
-    { id: 2, name: "Account.Type", type: "Field", referenceType: "Field Reference" },
-    { id: 3, name: "Contact", type: "CustomObject", referenceType: "Object Reference" },
-    { id: 4, name: "Opportunity", type: "CustomObject", referenceType: "Object Reference" },
-    { id: 5, name: "UtilityClass", type: "ApexClass", referenceType: "Utility Reference" }
-  ]
-};
-
 export default function MetadataDependencyAnalyzer() {
   const { activeOrg } = useOrgContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMetadataType, setSelectedMetadataType] = useState<string>("apex");
   const [selectedMetadataItem, setSelectedMetadataItem] = useState<MetadataItem | null>(null);
   const [viewMode, setViewMode] = useState<"dependencies" | "reverseDependencies">("dependencies");
+  const { toast } = useToast();
 
   const metadataTypeOptions = [
     { value: "apex", label: "Apex Classes & Triggers" },
     { value: "fields", label: "Custom Fields" },
     { value: "objects", label: "Custom Objects" },
   ];
+  
+  // Fetch metadata dependencies from API
+  const { 
+    data: metadataDependencies, 
+    isLoading: isDependenciesLoading, 
+    error: dependenciesError 
+  } = useQuery({
+    queryKey: [`/api/orgs/${activeOrg?.id}/metadata/dependencies`],
+    enabled: !!activeOrg?.id,
+  });
+  
+  // Fetch reverse dependencies for selected item
+  const { 
+    data: reverseDependencies, 
+    isLoading: isReverseDependenciesLoading 
+  } = useQuery({
+    queryKey: [`/api/orgs/${activeOrg?.id}/metadata/dependencies/reverse`, selectedMetadataItem?.name],
+    enabled: !!activeOrg?.id && !!selectedMetadataItem?.name,
+  });
+  
+  // Show error toast if there's an error
+  useEffect(() => {
+    if (dependenciesError) {
+      toast({
+        title: "Error loading dependencies",
+        description: "Could not load metadata dependencies. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [dependenciesError, toast]);
 
-  // Filter metadata based on search term
-  const filteredMetadata = selectedMetadataType ? 
-    mockDependencyReferences[selectedMetadataType as keyof typeof mockDependencyReferences]
-      .filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())) 
+  // Filter metadata based on search term and real API data
+  const filteredMetadata = selectedMetadataType && metadataDependencies 
+    ? (metadataDependencies[selectedMetadataType as keyof typeof metadataDependencies] || [])
+        .filter((item: MetadataItem) => 
+          item.name.toLowerCase().includes(searchTerm.toLowerCase())
+        ) 
     : [];
 
   // Handle the view details click
@@ -336,7 +281,7 @@ export default function MetadataDependencyAnalyzer() {
                     <div className="p-4">
                       <h3 className="font-medium text-sm mb-3">Components ({filteredMetadata.length})</h3>
                       <ul className="space-y-2">
-                        {filteredMetadata.map((item) => (
+                        {filteredMetadata.map((item: MetadataItem) => (
                           <li key={item.id}>
                             <button
                               onClick={() => handleViewDetails(item)}
@@ -458,33 +403,45 @@ export default function MetadataDependencyAnalyzer() {
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {/* Using mock reverse dependency data for demo */}
-                                {(mockReverseDependencies[selectedMetadataItem.name as keyof typeof mockReverseDependencies] || []).map((reference, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell className="font-medium flex items-center">
-                                      {getMetadataTypeIcon(reference.type)}
-                                      <span className="ml-2">{reference.name}</span>
-                                    </TableCell>
-                                    <TableCell>{reference.type}</TableCell>
-                                    <TableCell>
-                                      <Badge variant="outline" className={getReferenceBadgeColor(reference.referenceType)}>
-                                        {reference.referenceType}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <Button variant="ghost" size="sm">
-                                        <Eye className="h-4 w-4 mr-1" />
-                                        View
-                                      </Button>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                                {!mockReverseDependencies[selectedMetadataItem.name as keyof typeof mockReverseDependencies] && (
+                                {isReverseDependenciesLoading ? (
                                   <TableRow>
-                                    <TableCell colSpan={4} className="text-center text-neutral-500 py-8">
-                                      No dependencies found for this component
+                                    <TableCell colSpan={4} className="text-center py-8">
+                                      <div className="flex justify-center">
+                                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                      </div>
+                                      <p className="text-sm text-neutral-500 mt-2">Loading dependencies...</p>
                                     </TableCell>
                                   </TableRow>
+                                ) : (
+                                  <>
+                                    {Array.isArray(reverseDependencies) && reverseDependencies.map((reference: any, index: number) => (
+                                      <TableRow key={index}>
+                                        <TableCell className="font-medium flex items-center">
+                                          {getMetadataTypeIcon(reference.type)}
+                                          <span className="ml-2">{reference.name}</span>
+                                        </TableCell>
+                                        <TableCell>{reference.type}</TableCell>
+                                        <TableCell>
+                                          <Badge variant="outline" className={getReferenceBadgeColor(reference.referenceType)}>
+                                            {reference.referenceType}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                          <Button variant="ghost" size="sm">
+                                            <Eye className="h-4 w-4 mr-1" />
+                                            View
+                                          </Button>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                    {(!reverseDependencies || !Array.isArray(reverseDependencies) || reverseDependencies.length === 0) && (
+                                      <TableRow>
+                                        <TableCell colSpan={4} className="text-center text-neutral-500 py-8">
+                                          No dependencies found for this component
+                                        </TableCell>
+                                      </TableRow>
+                                    )}
+                                  </>
                                 )}
                               </TableBody>
                             </Table>

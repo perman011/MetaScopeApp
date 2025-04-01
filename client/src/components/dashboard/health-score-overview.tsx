@@ -10,8 +10,8 @@ interface HealthScoreOverviewProps {
 
 export default function HealthScoreOverview({ healthScore, isLoading }: HealthScoreOverviewProps) {
   // Calculate critical and warning issues count
-  const criticalIssues = healthScore?.issues?.filter(i => i.severity === 'critical').length || 0;
-  const warningIssues = healthScore?.issues?.filter(i => i.severity === 'warning').length || 0;
+  const criticalIssues = healthScore?.issues?.filter((i: { severity: string }) => i.severity === 'critical').length || 0;
+  const warningIssues = healthScore?.issues?.filter((i: { severity: string }) => i.severity === 'warning').length || 0;
 
   // Format last analyzed time
   const lastAnalyzed = healthScore?.lastAnalyzed
@@ -127,13 +127,13 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">Security & Access</div>
-                    <div className={`text-${healthScore.securityScore >= 80 ? 'success' : healthScore.securityScore >= 60 ? 'warning' : 'danger'}`}>
+                    <div className={healthScore.securityScore >= 80 ? 'text-green-600' : healthScore.securityScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.securityScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full ${healthScore.securityScore >= 80 ? 'bg-success' : healthScore.securityScore >= 60 ? 'bg-warning' : 'bg-danger'}`} 
+                      className={healthScore.securityScore >= 80 ? 'bg-green-500' : healthScore.securityScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
                       style={{ width: `${healthScore.securityScore}%` }}
                     ></div>
                   </div>
@@ -142,13 +142,13 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">Data Model</div>
-                    <div className={`text-${healthScore.dataModelScore >= 80 ? 'success' : healthScore.dataModelScore >= 60 ? 'warning' : 'danger'}`}>
+                    <div className={healthScore.dataModelScore >= 80 ? 'text-green-600' : healthScore.dataModelScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.dataModelScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full ${healthScore.dataModelScore >= 80 ? 'bg-success' : healthScore.dataModelScore >= 60 ? 'bg-warning' : 'bg-danger'}`} 
+                      className={healthScore.dataModelScore >= 80 ? 'bg-green-500' : healthScore.dataModelScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
                       style={{ width: `${healthScore.dataModelScore}%` }}
                     ></div>
                   </div>
@@ -157,13 +157,13 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">Automation Logic</div>
-                    <div className={`text-${healthScore.automationScore >= 80 ? 'success' : healthScore.automationScore >= 60 ? 'warning' : 'danger'}`}>
+                    <div className={healthScore.automationScore >= 80 ? 'text-green-600' : healthScore.automationScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.automationScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full ${healthScore.automationScore >= 80 ? 'bg-success' : healthScore.automationScore >= 60 ? 'bg-warning' : 'bg-danger'}`} 
+                      className={healthScore.automationScore >= 80 ? 'bg-green-500' : healthScore.automationScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
                       style={{ width: `${healthScore.automationScore}%` }}
                     ></div>
                   </div>
@@ -172,13 +172,13 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">Apex Code</div>
-                    <div className={`text-${healthScore.apexScore >= 80 ? 'success' : healthScore.apexScore >= 60 ? 'warning' : 'danger'}`}>
+                    <div className={healthScore.apexScore >= 80 ? 'text-green-600' : healthScore.apexScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.apexScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full ${healthScore.apexScore >= 80 ? 'bg-success' : healthScore.apexScore >= 60 ? 'bg-warning' : 'bg-danger'}`} 
+                      className={healthScore.apexScore >= 80 ? 'bg-green-500' : healthScore.apexScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
                       style={{ width: `${healthScore.apexScore}%` }}
                     ></div>
                   </div>
@@ -187,13 +187,13 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">UI Components</div>
-                    <div className={`text-${healthScore.uiComponentScore >= 80 ? 'success' : healthScore.uiComponentScore >= 60 ? 'warning' : 'danger'}`}>
+                    <div className={healthScore.uiComponentScore >= 80 ? 'text-green-600' : healthScore.uiComponentScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.uiComponentScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full rounded-full ${healthScore.uiComponentScore >= 80 ? 'bg-success' : healthScore.uiComponentScore >= 60 ? 'bg-warning' : 'bg-danger'}`} 
+                      className={healthScore.uiComponentScore >= 80 ? 'bg-green-500' : healthScore.uiComponentScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
                       style={{ width: `${healthScore.uiComponentScore}%` }}
                     ></div>
                   </div>
