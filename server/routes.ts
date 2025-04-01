@@ -81,7 +81,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Add the auth result to the org data
           const orgData = {
             ...req.body,
-            userId: req.user.id,
+            userId: req.user!.id,
             instanceUrl: authResult.instanceUrl,
             accessToken: authResult.accessToken,
             refreshToken: authResult.refreshToken || undefined
@@ -99,7 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Token-based authentication (original flow)
         const validatedData = insertSalesforceOrgSchema.parse({
           ...req.body,
-          userId: req.user.id
+          userId: req.user!.id
         });
         
         const org = await storage.createOrg(validatedData);

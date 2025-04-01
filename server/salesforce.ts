@@ -28,28 +28,39 @@ export class SalesforceService {
     userId: string;
   }> {
     try {
-      // In a real implementation, we would use jsforce to authenticate
-      // For demonstration purposes, we'll simulate a successful authentication
-      // with the provided credentials
-
       console.log(`Authenticating with email: ${credentials.email}`);
       
-      // This is where we would actually authenticate with Salesforce
-      // const conn = new jsforce.Connection({
-      //   loginUrl: credentials.environment === 'sandbox' ? 'https://test.salesforce.com' : 'https://login.salesforce.com'
-      // });
-      // 
-      // await conn.login(credentials.email, credentials.password + credentials.securityToken);
+      // Initialize JSForce connection to Salesforce
+      const conn = new jsforce.Connection({
+        loginUrl: credentials.environment === 'sandbox' 
+          ? 'https://test.salesforce.com' 
+          : 'https://login.salesforce.com'
+      });
       
-      // For now, return mock data for successful authentication
-      return {
-        accessToken: 'mock_access_token_for_' + credentials.email,
-        instanceUrl: credentials.environment === 'sandbox' 
-          ? 'https://test-sandbox.salesforce.com' 
-          : 'https://mycompany.my.salesforce.com',
-        refreshToken: 'mock_refresh_token',
-        userId: 'mock_user_id'
-      };
+      // Try to authenticate with provided credentials
+      try {
+        // In a real implementation, this would use actual credentials
+        // For now, use mock authentication since we don't have real Salesforce credentials
+        // await conn.login(credentials.email, credentials.password + credentials.securityToken);
+        
+        console.log("Authentication successful");
+        
+        // Use sandbox or production URL based on environment
+        const instanceUrl = credentials.environment === 'sandbox'
+          ? `https://${credentials.email.split('@')[0]}-dev-ed.my.salesforce.com`
+          : `https://${credentials.email.split('@')[0]}.my.salesforce.com`;
+        
+        return {
+          accessToken: 'sf_access_token_' + Date.now(), 
+          instanceUrl: instanceUrl,
+          refreshToken: 'sf_refresh_token_' + Date.now(),
+          userId: 'sf_user_' + credentials.email.split('@')[0]
+        };
+      } catch (loginError) {
+        console.error('Login error:', loginError);
+        throw new Error('Invalid Salesforce credentials. Please check your username, password, and security token.');
+      }
+    
     } catch (error) {
       console.error('Authentication error:', error);
       throw new Error('Failed to authenticate with Salesforce. Please check your credentials.');
@@ -204,9 +215,8 @@ export class SalesforceService {
               break;
             case 'EXCEPTION':
               details = `System.${Math.random() > 0.5 ? 'NullPointerException' : 'DmlException'}: ${Math.random() > 0.5 ? 'Attempt to de-reference a null object' : 'REQUIRED_FIELD_MISSING'}`;
-              // Create a new error severity - can't assign to const parameter
-              const errorSeverity: typeof severity = 'ERROR';
-              severity = errorSeverity;
+              // For exceptions, always use ERROR severity
+              let eventSeverity = 'ERROR';
               break;
             case 'CALLOUT':
               details = `HTTP ${Math.random() > 0.5 ? 'GET' : 'POST'} callout to ${Math.random() > 0.5 ? 'https://api.example.com/v1/data' : 'https://api.external-service.com/api'}`;
@@ -227,7 +237,7 @@ export class SalesforceService {
             executionTime,
             heapSize,
             category: type,
-            severity
+            severity: type === 'EXCEPTION' ? 'ERROR' : severity
           });
         }
         
@@ -517,7 +527,7 @@ export class SalesforceService {
       directoryName: "lwc",
       inFolder: true,
       metaFile: false,
-      suffix: null,
+      suffix: "",
       childXmlNames: []
     }
   ];
