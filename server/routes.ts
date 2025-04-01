@@ -17,6 +17,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     res.status(401).send('Unauthorized');
   };
+  
+  // Middleware to check if user is an admin
+  const ensureAdmin = (req, res, next) => {
+    if (req.isAuthenticated() && req.user.isAdmin) {
+      return next();
+    }
+    res.status(403).send('Forbidden: Admin access required');
+  };
 
   // Salesforce Org Management Routes
   app.get("/api/orgs", ensureAuthenticated, async (req, res) => {
@@ -206,6 +214,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(types);
     } catch (error) {
       console.error("Error fetching metadata types:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  // Admin Routes - Protected by admin middleware
+  app.get("/api/admin/users", ensureAdmin, async (req, res) => {
+    try {
+      // Get all users but exclude password field
+      const users = await storage.getAllUsers();
+      const usersWithoutPasswords = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  app.get("/api/admin/users/:id", ensureAdmin, async (req, res) => {
+    try {
+      const user = await storage.getUser(parseInt(req.params.id));
+      if (!user) {
+        return res.status(404).send("User not found");
+      }
+      
+      // Exclude password from response
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  app.patch("/api/admin/users/:id", ensureAdmin, async (req, res) => {
+    try {
+      const user = await storage.getUser(parseInt(req.params.id));
+      if (!user) {
+        return res.status(404).send("User not found");
+      }
+      
+      // Update user fields except password (password change would need separate endpoint with more validation)
+      const { password, ...updateData } = req.body;
+      
+      // Add method to storage.ts later: updateUser
+      // For now placeholder response
+      res.json({ ...user, ...updateData });
+    } catch (error) {
+      console.error("Error updating user:", error);
       res.status(500).send("Internal Server Error");
     }
   });

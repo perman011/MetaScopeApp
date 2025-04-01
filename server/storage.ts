@@ -63,6 +63,26 @@ export class MemStorage implements IStorage {
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // 24 hours
     });
+    
+    // Create admin user for first-time setup
+    this.setupAdminUser();
+  }
+  
+  // Create a default admin user for application administration
+  private async setupAdminUser() {
+    const existingAdmin = await this.getUserByUsername('admin');
+    if (!existingAdmin) {
+      // Create an admin user with preset credentials
+      // In production, this would use environment variables or secure secrets
+      await this.createUser({
+        username: 'admin',
+        password: '$2b$10$UEZ5JX2ow62GvMXjNMZJRO2S3uVMnxbAgHwhJPa3y6WkQPR3u4yxi', // hashed 'admin123'
+        fullName: 'System Administrator',
+        email: 'admin@metascope.com',
+        isAdmin: true
+      });
+      console.log('Admin user created successfully');
+    }
   }
 
   // User operations
@@ -75,6 +95,10 @@ export class MemStorage implements IStorage {
       (user) => user.username.toLowerCase() === username.toLowerCase()
     );
   }
+  
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
@@ -82,7 +106,8 @@ export class MemStorage implements IStorage {
       ...insertUser, 
       id,
       fullName: insertUser.fullName || null,
-      email: insertUser.email || null
+      email: insertUser.email || null,
+      isAdmin: insertUser.isAdmin ?? false // Set default value to false if not provided
     };
     this.users.set(id, user);
     return user;
@@ -183,7 +208,16 @@ export class MemStorage implements IStorage {
 
   async createHealthScore(insertScore: InsertHealthScore): Promise<HealthScore> {
     const id = this.healthScoreIdCounter++;
-    const score: HealthScore = { ...insertScore, id };
+    // Ensure all required fields have default values if not provided
+    const score: HealthScore = { 
+      ...insertScore, 
+      id,
+      complexityScore: insertScore.complexityScore ?? 50,
+      performanceRisk: insertScore.performanceRisk ?? 50,
+      technicalDebt: insertScore.technicalDebt ?? 50,
+      metadataVolume: insertScore.metadataVolume ?? 50,
+      customizationLevel: insertScore.customizationLevel ?? 50
+    };
     this.healthScores.set(id, score);
     return score;
   }

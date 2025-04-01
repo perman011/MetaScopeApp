@@ -7,6 +7,7 @@ import Dashboard from "@/pages/dashboard";
 import DataModelAnalyzer from "@/pages/data-model-analyzer";
 import SOQLEditor from "@/pages/soql-editor";
 import SecurityAnalyzer from "@/pages/security-analyzer";
+import AdminPage from "@/pages/admin-page";
 import { ProtectedRoute } from "./lib/protected-route";
 import { AuthProvider } from "./hooks/use-auth";
 
@@ -18,6 +19,7 @@ function AppRoutes() {
       <ProtectedRoute path="/data-model-analyzer" component={DataModelAnalyzer} />
       <ProtectedRoute path="/soql-editor" component={SOQLEditor} />
       <ProtectedRoute path="/security-analyzer" component={SecurityAnalyzer} />
+      <ProtectedRoute path="/admin" component={AdminPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

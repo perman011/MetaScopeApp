@@ -10,10 +10,12 @@ import {
   Search, 
   Layers, 
   FileCode, 
-  CreditCard
+  CreditCard,
+  UserCog
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 
 interface NavItemProps {
   href: string;
@@ -44,6 +46,7 @@ function NavItem({ href, icon: Icon, children, active }: NavItemProps) {
 
 export default function SideNavigation() {
   const [location] = useLocation();
+  const { user } = useAuth();
 
   return (
     <aside className="w-64 bg-white border-r border-neutral-200 flex flex-col h-full overflow-y-auto hidden md:block">
@@ -88,6 +91,11 @@ export default function SideNavigation() {
             Settings
           </h3>
           <div className="mt-1">
+            {user?.isAdmin && (
+              <NavItem href="/admin" icon={UserCog} active={location === "/admin"}>
+                Admin Panel
+              </NavItem>
+            )}
             <NavItem href="/settings" icon={Settings}>
               Settings
             </NavItem>
