@@ -68,8 +68,9 @@ export default function OrgSelector() {
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // Fetch orgs
-  const { data: orgs, isLoading } = useQuery({
+  const { data: orgs, isLoading } = useQuery<any[]>({
     queryKey: ["/api/orgs"],
+    placeholderData: [],
   });
   
   // Set up form for connecting a new org
@@ -138,7 +139,7 @@ export default function OrgSelector() {
                 Loading orgs...
               </DropdownMenuItem>
             ) : orgs && orgs.length > 0 ? (
-              orgs.map((org) => (
+              orgs.map((org: any) => (
                 <DropdownMenuItem 
                   key={org.id} 
                   onClick={() => setActiveOrg(org)}

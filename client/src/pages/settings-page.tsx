@@ -1,311 +1,324 @@
-import { useState } from "react";
-import Header from "@/components/layout/header";
-import Sidebar from "@/components/layout/sidebar";
-import Footer from "@/components/layout/footer";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import TopNavBar from "@/components/layout/top-nav-bar";
+import SideNavigation from "@/components/layout/side-navigation";
+import { Settings, Save, UserCircle, BellRing, Shield, Database, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Save, User, Bell, Shield, Database, ChevronRight } from "lucide-react";
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("account");
-
-  const handleSave = () => {
+  
+  const handleSaveSettings = () => {
     toast({
       title: "Settings saved",
-      description: "Your settings have been updated successfully.",
+      description: "Your settings have been saved successfully.",
     });
   };
-
+  
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
+    <div className="min-h-screen bg-neutral-50 flex flex-col">
+      <TopNavBar />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-neutral-50 p-4 lg:p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold text-neutral-800">Settings</h1>
-              <p className="text-neutral-500 mt-1">Manage your account and application preferences</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <Card className="lg:col-span-1">
-              <CardContent className="p-4">
-                <nav className="space-y-1">
-                  <Button 
-                    variant={activeTab === "account" ? "secondary" : "ghost"} 
-                    className="w-full justify-start" 
-                    onClick={() => setActiveTab("account")}
-                  >
-                    <User className="h-4 w-4 mr-2" />
-                    Account
-                  </Button>
-                  <Button 
-                    variant={activeTab === "notifications" ? "secondary" : "ghost"} 
-                    className="w-full justify-start" 
-                    onClick={() => setActiveTab("notifications")}
-                  >
-                    <Bell className="h-4 w-4 mr-2" />
-                    Notifications
-                  </Button>
-                  <Button 
-                    variant={activeTab === "security" ? "secondary" : "ghost"} 
-                    className="w-full justify-start" 
-                    onClick={() => setActiveTab("security")}
-                  >
-                    <Shield className="h-4 w-4 mr-2" />
-                    Security
-                  </Button>
-                  <Button 
-                    variant={activeTab === "api" ? "secondary" : "ghost"} 
-                    className="w-full justify-start" 
-                    onClick={() => setActiveTab("api")}
-                  >
-                    <Database className="h-4 w-4 mr-2" />
-                    API Settings
-                  </Button>
-                </nav>
-              </CardContent>
-            </Card>
+        <SideNavigation />
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-5xl mx-auto">
+            <h1 className="text-3xl font-bold text-neutral-800 mb-2">Settings</h1>
+            <p className="text-neutral-600 mb-6">
+              Manage your account settings and preferences.
+            </p>
             
-            <div className="lg:col-span-3">
-              {activeTab === "account" && (
+            <Tabs defaultValue="account" className="w-full">
+              <TabsList className="grid w-full md:w-[600px] grid-cols-4 mb-8">
+                <TabsTrigger value="account">Account</TabsTrigger>
+                <TabsTrigger value="notifications">Notifications</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
+                <TabsTrigger value="advanced">Advanced</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="account">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Account Settings</CardTitle>
+                    <CardTitle className="flex items-center">
+                      <UserCircle className="h-5 w-5 mr-2" />
+                      Account Information
+                    </CardTitle>
                     <CardDescription>
-                      Manage your personal account information
+                      Update your account details and personal information.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="full-name">Full Name</Label>
-                      <Input id="full-name" defaultValue={user?.name || ""} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="username">Username</Label>
+                        <Input id="username" value={user?.username || ""} readOnly />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="fullName">Full Name</Label>
+                        <Input id="fullName" defaultValue={user?.fullName || ""} />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" defaultValue={user?.email || ""} />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="company">Company</Label>
+                        <Input id="company" defaultValue="Acme Corporation" />
+                      </div>
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input id="email" type="email" defaultValue={user?.email || ""} />
-                    </div>
+                    <Separator className="my-4" />
                     
                     <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
-                      <Input id="username" defaultValue={user?.username || ""} disabled />
-                      <p className="text-xs text-neutral-500">Username cannot be changed</p>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Button onClick={handleSave}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </Button>
+                      <Label htmlFor="bio">Bio</Label>
+                      <textarea 
+                        id="bio" 
+                        className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Tell us about yourself"
+                      />
                     </div>
                   </CardContent>
+                  <CardFooter className="justify-end">
+                    <Button onClick={handleSaveSettings}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </Button>
+                  </CardFooter>
                 </Card>
-              )}
+              </TabsContent>
               
-              {activeTab === "notifications" && (
+              <TabsContent value="notifications">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Notification Settings</CardTitle>
+                    <CardTitle className="flex items-center">
+                      <BellRing className="h-5 w-5 mr-2" />
+                      Notification Preferences
+                    </CardTitle>
                     <CardDescription>
-                      Configure how and when you receive notifications
+                      Manage how and when you receive notifications.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium">Email Notifications</h3>
+                        <p className="text-sm text-neutral-500">
+                          Receive email notifications for important updates and alerts.
+                        </p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium">Security Alerts</h3>
+                        <p className="text-sm text-neutral-500">
+                          Get notified about potential security issues in your Salesforce org.
+                        </p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium">Product Updates</h3>
+                        <p className="text-sm text-neutral-500">
+                          Receive notifications about new features and product updates.
+                        </p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium">Marketing Communications</h3>
+                        <p className="text-sm text-neutral-500">
+                          Receive occasional marketing communications and newsletters.
+                        </p>
+                      </div>
+                      <Switch />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="justify-end">
+                    <Button onClick={handleSaveSettings}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Preferences
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="security">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Shield className="h-5 w-5 mr-2" />
+                      Security Settings
+                    </CardTitle>
+                    <CardDescription>
+                      Manage your account security and authentication settings.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-neutral-700">Email Notifications</h3>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="email-sync">Sync Completion</Label>
-                          <p className="text-sm text-neutral-500">Receive notifications when metadata sync completes</p>
+                      <h3 className="font-medium">Change Password</h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="current-password">Current Password</Label>
+                          <Input id="current-password" type="password" />
                         </div>
-                        <Switch id="email-sync" defaultChecked />
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="new-password">New Password</Label>
+                          <Input id="new-password" type="password" />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="confirm-password">Confirm New Password</Label>
+                          <Input id="confirm-password" type="password" />
+                        </div>
                       </div>
                       
+                      <Button className="mt-2">Update Password</Button>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="email-security">Security Alerts</Label>
-                          <p className="text-sm text-neutral-500">Receive notifications about critical security issues</p>
+                        <div>
+                          <h3 className="font-medium">Two-Factor Authentication</h3>
+                          <p className="text-sm text-neutral-500">
+                            Add an extra layer of security to your account.
+                          </p>
                         </div>
-                        <Switch id="email-security" defaultChecked />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="email-newsletter">Product Updates</Label>
-                          <p className="text-sm text-neutral-500">Receive product updates and newsletters</p>
-                        </div>
-                        <Switch id="email-newsletter" />
+                        <Switch />
                       </div>
                     </div>
                     
+                    <Separator />
+                    
                     <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-neutral-700">In-App Notifications</h3>
-                      
                       <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="app-sync">Sync Status</Label>
-                          <p className="text-sm text-neutral-500">Show notifications for sync status changes</p>
+                        <div>
+                          <h3 className="font-medium">Session Timeout</h3>
+                          <p className="text-sm text-neutral-500">
+                            Automatically log out after a period of inactivity.
+                          </p>
                         </div>
-                        <Switch id="app-sync" defaultChecked />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="app-issues">New Issues</Label>
-                          <p className="text-sm text-neutral-500">Show notifications when new issues are detected</p>
-                        </div>
-                        <Switch id="app-issues" defaultChecked />
-                      </div>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Button onClick={handleSave}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {activeTab === "security" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Security Settings</CardTitle>
-                    <CardDescription>
-                      Manage your account security settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-neutral-700">Password</h3>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="current-password">Current Password</Label>
-                        <Input id="current-password" type="password" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="new-password">New Password</Label>
-                        <Input id="new-password" type="password" />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="confirm-password">Confirm New Password</Label>
-                        <Input id="confirm-password" type="password" />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-neutral-700">Two-Factor Authentication</h3>
-                      
-                      <div className="bg-primary-50 p-4 rounded-md">
-                        <p className="text-sm text-primary-800">Two-factor authentication is not enabled yet. Enable it to add an extra layer of security.</p>
-                        <Button className="mt-2" variant="outline" size="sm">
-                          Enable 2FA
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-neutral-700">Session Settings</h3>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="auto-logout">Automatic Logout</Label>
-                          <p className="text-sm text-neutral-500">Automatically log out after 24 hours of inactivity</p>
-                        </div>
-                        <Switch id="auto-logout" defaultChecked />
-                      </div>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Button onClick={handleSave}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {activeTab === "api" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>API Settings</CardTitle>
-                    <CardDescription>
-                      Manage API keys and integration settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-neutral-700">API Keys</h3>
-                      
-                      <div className="p-4 border border-neutral-200 rounded-md">
-                        <p className="text-sm text-neutral-600 mb-2">No API keys have been generated yet</p>
-                        <Button variant="outline" size="sm">
-                          Generate API Key
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-neutral-700">Salesforce API Settings</h3>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="api-version">Default API Version</Label>
-                        <select id="api-version" className="w-full flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                          <option>v58.0</option>
-                          <option selected>v57.0</option>
-                          <option>v56.0</option>
-                          <option>v55.0</option>
+                        <select className="flex h-10 w-40 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                          <option value="15">15 minutes</option>
+                          <option value="30">30 minutes</option>
+                          <option value="60" selected>1 hour</option>
+                          <option value="120">2 hours</option>
+                          <option value="240">4 hours</option>
                         </select>
                       </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="bulk-api">Use Bulk API</Label>
-                          <p className="text-sm text-neutral-500">Use Bulk API for large data sets when possible</p>
-                        </div>
-                        <Switch id="bulk-api" defaultChecked />
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="metadata-cache">Cache Metadata</Label>
-                          <p className="text-sm text-neutral-500">Cache metadata to improve performance</p>
-                        </div>
-                        <Switch id="metadata-cache" defaultChecked />
-                      </div>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Button onClick={handleSave}>
-                        <Save className="h-4 w-4 mr-2" />
-                        Save Changes
-                      </Button>
                     </div>
                   </CardContent>
+                  <CardFooter className="justify-end">
+                    <Button onClick={handleSaveSettings}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Security Settings
+                    </Button>
+                  </CardFooter>
                 </Card>
-              )}
-            </div>
+              </TabsContent>
+              
+              <TabsContent value="advanced">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Settings className="h-5 w-5 mr-2" />
+                      Advanced Settings
+                    </CardTitle>
+                    <CardDescription>
+                      Customize advanced application settings.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium">Data Caching</h3>
+                        <p className="text-sm text-neutral-500">
+                          Cache metadata for faster loading times.
+                        </p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium">Auto-refresh Analysis</h3>
+                        <p className="text-sm text-neutral-500">
+                          Automatically refresh analysis data when connecting to an org.
+                        </p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Default API Version</h3>
+                      <p className="text-sm text-neutral-500 mb-2">
+                        Select the default Salesforce API version to use for queries.
+                      </p>
+                      <select className="flex h-10 w-full max-w-xs items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                        <option value="60.0">API v60.0 (Spring '24)</option>
+                        <option value="59.0" selected>API v59.0 (Winter '24)</option>
+                        <option value="58.0">API v58.0 (Summer '23)</option>
+                        <option value="57.0">API v57.0 (Spring '23)</option>
+                      </select>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">Display Density</h3>
+                          <p className="text-sm text-neutral-500">
+                            Choose how compact the UI should be.
+                          </p>
+                        </div>
+                        <select className="flex h-10 w-32 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                          <option value="compact">Compact</option>
+                          <option value="normal" selected>Normal</option>
+                          <option value="comfortable">Comfortable</option>
+                        </select>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="justify-end">
+                    <Button onClick={handleSaveSettings}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Advanced Settings
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </main>
       </div>
-      <Footer />
     </div>
   );
 }
