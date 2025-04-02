@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useOrgContext } from "@/hooks/use-org";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -54,6 +55,7 @@ export default function ConnectSalesforceOrgDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [authMethod, setAuthMethod] = useState("credentials"); // or "token"
   const { toast } = useToast();
+  const { refetchOrgs } = useOrgContext();
 
   const connectMutation = useMutation({
     mutationFn: async (orgData: any) => {
@@ -63,9 +65,12 @@ export default function ConnectSalesforceOrgDialog({
       console.log("Connection success, received:", result);
       return result;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log("Invalidating queries and refreshing org data");
-      queryClient.invalidateQueries({ queryKey: ["/api/orgs"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/orgs"] });
+      // Use our manual refetch to ensure UI is updated
+      await refetchOrgs();
+      
       toast({
         title: "Org connected successfully",
         description: `Your Salesforce org has been connected to your account.`,

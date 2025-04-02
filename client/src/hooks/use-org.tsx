@@ -5,24 +5,28 @@ import {
   useState,
   useEffect,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SalesforceOrg } from "@shared/schema";
 
 interface OrgContextType {
   activeOrg: SalesforceOrg | null;
   setActiveOrg: (org: SalesforceOrg | null) => void;
   isLoading: boolean;
+  refetchOrgs: () => Promise<void>;
 }
 
 const OrgContext = createContext<OrgContextType | null>(null);
 
 export function OrgProvider({ children }: { children: ReactNode }) {
   const [activeOrg, setActiveOrg] = useState<SalesforceOrg | null>(null);
+  const queryClient = useQueryClient();
   
   // Fetch orgs
-  const { data: orgs, isLoading } = useQuery<SalesforceOrg[]>({
+  const { data: orgs, isLoading, refetch } = useQuery<SalesforceOrg[]>({
     queryKey: ["/api/orgs"],
     enabled: true,
+    staleTime: 5000, // Consider data stale after 5 seconds
+    refetchOnWindowFocus: true,
     onSuccess: (data: SalesforceOrg[]) => {
       console.log("Orgs fetched successfully:", data);
     },
@@ -30,6 +34,14 @@ export function OrgProvider({ children }: { children: ReactNode }) {
       console.error("Error fetching orgs:", error);
     }
   });
+  
+  // Function to manually refetch orgs
+  const refetchOrgs = async () => {
+    console.log("Manually refetching orgs...");
+    await queryClient.invalidateQueries({ queryKey: ["/api/orgs"] });
+    const result = await refetch();
+    console.log("Refetch result:", result.data);
+  };
   
   // Set the first org as active if none is selected and orgs are loaded
   useEffect(() => {
@@ -64,6 +76,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
         activeOrg,
         setActiveOrg,
         isLoading,
+        refetchOrgs,
       }}
     >
       {children}
