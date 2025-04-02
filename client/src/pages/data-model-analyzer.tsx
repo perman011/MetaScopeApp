@@ -1,9 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ModelVisualizer from "@/components/data-model/model-visualizer";
+import EnhancedSchemaVisualizer from "@/components/data-model/enhanced-schema-visualizer";
 import { useOrgContext } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
@@ -18,6 +20,7 @@ interface ObjectMetadata {
 
 export default function DataModelAnalyzer() {
   const { activeOrg } = useOrgContext();
+  const [useEnhancedVisualizer, setUseEnhancedVisualizer] = useState(true);
 
   // Fetch metadata for active org
   const { data: metadata, isLoading } = useQuery<any[]>({
@@ -46,11 +49,20 @@ export default function DataModelAnalyzer() {
     <div className="p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Data Model Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-neutral-800">Data Model Analyzer</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            Visualize and analyze your Salesforce object model
-          </p>
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold text-neutral-800">Data Model Analyzer</h1>
+            <p className="mt-1 text-sm text-neutral-500">
+              Visualize and analyze your Salesforce object model
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-neutral-600">Enhanced Visualizer</span>
+            <Switch 
+              checked={useEnhancedVisualizer} 
+              onCheckedChange={setUseEnhancedVisualizer} 
+            />
+          </div>
         </div>
 
         <Tabs defaultValue="graph">
@@ -74,6 +86,8 @@ export default function DataModelAnalyzer() {
                   <div className="h-full flex items-center justify-center">
                     <p className="text-neutral-500">No object metadata available</p>
                   </div>
+                ) : useEnhancedVisualizer ? (
+                  <EnhancedSchemaVisualizer metadata={objectMetadata} />
                 ) : (
                   <ModelVisualizer metadata={objectMetadata} />
                 )}
