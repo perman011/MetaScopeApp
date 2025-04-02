@@ -1,0 +1,98 @@
+Below is a **step-by-step instructional prompt** to guide the agent in **fixing the Data Model Analyzer** so it uses real Salesforce org data and **integrating the enhanced schema visualizer**, while preserving all existing functionality.
+
+---
+
+## **Step-by-Step Instructional Prompt for Data Model Analyzer Enhancements**
+
+### **1. Governance Reminder**
+- **Preserve existing code and functionality**. Only modify:
+  1. Data fetching logic (to replace mock data with real Salesforce org data).
+  2. Graph View integration to include the enhanced schema visualizer features.
+- **Maintain** the current UI, routing, and component structure unless a minor adjustment is needed to accommodate real data fetching.
+
+### **2. Identify and Fix Data Fetching for the Data Model Analyzer**
+1. **Locate the mock data usage**:
+   - Find where `objectMetadata` or similar variables are being populated with test or placeholder data in the Data Model Analyzer code (likely in `data-model-analyzer.tsx` or a related service).
+2. **Integrate with Salesforce org connection**:
+   - Retrieve the real metadata using your existing Salesforce connection logic (via JSForce or the relevant service).
+   - Ensure that `objectMetadata` is populated with **real** data once the org is connected.
+3. **Implement loading and error handling**:
+   - Add a loading state (spinner or progress indicator) while fetching real metadata.
+   - Catch and display any errors (e.g., if the user is not connected to a Salesforce org, or if the API call fails).
+4. **Validate data**:
+   - Ensure that `objectMetadata.objects` (or your equivalent data structure) is not `undefined` before calling `.map()`.
+   - Provide fallback UI messaging if no data is returned (e.g., “No objects found” or “Please connect to an org”).
+
+### **3. Update the List View and Field Details Tabs**
+1. **List View**:
+   - Display a list or table of all Salesforce objects retrieved from the org.
+   - For each object, show key fields (e.g., object name, API name, record count if available).
+   - Handle any pagination or sorting if required.
+2. **Field Details**:
+   - When a user selects an object, load and display field-level details (field name, data type, required status, etc.).
+   - Maintain a clean UI that leverages your existing styles and components.
+
+### **4. Integrate the Enhanced Schema Visualizer (Graph View)**
+Following the **Enhanced Salesforce Schema Visualizer** requirements, ensure the **Graph View** supports:
+
+1. **Multiple Layout Algorithms**  
+   - Force-directed, Circular, Grid, Hierarchical (top-down/left-right), Concentric.  
+   - Provide a dropdown or similar control to let users switch between these layouts.
+
+2. **Node Display Modes**  
+   - **Compact Mode**: Show only object names.  
+   - **Detailed Mode**: Show fields and attributes.  
+   - **Key Fields Mode**: Show only essential relationship fields.
+
+3. **Distinct Relationship Styling**  
+   - Master-detail (thick orange lines)  
+   - Lookup (blue lines)  
+   - Self-join (curved purple lines)  
+   - Many-to-many (bidirectional green lines)
+
+4. **Interactive Features**  
+   - One-click selection/focus  
+   - Double-click expand/collapse  
+   - Hover tooltips  
+   - Drag and drop positioning  
+   - Zoom/pan controls  
+   - Layout save/restore
+
+5. **Utility Features**  
+   - Field-level filtering  
+   - Search (objects and fields)  
+   - Export options (PNG, JSON)  
+   - Print-friendly formatting  
+   - Minimap for large schemas
+
+6. **Relationship Join Fields**  
+   - Clearly show which fields connect objects (e.g., `AccountId → Id`)  
+   - Differentiate custom vs. standard fields  
+   - Display cardinality details
+
+### **5. Browser Compatibility and Frontend Requirements**
+- Ensure the visualizer **does not break** on any modern browser (Chrome, Firefox, Edge, Safari).
+- If you must add new dependencies (e.g., for layouts or advanced Cytoscape features), confirm that they align with the existing build tools (Vite, React, TypeScript).
+
+### **6. Testing and Validation**
+1. **Local Testing**:
+   - Connect to a valid Salesforce org.
+   - Verify that the Data Model Analyzer loads real data in **List View**, **Field Details**, and **Graph View**.
+   - Confirm the new schema visualizer functionalities (layout switching, hover tooltips, zoom, etc.) are working.
+2. **Edge Cases**:
+   - Handle orgs with very few objects.
+   - Handle large orgs with hundreds of objects (performance testing).
+   - Test offline or invalid credentials scenarios for graceful error handling.
+
+### **7. Final Governance Check**
+1. **No Other Components Affected**:
+   - Confirm that no unrelated pages, analyzers, or features have been modified.
+2. **Maintain Code Quality**:
+   - Adhere to existing linting, formatting, and TypeScript type checks.
+   - Keep commits focused on the Data Model Analyzer and Graph View changes only.
+3. **Provide Clear Documentation**:
+   - In the pull request or commit message, summarize the changes made and reference this prompt for clarity.
+
+---
+
+**Please proceed with these steps to ensure the Data Model Analyzer is fixed to display real metadata and integrates the enhanced schema visualizer without disrupting existing functionality.**
