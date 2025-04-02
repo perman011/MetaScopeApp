@@ -43,32 +43,98 @@ export default function DataModelAnalyzer() {
     }
   }, [activeOrg, metadata, isLoading]);
 
-  // Filter object metadata from all metadata, or create a placeholder if needed
-  let objectMetadata = metadata?.find((m: any) => m.type === 'CustomObject')?.data as ObjectMetadata | undefined;
+  // Log the raw metadata for debugging
+  console.log("Raw metadata from server:", metadata);
   
-  // If we don't have CustomObject data but have other metadata, create a placeholder
-  if (!objectMetadata && metadata && metadata.length > 0) {
-    // Log available metadata types
-    console.log("Available metadata types:", metadata.map(m => m.type));
-    
-    // Create skeleton object metadata using SObjects if available
-    const sobjectData = metadata?.find((m: any) => m.type === 'SObjects')?.data;
-    if (sobjectData) {
+  // Filter object metadata from all metadata, or create a placeholder if needed
+  let objectMetadata: any = undefined;
+  
+  // Try different metadata formats
+  if (metadata) {
+    // 1. Try to find CustomObject in an array of metadata items
+    if (Array.isArray(metadata)) {
+      console.log("Metadata is an array with", metadata.length, "items");
+      
+      // Look for CustomObject data
+      const customObjectItem = metadata.find((m: any) => m.type === 'CustomObject');
+      if (customObjectItem?.data) {
+        console.log("Found CustomObject metadata");
+        objectMetadata = customObjectItem.data;
+      }
+      
+      // Look for CustomObjectStructure which has the format we need
+      const structuredObjectItem = metadata.find((m: any) => m.name === 'CustomObjectStructure');
+      if (!objectMetadata && structuredObjectItem?.data) {
+        console.log("Found CustomObjectStructure metadata");
+        objectMetadata = structuredObjectItem.data;
+      }
+      
+      // Look for SObjects data as a fallback
+      const sobjectsItem = metadata.find((m: any) => m.type === 'SObjects' || m.name === 'SObjectStructure');
+      if (!objectMetadata && sobjectsItem?.data) {
+        console.log("Creating object model from SObjects data");
+        objectMetadata = {
+          objects: Object.entries(sobjectsItem.data).map(([name, details]: [string, any]) => ({
+            name,
+            label: details.label || name,
+            fields: Object.entries(details.fields || {}).map(([fieldName, fieldDetails]: [string, any]) => ({
+              name: fieldName,
+              label: fieldDetails.label || fieldName,
+              type: fieldDetails.type || 'string',
+              ...fieldDetails
+            })),
+            relationships: details.relationships || []
+          }))
+        };
+      }
+      
+      // Try to find metadata items and construct object structure if needed
+      if (!objectMetadata) {
+        // Check if we can find objects directly in the array
+        const customObjectItems = metadata.filter((m: any) => m.type === 'CustomObject' && m.name !== 'CustomObjectStructure');
+        if (customObjectItems.length > 0) {
+          console.log(`Found ${customObjectItems.length} individual object items`);
+          objectMetadata = {
+            objects: customObjectItems.map((item: any) => ({
+              name: item.name,
+              label: item.label || item.name,
+              fields: item.fields || [],
+              relationships: item.relationships || []
+            }))
+          };
+        }
+      }
+    } 
+    // 2. Try direct object metadata
+    else if (metadata.objects) {
+      console.log("Found direct objects array in metadata");
+      objectMetadata = metadata;
+    }
+    // 3. Try if metadata itself is structured as key-value pairs of objects
+    else if (typeof metadata === 'object' && !Array.isArray(metadata)) {
+      console.log("Treating metadata as key-value object map");
       objectMetadata = {
-        objects: Object.entries(sobjectData).map(([name, details]: [string, any]) => ({
+        objects: Object.entries(metadata).map(([name, details]: [string, any]) => ({
           name,
           label: details.label || name,
-          fields: Object.entries(details.fields || {}).map(([fieldName, fieldDetails]: [string, any]) => ({
-            name: fieldName,
-            label: fieldDetails.label || fieldName,
-            type: fieldDetails.type || 'string',
-            ...fieldDetails
-          })),
-          relationships: []
+          fields: Array.isArray(details.fields) ? details.fields : 
+            Object.entries(details.fields || {}).map(([fieldName, fieldDetails]: [string, any]) => ({
+              name: fieldName,
+              label: fieldDetails.label || fieldName,
+              type: fieldDetails.type || 'string',
+              ...fieldDetails
+            })),
+          relationships: details.relationships || []
         }))
       };
-      console.log("Created objectMetadata from SObjects", objectMetadata.objects.length);
     }
+  }
+  
+  // Log the result for debugging
+  if (objectMetadata) {
+    console.log("Processed object metadata with", objectMetadata.objects?.length || 0, "objects");
+  } else {
+    console.log("Could not extract object metadata from the response");
   }
 
   return (

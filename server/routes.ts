@@ -178,7 +178,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const type = req.query.type as string | undefined;
+      
+      // Get stored metadata from the database
       const metadata = await storage.getOrgMetadata(org.id, type);
+      
+      // Find object-related metadata items
+      const customObjectItems = metadata.filter(
+        (m: any) => m.type === 'CustomObject' || m.type === 'SObjects'
+      );
+      
+      // If we have metadata with clear CustomObjectStructure/SObjectStructure, use that
+      const structuredData = metadata.find(
+        (m: any) => m.name === 'CustomObjectStructure' || m.name === 'SObjectStructure'
+      );
+      
+      if (structuredData && structuredData.data) {
+        console.log(`Found structured ${structuredData.name} data for visualization`);
+        // Return the structured data which is in the format our visualizer expects
+        return res.json(metadata);
+      }
+      
+      if (customObjectItems.length > 0) {
+        console.log(`Found ${customObjectItems.length} object metadata items`);
+        // Return all metadata items, our frontend will parse them
+        return res.json(metadata);
+      }
+      
+      console.log("No object data found in stored metadata, returning all items");
+      // Return all metadata items if no specific object data is found
       res.json(metadata);
     } catch (error) {
       console.error("Error fetching metadata:", error);
@@ -196,8 +223,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).send("Forbidden");
       }
       
-      const types = req.body.types || [];
+      // Force add 'CustomObject' and 'SObjects' types for visualization
+      const requestedTypes = req.body.types || [];
+      const types = Array.from(new Set([...requestedTypes, 'CustomObject', 'SObjects']));
+      
+      console.log(`Fetching metadata from org ${org.id} for types:`, types);
       const metadata = await salesforceService.getMetadata(org, types);
+      
+      // Update the org's lastSyncedAt timestamp after successful sync
+      await storage.updateOrg(org.id, {
+        lastSyncedAt: new Date().toISOString()
+      });
+      
       res.json(metadata);
     } catch (error) {
       console.error("Error syncing metadata:", error);
