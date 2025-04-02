@@ -57,10 +57,14 @@ export default function ConnectSalesforceOrgDialog({
 
   const connectMutation = useMutation({
     mutationFn: async (orgData: any) => {
+      console.log("Connecting org with data:", orgData);
       const response = await apiRequest("POST", "/api/orgs", orgData);
-      return await response.json();
+      const result = await response.json();
+      console.log("Connection success, received:", result);
+      return result;
     },
     onSuccess: (data) => {
+      console.log("Invalidating queries and refreshing org data");
       queryClient.invalidateQueries({ queryKey: ["/api/orgs"] });
       toast({
         title: "Org connected successfully",

@@ -54,6 +54,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/orgs", ensureAuthenticated, async (req, res) => {
+    console.log("Received request to create org:", {
+      authMethod: req.body.authMethod,
+      name: req.body.name,
+      userId: req.user?.id,
+      // Don't log sensitive data like passwords
+    });
+    
     try {
       const { 
         authMethod, 
@@ -66,10 +73,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (authMethod === 'credentials') {
         if (!email || !password) {
+          console.log("Missing email or password for credential auth");
           return res.status(400).send("Email and password are required for credential authentication");
         }
         
         try {
+          console.log("Attempting to authenticate with Salesforce using credentials");
           // Authenticate with Salesforce
           const authResult = await salesforceService.authenticateWithCredentials({
             email,
@@ -77,6 +86,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             securityToken: securityToken || '',
             environment: environment || 'production'
           });
+          
+          console.log("Salesforce authentication successful, instance URL:", authResult.instanceUrl);
           
           // Add the auth result to the org data
           const orgData = {
@@ -89,20 +100,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Validate and create the org
           const validatedData = insertSalesforceOrgSchema.parse(orgData);
+          console.log("Validated org data and creating storage entry");
           const org = await storage.createOrg(validatedData);
+          console.log("Org created successfully with ID:", org.id);
           res.status(201).json(org);
         } catch (authError) {
           console.error("Salesforce authentication error:", authError);
           return res.status(401).send("Failed to authenticate with Salesforce: " + authError.message);
         }
       } else {
+        console.log("Using token-based authentication");
         // Token-based authentication (original flow)
         const validatedData = insertSalesforceOrgSchema.parse({
           ...req.body,
           userId: req.user!.id
         });
         
+        console.log("Validated org data and creating storage entry");
         const org = await storage.createOrg(validatedData);
+        console.log("Org created successfully with ID:", org.id);
         res.status(201).json(org);
       }
     } catch (error) {

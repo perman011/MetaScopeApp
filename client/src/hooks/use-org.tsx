@@ -23,11 +23,19 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   const { data: orgs, isLoading } = useQuery<SalesforceOrg[]>({
     queryKey: ["/api/orgs"],
     enabled: true,
+    onSuccess: (data: SalesforceOrg[]) => {
+      console.log("Orgs fetched successfully:", data);
+    },
+    onError: (error: Error) => {
+      console.error("Error fetching orgs:", error);
+    }
   });
   
   // Set the first org as active if none is selected and orgs are loaded
   useEffect(() => {
+    console.log("Org context effect triggered - orgs:", orgs, "activeOrg:", activeOrg);
     if (!activeOrg && orgs && orgs.length > 0) {
+      console.log("Setting first org as active:", orgs[0]);
       setActiveOrg(orgs[0]);
     }
   }, [orgs, activeOrg]);
@@ -43,7 +51,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedOrgId = localStorage.getItem("activeOrgId");
     if (storedOrgId && orgs) {
-      const org = orgs.find(o => o.id.toString() === storedOrgId);
+      const org = orgs.find((o: SalesforceOrg) => o.id.toString() === storedOrgId);
       if (org) {
         setActiveOrg(org);
       }
