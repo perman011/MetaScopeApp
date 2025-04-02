@@ -70,7 +70,7 @@ export default function SOQLEditor() {
       const selectMatch = optimizedQuery.match(/SELECT\s+(.*?)\s+FROM/i);
       if (selectMatch && selectMatch[1]) {
         const fields = selectMatch[1].split(',').map(f => f.trim());
-        const uniqueFields = Array.from(new Set(fields));
+        const uniqueFields = [...new Set(fields)];
         optimizedQuery = optimizedQuery.replace(
           /SELECT\s+(.*?)\s+FROM/i,
           `SELECT ${uniqueFields.join(', ')} FROM`
