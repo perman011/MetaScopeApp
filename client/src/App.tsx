@@ -4,6 +4,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import HomePage from "@/pages/home-page";
 import Dashboard from "@/pages/dashboard";
+import EnhancedDashboard from "@/pages/enhanced-dashboard";
 import DataModelAnalyzer from "@/pages/data-model-analyzer";
 import SOQLEditor from "@/pages/soql-editor";
 import SecurityAnalyzer from "@/pages/security-analyzer";
@@ -57,6 +58,7 @@ function AuthenticatedRoutes() {
             <Switch>
               <Route path="/" component={HomePage} />
               <Route path="/dashboard" component={Dashboard} />
+              <Route path="/enhanced-dashboard" component={EnhancedDashboard} />
               <Route path="/data-model-analyzer" component={DataModelAnalyzer} />
               <Route path="/soql-editor" component={SOQLEditor} />
               <Route path="/security-analyzer" component={SecurityAnalyzer} />
