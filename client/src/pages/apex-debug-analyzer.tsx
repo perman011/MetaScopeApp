@@ -4,8 +4,6 @@ import { SalesforceOrg } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useOrgContext } from "@/hooks/use-org";
 import { useToast } from "@/hooks/use-toast";
-// import SideNavigation from "@/components/layout/side-navigation";
-import TopNavBar from "@/components/layout/top-nav-bar";
 import OrgContext from "@/components/org-context";
 import {
   Card,
