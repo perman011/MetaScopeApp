@@ -498,35 +498,62 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      // Handle search on Enter key
+                      // Show toast notification for search just like the button click
                       if (searchQuery.trim()) {
-                        console.log("Searching for:", searchQuery);
                         const matchCount = filteredObjects.length;
-                        
-                        try {
-                          if (matchCount > 0) {
+                        if (matchCount > 0) {
+                          // Use the toast function from the hook if available, otherwise use fallbacks
+                          try {
                             if (toast) {
                               toast({
-                                title: "Search Results", 
+                                title: `Search Results`,
                                 description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                                variant: "default"
+                                variant: "default",
+                              });
+                            } else if (globalToast) {
+                              globalToast({
+                                title: `Search Results`,
+                                description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
+                                variant: "default",
+                              });
+                            } else if (notify) {
+                              notify({
+                                title: `Search Results`,
+                                description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
+                                variant: "default",
                               });
                             } else {
-                              console.log(`Found ${matchCount} objects matching "${searchQuery}"`);
+                              console.log(`Search Results: Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`);
                             }
-                          } else {
+                          } catch (error) {
+                            console.error("Error showing toast:", error);
+                          }
+                        } else {
+                          try {
                             if (toast) {
                               toast({
                                 title: "No Results Found",
                                 description: `No objects match "${searchQuery}". Try a different search term.`,
-                                variant: "destructive"
+                                variant: "destructive",
+                              });
+                            } else if (globalToast) {
+                              globalToast({
+                                title: "No Results Found",
+                                description: `No objects match "${searchQuery}". Try a different search term.`,
+                                variant: "destructive",
+                              });
+                            } else if (notify) {
+                              notify({
+                                title: "No Results Found",
+                                description: `No objects match "${searchQuery}". Try a different search term.`,
+                                variant: "destructive",
                               });
                             } else {
-                              console.log(`No objects match "${searchQuery}". Try a different search term.`);
+                              console.log(`No Results Found: No objects match "${searchQuery}". Try a different search term.`);
                             }
+                          } catch (error) {
+                            console.error("Error showing toast:", error);
                           }
-                        } catch (error) {
-                          console.error("Error during search:", error);
                         }
                       }
                     }
@@ -542,30 +569,42 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
                     // Show toast notification for search
                     if (searchQuery.trim()) {
                       const matchCount = filteredObjects.length;
-                      try {
-                        if (matchCount > 0) {
+                      if (matchCount > 0) {
+                        try {
                           if (toast) {
                             toast({
-                              title: "Search Results", 
+                              title: `Search Results`,
                               description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                              variant: "default"
+                              variant: "default",
                             });
                           } else {
-                            console.log(`Found ${matchCount} objects matching "${searchQuery}"`);
+                            globalToast({
+                              title: `Search Results`,
+                              description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
+                              variant: "default",
+                            });
                           }
-                        } else {
+                        } catch (error) {
+                          console.error("Error showing toast:", error);
+                        }
+                      } else {
+                        try {
                           if (toast) {
                             toast({
                               title: "No Results Found",
                               description: `No objects match "${searchQuery}". Try a different search term.`,
-                              variant: "destructive"
+                              variant: "destructive",
                             });
                           } else {
-                            console.log(`No objects match "${searchQuery}". Try a different search term.`);
+                            globalToast({
+                              title: "No Results Found",
+                              description: `No objects match "${searchQuery}". Try a different search term.`,
+                              variant: "destructive",
+                            });
                           }
+                        } catch (error) {
+                          console.error("Error showing toast:", error);
                         }
-                      } catch (error) {
-                        console.error("Error during search:", error);
                       }
                     }
                   }}

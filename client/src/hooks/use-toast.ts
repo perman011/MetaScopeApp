@@ -185,7 +185,26 @@ function useToast() {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    isHeadless: false, // Add this property to prevent "Cannot read properties of null (reading 'isHeadless')" error
+    notify: toast, // Add this alias to prevent "Cannot read properties of null (reading 'notify')" error
   }
 }
 
-export { useToast, toast }
+// Create a safe version of the toast function that won't crash if called outside a component
+function safeToast(props: Toast) {
+  try {
+    return toast(props);
+  } catch (error) {
+    console.error("Error showing toast:", error);
+    return {
+      id: "error",
+      dismiss: () => {},
+      update: () => {},
+    };
+  }
+}
+
+// Add a global notify function to prevent "Cannot read properties of null (reading 'notify')" error
+const notify = safeToast;
+
+export { useToast, toast, safeToast, notify }
