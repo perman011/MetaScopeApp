@@ -120,29 +120,20 @@ export default function EnhancedDashboard() {
   return (
     <div className="p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Dashboard Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-neutral-800">Dashboard</h1>
-            <p className="mt-1 text-sm text-neutral-500">
-              Overview of your Salesforce org's health and metadata
-            </p>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" disabled={!activeOrg} onClick={async () => {
-              if (!activeOrg) return;
-              try {
-                await apiRequest("POST", `/api/orgs/${activeOrg.id}/sync`, {});
-                await apiRequest("POST", `/api/orgs/${activeOrg.id}/analyze`);
-              } catch (error) {
-                console.error("Error refreshing data:", error);
-              }
-            }}>
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Refresh Data
-            </Button>
-          </div>
+        {/* Dashboard Actions */}
+        <div className="flex justify-end items-center mb-6">
+          <Button variant="outline" size="sm" disabled={!activeOrg} onClick={async () => {
+            if (!activeOrg) return;
+            try {
+              await apiRequest("POST", `/api/orgs/${activeOrg.id}/sync`, {});
+              await apiRequest("POST", `/api/orgs/${activeOrg.id}/analyze`);
+            } catch (error) {
+              console.error("Error refreshing data:", error);
+            }
+          }}>
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Refresh Data
+          </Button>
         </div>
         
         {!activeOrg ? (

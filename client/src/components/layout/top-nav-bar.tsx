@@ -39,8 +39,13 @@ export default function TopNavBar() {
             className="text-primary-500 font-bold text-xl flex items-center cursor-pointer"
             onClick={() => navigate("/")}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mr-2" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+              <path d="M12 6v6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M9 2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M7 5.5L4.5 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M17 5.5L19.5 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <rect x="9" y="9" width="6" height="6" fill="currentColor" opacity="0.3" />
             </svg>
             <span>MetaScope</span>
           </div>
