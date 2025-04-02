@@ -6,8 +6,9 @@ import { useOrgContext } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
 interface ObjectMetadata {
   objects: Array<{
@@ -82,9 +83,36 @@ export default function DataModelAnalyzer() {
                   <div className="h-full flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
                   </div>
+                ) : !activeOrg ? (
+                  <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                    <div className="max-w-md">
+                      <h3 className="text-xl font-medium text-neutral-700 mb-3">Connect a Salesforce Org</h3>
+                      <p className="text-neutral-600 mb-6">
+                        To visualize your Salesforce data model, you need to connect a Salesforce organization first.
+                      </p>
+                      <div className="flex items-center justify-center">
+                        <Button className="flex items-center" asChild>
+                          <a href="/">
+                            <div className="mr-2">+</div> Connect Salesforce Org
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 ) : !objectMetadata ? (
-                  <div className="h-full flex items-center justify-center">
-                    <p className="text-neutral-500">No object metadata available</p>
+                  <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                    <div className="max-w-md">
+                      <h3 className="text-xl font-medium text-neutral-700 mb-3">No Metadata Available</h3>
+                      <p className="text-neutral-600 mb-6">
+                        We couldn't find any object metadata for this organization. This may happen if the sync process hasn't completed or if there was an issue retrieving the metadata.
+                      </p>
+                      <Button
+                        onClick={() => apiRequest("POST", `/api/orgs/${activeOrg.id}/sync`, {})}
+                        className="flex items-center"
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" /> Sync Metadata
+                      </Button>
+                    </div>
                   </div>
                 ) : useEnhancedVisualizer ? (
                   <EnhancedSchemaVisualizer metadata={objectMetadata} />
@@ -105,9 +133,30 @@ export default function DataModelAnalyzer() {
                   <div className="h-64 flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
                   </div>
+                ) : !activeOrg ? (
+                  <div className="h-64 flex items-center justify-center p-6 text-center">
+                    <div>
+                      <h3 className="text-lg font-medium text-neutral-700 mb-2">Connect a Salesforce Org</h3>
+                      <p className="text-neutral-600 mb-4">
+                        To view Salesforce objects, connect an organization first.
+                      </p>
+                    </div>
+                  </div>
                 ) : !objectMetadata ? (
-                  <div className="h-64 flex items-center justify-center">
-                    <p className="text-neutral-500">No object metadata available</p>
+                  <div className="h-64 flex items-center justify-center p-6 text-center">
+                    <div>
+                      <h3 className="text-lg font-medium text-neutral-700 mb-2">No Metadata Available</h3>
+                      <p className="text-neutral-600 mb-4">
+                        Sync the organization metadata to see objects.
+                      </p>
+                      <Button
+                        onClick={() => apiRequest("POST", `/api/orgs/${activeOrg.id}/sync`, {})}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" /> Sync Metadata
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -147,9 +196,30 @@ export default function DataModelAnalyzer() {
                   <div className="h-64 flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
                   </div>
+                ) : !activeOrg ? (
+                  <div className="h-64 flex items-center justify-center p-6 text-center">
+                    <div>
+                      <h3 className="text-lg font-medium text-neutral-700 mb-2">Connect a Salesforce Org</h3>
+                      <p className="text-neutral-600">
+                        To view field details, connect an organization first.
+                      </p>
+                    </div>
+                  </div>
                 ) : !objectMetadata ? (
-                  <div className="h-64 flex items-center justify-center">
-                    <p className="text-neutral-500">No object metadata available</p>
+                  <div className="h-64 flex items-center justify-center p-6 text-center">
+                    <div>
+                      <h3 className="text-lg font-medium text-neutral-700 mb-2">No Metadata Available</h3>
+                      <p className="text-neutral-600 mb-4">
+                        Sync the organization metadata to see field details.
+                      </p>
+                      <Button
+                        onClick={() => apiRequest("POST", `/api/orgs/${activeOrg.id}/sync`, {})}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" /> Sync Metadata
+                      </Button>
+                    </div>
                   </div>
                 ) : (
                   <div className="p-4">

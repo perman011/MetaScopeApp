@@ -391,6 +391,33 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
     setRightPanelCollapsed(!rightPanelCollapsed);
   };
 
+  // Check if there's any data to display
+  const hasData = processedMetadata.objects.length > 0;
+
+  // If no data, show a message instead
+  if (!hasData) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md">
+          <h3 className="text-xl font-medium text-neutral-700 mb-3">No Object Metadata Available</h3>
+          <p className="text-neutral-600 mb-6">
+            To visualize your Salesforce data model, you need to connect a Salesforce organization first.
+          </p>
+          <div className="flex items-center justify-center space-x-2">
+            <Button variant="outline" className="flex items-center" asChild>
+              <a href="/">
+                <div className="mr-2">←</div> Go to Dashboard
+              </a>
+            </Button>
+            <Button className="flex items-center">
+              <div className="mr-2">+</div> Connect Salesforce Org
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex h-full bg-white">
       {/* Left Panel */}
