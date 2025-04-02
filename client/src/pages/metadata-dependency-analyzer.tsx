@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import TopNavBar from "@/components/layout/top-nav-bar";
-import SideNavigation from "@/components/layout/side-navigation";
 import { useOrgContext } from "@/hooks/use-org";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -171,196 +169,247 @@ export default function MetadataDependencyAnalyzer() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
-      <TopNavBar />
-      <div className="flex flex-1 overflow-hidden">
-        <SideNavigation />
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-neutral-800">Metadata Dependency Analyzer</h1>
-                <p className="text-neutral-600">
-                  Analyze dependencies and references between metadata components.
-                </p>
-              </div>
-              <div>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="outline">
-                      <HelpCircle className="h-4 w-4 mr-2" />
-                      How it works
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Understanding Metadata Dependencies</DialogTitle>
-                      <DialogDescription>
-                        The Metadata Dependency Analyzer helps you identify relationships between components in your Salesforce org.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 mt-4">
-                      <h4 className="font-medium">What are dependencies?</h4>
-                      <p className="text-sm text-neutral-600">
-                        Dependencies show which components reference or depend on a particular metadata item. 
-                        For example, an Apex class might be referenced by triggers, flows, or other classes.
-                      </p>
-                      
-                      <h4 className="font-medium">How to use this tool</h4>
-                      <ol className="text-sm text-neutral-600 space-y-2 ml-4 list-decimal">
-                        <li>Select a metadata type (Apex, Fields, Objects)</li>
-                        <li>Find the specific component you want to analyze</li>
-                        <li>View all components that reference or depend on it</li>
-                        <li>Switch between "References to" and "Referenced by" views</li>
-                      </ol>
-                      
-                      <h4 className="font-medium">Benefits</h4>
-                      <ul className="text-sm text-neutral-600 space-y-2 ml-4 list-disc">
-                        <li>Identify impact before making changes</li>
-                        <li>Debug complex interactions between components</li>
-                        <li>Improve refactoring and code maintenance</li>
-                        <li>Document dependencies for better understanding</li>
-                      </ul>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-
-            {!activeOrg && (
-              <Alert className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>No org selected</AlertTitle>
-                <AlertDescription>
-                  Please select a Salesforce org to analyze metadata dependencies.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
-              {/* Left Panel - Metadata Selection */}
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle>Select Metadata</CardTitle>
-                  <CardDescription>
-                    Choose a metadata type and search for specific components
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Metadata Type</label>
-                    <Select 
-                      value={selectedMetadataType} 
-                      onValueChange={setSelectedMetadataType}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select metadata type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {metadataTypeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+    <div className="p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-800">Metadata Dependency Analyzer</h1>
+            <p className="text-neutral-600">
+              Analyze dependencies and references between metadata components.
+            </p>
+          </div>
+          <div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  How it works
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Understanding Metadata Dependencies</DialogTitle>
+                  <DialogDescription>
+                    The Metadata Dependency Analyzer helps you identify relationships between components in your Salesforce org.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <h4 className="font-medium">What are dependencies?</h4>
+                  <p className="text-sm text-neutral-600">
+                    Dependencies show which components reference or depend on a particular metadata item. 
+                    For example, an Apex class might be referenced by triggers, flows, or other classes.
+                  </p>
                   
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="Search components..."
-                      className="pl-8"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
+                  <h4 className="font-medium">How to use this tool</h4>
+                  <ol className="text-sm text-neutral-600 space-y-2 ml-4 list-decimal">
+                    <li>Select a metadata type (Apex, Fields, Objects)</li>
+                    <li>Find the specific component you want to analyze</li>
+                    <li>View all components that reference or depend on it</li>
+                    <li>Switch between "References to" and "Referenced by" views</li>
+                  </ol>
                   
-                  <ScrollArea className="h-[calc(100vh-26rem)] rounded border">
-                    <div className="p-4">
-                      <h3 className="font-medium text-sm mb-3">Components ({filteredMetadata.length})</h3>
-                      <ul className="space-y-2">
-                        {filteredMetadata.map((item: MetadataItem) => (
-                          <li key={item.id}>
-                            <button
-                              onClick={() => handleViewDetails(item)}
-                              className={`w-full text-left px-3 py-2 rounded text-sm hover:bg-neutral-100 flex items-center justify-between ${selectedMetadataItem?.id === item.id ? 'bg-neutral-100 font-medium' : ''}`}
-                            >
-                              <div className="flex items-center">
-                                {getMetadataTypeIcon(item.type)}
-                                <span className="ml-2">{item.name}</span>
-                              </div>
-                              <Badge variant="outline" className="ml-2 text-xs">
-                                {item.references.length}
-                              </Badge>
-                            </button>
-                          </li>
-                        ))}
-                        {filteredMetadata.length === 0 && (
-                          <li className="text-center text-sm text-neutral-500 py-4">
-                            No components found
-                          </li>
-                        )}
-                      </ul>
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                  <h4 className="font-medium">Benefits</h4>
+                  <ul className="text-sm text-neutral-600 space-y-2 ml-4 list-disc">
+                    <li>Identify impact before making changes</li>
+                    <li>Debug complex interactions between components</li>
+                    <li>Improve refactoring and code maintenance</li>
+                    <li>Document dependencies for better understanding</li>
+                  </ul>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {!activeOrg && (
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No org selected</AlertTitle>
+            <AlertDescription>
+              Please select a Salesforce org to analyze metadata dependencies.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+          {/* Left Panel - Metadata Selection */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Select Metadata</CardTitle>
+              <CardDescription>
+                Choose a metadata type and search for specific components
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Metadata Type</label>
+                <Select 
+                  value={selectedMetadataType} 
+                  onValueChange={setSelectedMetadataType}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select metadata type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {metadataTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
-              {/* Right Panel - Dependency Details */}
-              <Card className="lg:col-span-5">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle>
-                        {selectedMetadataItem ? selectedMetadataItem.name : "Dependency Details"}
-                      </CardTitle>
-                      <CardDescription>
-                        {selectedMetadataItem 
-                          ? `Viewing dependencies for ${selectedMetadataItem.type}`
-                          : "Select a component to view its dependencies"}
-                      </CardDescription>
-                    </div>
-                    
-                    {selectedMetadataItem && (
-                      <Button variant="outline" size="sm">
-                        <DownloadCloud className="h-4 w-4 mr-2" />
-                        Export
-                      </Button>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search components..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <ScrollArea className="h-[calc(100vh-26rem)] rounded border">
+                <div className="p-4">
+                  <h3 className="font-medium text-sm mb-3">Components ({filteredMetadata.length})</h3>
+                  <ul className="space-y-2">
+                    {filteredMetadata.map((item: MetadataItem) => (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => handleViewDetails(item)}
+                          className={`w-full text-left px-3 py-2 rounded text-sm hover:bg-neutral-100 flex items-center justify-between ${selectedMetadataItem?.id === item.id ? 'bg-neutral-100 font-medium' : ''}`}
+                        >
+                          <div className="flex items-center">
+                            {getMetadataTypeIcon(item.type)}
+                            <span className="ml-2">{item.name}</span>
+                          </div>
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {item.references.length}
+                          </Badge>
+                        </button>
+                      </li>
+                    ))}
+                    {filteredMetadata.length === 0 && (
+                      <li className="text-center text-sm text-neutral-500 py-4">
+                        No components found
+                      </li>
                     )}
-                  </div>
-                </CardHeader>
+                  </ul>
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+          
+          {/* Right Panel - Dependency Details */}
+          <Card className="lg:col-span-5">
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>
+                    {selectedMetadataItem ? selectedMetadataItem.name : "Dependency Details"}
+                  </CardTitle>
+                  <CardDescription>
+                    {selectedMetadataItem 
+                      ? `Viewing dependencies for ${selectedMetadataItem.type}`
+                      : "Select a component to view its dependencies"}
+                  </CardDescription>
+                </div>
                 
-                {selectedMetadataItem ? (
-                  <>
-                    <CardContent>
-                      <Tabs defaultValue="dependencies" onValueChange={(val) => setViewMode(val as "dependencies" | "reverseDependencies")}>
-                        <TabsList className="mb-4">
-                          <TabsTrigger value="dependencies" className="flex items-center">
-                            <Link2 className="h-4 w-4 mr-2" />
-                            Referenced By
-                          </TabsTrigger>
-                          <TabsTrigger value="reverseDependencies" className="flex items-center">
-                            <Link2 className="h-4 w-4 mr-2 rotate-180" />
-                            References To
-                          </TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="dependencies" className="mt-0">
-                          <div className="rounded-md border">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="w-[250px]">Component</TableHead>
-                                  <TableHead className="w-[150px]">Type</TableHead>
-                                  <TableHead>Reference Type</TableHead>
-                                  <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {selectedMetadataItem.references.map((reference) => (
-                                  <TableRow key={reference.id}>
+                {selectedMetadataItem && (
+                  <Button variant="outline" size="sm">
+                    <DownloadCloud className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            
+            {selectedMetadataItem ? (
+              <>
+                <CardContent>
+                  <Tabs defaultValue="dependencies" onValueChange={(val) => setViewMode(val as "dependencies" | "reverseDependencies")}>
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="dependencies" className="flex items-center">
+                        <Link2 className="h-4 w-4 mr-2" />
+                        Referenced By
+                      </TabsTrigger>
+                      <TabsTrigger value="reverseDependencies" className="flex items-center">
+                        <Link2 className="h-4 w-4 mr-2 rotate-180" />
+                        References To
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="dependencies" className="mt-0">
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[250px]">Component</TableHead>
+                              <TableHead className="w-[150px]">Type</TableHead>
+                              <TableHead>Reference Type</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedMetadataItem.references.map((reference) => (
+                              <TableRow key={reference.id}>
+                                <TableCell className="font-medium flex items-center">
+                                  {getMetadataTypeIcon(reference.type)}
+                                  <span className="ml-2">{reference.name}</span>
+                                </TableCell>
+                                <TableCell>{reference.type}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={getReferenceBadgeColor(reference.referenceType)}>
+                                    {reference.referenceType}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button variant="ghost" size="sm">
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            {selectedMetadataItem.references.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center text-neutral-500 py-8">
+                                  No references found for this component
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="reverseDependencies" className="mt-0">
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[250px]">Component</TableHead>
+                              <TableHead className="w-[150px]">Type</TableHead>
+                              <TableHead>Reference Type</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {isReverseDependenciesLoading ? (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center py-8">
+                                  <div className="flex justify-center">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                  </div>
+                                  <p className="text-sm text-neutral-500 mt-2">Loading dependencies...</p>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              <>
+                                {Array.isArray(reverseDependencies) && reverseDependencies.map((reference: any, index: number) => (
+                                  <TableRow key={index}>
                                     <TableCell className="font-medium flex items-center">
                                       {getMetadataTypeIcon(reference.type)}
                                       <span className="ml-2">{reference.name}</span>
@@ -379,98 +428,41 @@ export default function MetadataDependencyAnalyzer() {
                                     </TableCell>
                                   </TableRow>
                                 ))}
-                                {selectedMetadataItem.references.length === 0 && (
+                                {(!reverseDependencies || !Array.isArray(reverseDependencies) || reverseDependencies.length === 0) && (
                                   <TableRow>
                                     <TableCell colSpan={4} className="text-center text-neutral-500 py-8">
-                                      No references found for this component
+                                      No dependencies found for this component
                                     </TableCell>
                                   </TableRow>
                                 )}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </TabsContent>
-                        
-                        <TabsContent value="reverseDependencies" className="mt-0">
-                          <div className="rounded-md border">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="w-[250px]">Component</TableHead>
-                                  <TableHead className="w-[150px]">Type</TableHead>
-                                  <TableHead>Reference Type</TableHead>
-                                  <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {isReverseDependenciesLoading ? (
-                                  <TableRow>
-                                    <TableCell colSpan={4} className="text-center py-8">
-                                      <div className="flex justify-center">
-                                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                                      </div>
-                                      <p className="text-sm text-neutral-500 mt-2">Loading dependencies...</p>
-                                    </TableCell>
-                                  </TableRow>
-                                ) : (
-                                  <>
-                                    {Array.isArray(reverseDependencies) && reverseDependencies.map((reference: any, index: number) => (
-                                      <TableRow key={index}>
-                                        <TableCell className="font-medium flex items-center">
-                                          {getMetadataTypeIcon(reference.type)}
-                                          <span className="ml-2">{reference.name}</span>
-                                        </TableCell>
-                                        <TableCell>{reference.type}</TableCell>
-                                        <TableCell>
-                                          <Badge variant="outline" className={getReferenceBadgeColor(reference.referenceType)}>
-                                            {reference.referenceType}
-                                          </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                          <Button variant="ghost" size="sm">
-                                            <Eye className="h-4 w-4 mr-1" />
-                                            View
-                                          </Button>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                    {(!reverseDependencies || !Array.isArray(reverseDependencies) || reverseDependencies.length === 0) && (
-                                      <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-neutral-500 py-8">
-                                          No dependencies found for this component
-                                        </TableCell>
-                                      </TableRow>
-                                    )}
-                                  </>
-                                )}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                    </CardContent>
-                    <CardFooter className="bg-neutral-50 border-t py-4 text-sm">
-                      <div className="flex items-center text-neutral-600">
-                        <AlertCircle className="h-4 w-4 mr-2" />
-                        Dependencies are calculated based on static and dynamic analysis of components.
+                              </>
+                            )}
+                          </TableBody>
+                        </Table>
                       </div>
-                    </CardFooter>
-                  </>
-                ) : (
-                  <CardContent className="text-center py-16">
-                    <div className="flex flex-col items-center justify-center">
-                      <Link2 className="h-16 w-16 text-neutral-300 mb-4" />
-                      <h3 className="text-lg font-medium">No component selected</h3>
-                      <p className="text-neutral-500 max-w-md mt-2">
-                        Select a component from the left panel to view its dependencies and references.
-                      </p>
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            </div>
-          </div>
-        </main>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+                <CardFooter className="bg-neutral-50 border-t py-4 text-sm">
+                  <div className="flex items-center text-neutral-600">
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Dependencies are calculated based on static and dynamic analysis of components.
+                  </div>
+                </CardFooter>
+              </>
+            ) : (
+              <CardContent className="text-center py-16">
+                <div className="flex flex-col items-center justify-center">
+                  <Link2 className="h-16 w-16 text-neutral-300 mb-4" />
+                  <h3 className="text-lg font-medium">No component selected</h3>
+                  <p className="text-neutral-500 max-w-md mt-2">
+                    Select a component from the left panel to view its dependencies and references.
+                  </p>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );

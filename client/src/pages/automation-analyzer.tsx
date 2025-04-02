@@ -22,8 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import TopNavBar from "@/components/layout/top-nav-bar";
-import SideNavigation from "@/components/layout/side-navigation";
+
 
 // Mock automation data since backend integration not implemented yet
 const mockAutomationData = {
@@ -156,328 +155,322 @@ export default function AutomationAnalyzer() {
   }, [activeOrg]);
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
-      <TopNavBar />
-      <div className="flex flex-1 overflow-hidden">
-        <SideNavigation />
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h1 className="text-3xl font-bold text-neutral-800">Automation Analyzer</h1>
-                <p className="text-neutral-600">
-                  Analyze Process Builders, Flows, Workflow Rules, and Apex Triggers across your org.
-                </p>
-              </div>
-              <div>
-                <Button
-                  onClick={startAnalysis}
-                  disabled={isAnalyzing || !activeOrg}
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Layers className="mr-2 h-4 w-4" />
-                      Run Analysis
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {!activeOrg && (
-              <Alert className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>No org selected</AlertTitle>
-                <AlertDescription>
-                  Please select a Salesforce org to analyze automations.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {analysisComplete && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <AutomationTypeCard
-                    title="Flows"
-                    count={mockAutomationData.flows.length}
-                    icon={Layers}
-                    className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
-                  />
-                  <AutomationTypeCard
-                    title="Process Builders"
-                    count={mockAutomationData.processBuilders.length}
-                    icon={Layers}
-                    className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200"
-                  />
-                  <AutomationTypeCard
-                    title="Workflow Rules"
-                    count={mockAutomationData.workflowRules.length}
-                    icon={Layers}
-                    className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200"
-                  />
-                  <AutomationTypeCard
-                    title="Apex Triggers"
-                    count={mockAutomationData.apexTriggers.length}
-                    icon={Layers}
-                    className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
-                  />
-                </div>
-
-                <Card className="mb-6">
-                  <CardHeader>
-                    <CardTitle>Potential Conflicts</CardTitle>
-                    <CardDescription>
-                      The analysis identified {mockAutomationData.conflicts.length} potential conflicts in your automation setup.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Severity</TableHead>
-                          <TableHead>Components</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="w-[100px]">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {mockAutomationData.conflicts.map((conflict) => (
-                          <TableRow key={conflict.id}>
-                            <TableCell className="font-medium">{conflict.type}</TableCell>
-                            <TableCell>
-                              <ConflictSeverityBadge severity={conflict.severity} />
-                            </TableCell>
-                            <TableCell>{conflict.components.join(", ")}</TableCell>
-                            <TableCell>{conflict.description}</TableCell>
-                            <TableCell>
-                              <Button variant="outline" size="sm">
-                                Details
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-
-                <Tabs defaultValue="flows" className="w-full">
-                  <TabsList className="grid grid-cols-4 mb-4">
-                    <TabsTrigger value="flows">Flows</TabsTrigger>
-                    <TabsTrigger value="process-builders">Process Builders</TabsTrigger>
-                    <TabsTrigger value="workflow-rules">Workflow Rules</TabsTrigger>
-                    <TabsTrigger value="apex-triggers">Apex Triggers</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="flows">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Flows</CardTitle>
-                        <CardDescription>
-                          List of all Flow automations in your org
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Type</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Modified</TableHead>
-                              <TableHead>Description</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {mockAutomationData.flows.map((flow) => (
-                              <TableRow key={flow.id}>
-                                <TableCell className="font-medium">{flow.name}</TableCell>
-                                <TableCell>{flow.type}</TableCell>
-                                <TableCell>
-                                  <StatusBadge status={flow.status} />
-                                </TableCell>
-                                <TableCell>{flow.modified}</TableCell>
-                                <TableCell>{flow.description}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                  
-                  <TabsContent value="process-builders">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Process Builders</CardTitle>
-                        <CardDescription>
-                          List of all Process Builder automations in your org
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Object</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Modified</TableHead>
-                              <TableHead>Description</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {mockAutomationData.processBuilders.map((process) => (
-                              <TableRow key={process.id}>
-                                <TableCell className="font-medium">{process.name}</TableCell>
-                                <TableCell>{process.object}</TableCell>
-                                <TableCell>
-                                  <StatusBadge status={process.status} />
-                                </TableCell>
-                                <TableCell>{process.modified}</TableCell>
-                                <TableCell>{process.description}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                  
-                  <TabsContent value="workflow-rules">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Workflow Rules</CardTitle>
-                        <CardDescription>
-                          List of all Workflow Rules in your org
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Object</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Modified</TableHead>
-                              <TableHead>Description</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {mockAutomationData.workflowRules.map((rule) => (
-                              <TableRow key={rule.id}>
-                                <TableCell className="font-medium">{rule.name}</TableCell>
-                                <TableCell>{rule.object}</TableCell>
-                                <TableCell>
-                                  <StatusBadge status={rule.status} />
-                                </TableCell>
-                                <TableCell>{rule.modified}</TableCell>
-                                <TableCell>{rule.description}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                  
-                  <TabsContent value="apex-triggers">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Apex Triggers</CardTitle>
-                        <CardDescription>
-                          List of all Apex Triggers in your org
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Object</TableHead>
-                              <TableHead>Events</TableHead>
-                              <TableHead>Modified</TableHead>
-                              <TableHead>Description</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {mockAutomationData.apexTriggers.map((trigger) => (
-                              <TableRow key={trigger.id}>
-                                <TableCell className="font-medium">{trigger.name}</TableCell>
-                                <TableCell>{trigger.object}</TableCell>
-                                <TableCell>{trigger.events}</TableCell>
-                                <TableCell>{trigger.modified}</TableCell>
-                                <TableCell>{trigger.description}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
-
-                <Card className="mt-6">
-                  <CardHeader>
-                    <CardTitle>Recommendations</CardTitle>
-                    <CardDescription>
-                      Based on our analysis, here are the recommendations to improve your automation setup.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Impact</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="w-[100px]">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {mockAutomationData.recommendations.map((rec) => (
-                          <TableRow key={rec.id}>
-                            <TableCell className="font-medium">{rec.type}</TableCell>
-                            <TableCell>
-                              <RecommendationImpactBadge impact={rec.impact} />
-                            </TableCell>
-                            <TableCell>{rec.description}</TableCell>
-                            <TableCell>
-                              <Button variant="outline" size="sm">
-                                <ArrowRight className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {!analysisComplete && !isAnalyzing && activeOrg && (
-              <Card className="text-center p-6">
-                <div className="mb-4">
-                  <Layers className="h-12 w-12 mx-auto text-primary-500" />
-                </div>
-                <h2 className="text-xl font-medium text-neutral-800 mb-2">Run Automation Analysis</h2>
-                <p className="text-neutral-600 max-w-md mx-auto mb-4">
-                  Click the "Run Analysis" button to scan your Salesforce org for automations and detect potential conflicts.
-                </p>
-                <Button onClick={startAnalysis}>
+    <div className="p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-800">Automation Analyzer</h1>
+            <p className="text-neutral-600">
+              Analyze Process Builders, Flows, Workflow Rules, and Apex Triggers across your org.
+            </p>
+          </div>
+          <div>
+            <Button
+              onClick={startAnalysis}
+              disabled={isAnalyzing || !activeOrg}
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
                   <Layers className="mr-2 h-4 w-4" />
                   Run Analysis
-                </Button>
-              </Card>
-            )}
+                </>
+              )}
+            </Button>
           </div>
-        </main>
+        </div>
+
+        {!activeOrg && (
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No org selected</AlertTitle>
+            <AlertDescription>
+              Please select a Salesforce org to analyze automations.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {analysisComplete && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <AutomationTypeCard
+                title="Flows"
+                count={mockAutomationData.flows.length}
+                icon={Layers}
+                className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
+              />
+              <AutomationTypeCard
+                title="Process Builders"
+                count={mockAutomationData.processBuilders.length}
+                icon={Layers}
+                className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200"
+              />
+              <AutomationTypeCard
+                title="Workflow Rules"
+                count={mockAutomationData.workflowRules.length}
+                icon={Layers}
+                className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200"
+              />
+              <AutomationTypeCard
+                title="Apex Triggers"
+                count={mockAutomationData.apexTriggers.length}
+                icon={Layers}
+                className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
+              />
+            </div>
+
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Potential Conflicts</CardTitle>
+                <CardDescription>
+                  The analysis identified {mockAutomationData.conflicts.length} potential conflicts in your automation setup.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Severity</TableHead>
+                      <TableHead>Components</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="w-[100px]">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mockAutomationData.conflicts.map((conflict) => (
+                      <TableRow key={conflict.id}>
+                        <TableCell className="font-medium">{conflict.type}</TableCell>
+                        <TableCell>
+                          <ConflictSeverityBadge severity={conflict.severity} />
+                        </TableCell>
+                        <TableCell>{conflict.components.join(", ")}</TableCell>
+                        <TableCell>{conflict.description}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm">
+                            Details
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Tabs defaultValue="flows" className="w-full">
+              <TabsList className="grid grid-cols-4 mb-4">
+                <TabsTrigger value="flows">Flows</TabsTrigger>
+                <TabsTrigger value="process-builders">Process Builders</TabsTrigger>
+                <TabsTrigger value="workflow-rules">Workflow Rules</TabsTrigger>
+                <TabsTrigger value="apex-triggers">Apex Triggers</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="flows">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Flows</CardTitle>
+                    <CardDescription>
+                      List of all Flow automations in your org
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Modified</TableHead>
+                          <TableHead>Description</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {mockAutomationData.flows.map((flow) => (
+                          <TableRow key={flow.id}>
+                            <TableCell className="font-medium">{flow.name}</TableCell>
+                            <TableCell>{flow.type}</TableCell>
+                            <TableCell>
+                              <StatusBadge status={flow.status} />
+                            </TableCell>
+                            <TableCell>{flow.modified}</TableCell>
+                            <TableCell>{flow.description}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="process-builders">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Process Builders</CardTitle>
+                    <CardDescription>
+                      List of all Process Builder automations in your org
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Object</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Modified</TableHead>
+                          <TableHead>Description</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {mockAutomationData.processBuilders.map((process) => (
+                          <TableRow key={process.id}>
+                            <TableCell className="font-medium">{process.name}</TableCell>
+                            <TableCell>{process.object}</TableCell>
+                            <TableCell>
+                              <StatusBadge status={process.status} />
+                            </TableCell>
+                            <TableCell>{process.modified}</TableCell>
+                            <TableCell>{process.description}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="workflow-rules">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Workflow Rules</CardTitle>
+                    <CardDescription>
+                      List of all Workflow Rules in your org
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Object</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Modified</TableHead>
+                          <TableHead>Description</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {mockAutomationData.workflowRules.map((rule) => (
+                          <TableRow key={rule.id}>
+                            <TableCell className="font-medium">{rule.name}</TableCell>
+                            <TableCell>{rule.object}</TableCell>
+                            <TableCell>
+                              <StatusBadge status={rule.status} />
+                            </TableCell>
+                            <TableCell>{rule.modified}</TableCell>
+                            <TableCell>{rule.description}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="apex-triggers">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Apex Triggers</CardTitle>
+                    <CardDescription>
+                      List of all Apex Triggers in your org
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Object</TableHead>
+                          <TableHead>Events</TableHead>
+                          <TableHead>Modified</TableHead>
+                          <TableHead>Description</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {mockAutomationData.apexTriggers.map((trigger) => (
+                          <TableRow key={trigger.id}>
+                            <TableCell className="font-medium">{trigger.name}</TableCell>
+                            <TableCell>{trigger.object}</TableCell>
+                            <TableCell>{trigger.events}</TableCell>
+                            <TableCell>{trigger.modified}</TableCell>
+                            <TableCell>{trigger.description}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Recommendations</CardTitle>
+                <CardDescription>
+                  Based on our analysis, here are the recommendations to improve your automation setup.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Impact</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="w-[100px]">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mockAutomationData.recommendations.map((rec) => (
+                      <TableRow key={rec.id}>
+                        <TableCell className="font-medium">{rec.type}</TableCell>
+                        <TableCell>
+                          <RecommendationImpactBadge impact={rec.impact} />
+                        </TableCell>
+                        <TableCell>{rec.description}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm">
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {!analysisComplete && !isAnalyzing && activeOrg && (
+          <Card className="text-center p-6">
+            <div className="mb-4">
+              <Layers className="h-12 w-12 mx-auto text-primary-500" />
+            </div>
+            <h2 className="text-xl font-medium text-neutral-800 mb-2">Run Automation Analysis</h2>
+            <p className="text-neutral-600 max-w-md mx-auto mb-4">
+              Click the "Run Analysis" button to scan your Salesforce org for automations and detect potential conflicts.
+            </p>
+            <Button onClick={startAnalysis}>
+              <Layers className="mr-2 h-4 w-4" />
+              Run Analysis
+            </Button>
+          </Card>
+        )}
       </div>
     </div>
   );
