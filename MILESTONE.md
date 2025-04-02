@@ -9,6 +9,8 @@ This file marks a stable milestone in the MetaScope application development. The
 - Removed auto-redirect to dashboard, allowing users to see all navigation options
 - Consistent layout across the application
 - Proper rendering of side navigation on desktop
+- Fixed duplicate navigation issue by centralizing the layout in App.tsx
+- Properly centered login page with improved styling
 
 ## Authentication 
 
