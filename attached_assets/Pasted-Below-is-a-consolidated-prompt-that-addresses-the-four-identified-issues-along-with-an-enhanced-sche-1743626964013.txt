@@ -1,0 +1,74 @@
+Below is a consolidated prompt that addresses the four identified issues along with an enhanced schema visualizer description that your agent developers can use to update the project:
+
+---
+
+**Consolidated Issues and Enhancement Prompt**
+
+1. **Connection Loading Indicator**  
+   - **Issue:** When connecting to a Salesforce org, no loading indicator is displayed; a visual cue is needed to show the connection process and that the app is "ready."  
+   - **Instruction:** Update the connection workflow so that when a user initiates a connection, a dynamic loading indicator (spinner, progress bar, or similar) appears. Once the connection is successfully established, replace the loading indicator with a clear “Ready” status.
+
+2. **Data Population for Analyzers**  
+   - **Issue:** After a successful connection, some analyzers display only test data rather than the actual data from the org.  
+   - **Instruction:** Ensure that each analyzer correctly fetches and displays the live metadata from the Salesforce org. Verify the integration with the backend data source and update any placeholder/test data to pull real data dynamically.
+
+3. **Export Functionality on the Dashboard**  
+   - **Issue:** The dashboard currently does not offer an option to export all scraped metadata.  
+   - **Instruction:** Add an export option under the dashboard tab. This feature should allow users to export the complete set of metadata in multiple file formats (e.g., JSON, Excel, CSV). The export interface should be simple and accessible, giving users the choice of file type.
+
+4. **Data Model Analyzer – Enhanced Graph View**  
+   - **Issue:** In the Data Model Analyzer, the third tab (graph view) should incorporate advanced visualization features.  
+   - **Instruction:** Integrate the enhanced Salesforce Schema Visualizer into the third tab of the Data Model Analyzer, ensuring that it supports multiple layouts and interactive features as described below.
+
+---
+
+**Enhanced Salesforce Schema Visualizer Prompt**
+
+"Create a web-based Salesforce Schema Visualizer with an intuitive user interface that makes exploring complex database relationships easy for both technical and non-technical users. The visualizer should:
+
+1. Provide a clean, modern interface with easy-to-use controls and clear visual design.
+
+2. Support multiple interactive layout algorithms including:
+   - Force-directed (for natural clustering)
+   - Circular (for radial relationships)
+   - Grid (for organized viewing)
+   - Hierarchical top-down (for parent-child structures)
+   - Hierarchical left-right (for process flows)
+   - Concentric (for relationship centrality)
+
+3. Display Salesforce objects as visually distinct nodes with:
+   - Compact mode (showing only object names)
+   - Detailed mode (showing all fields and attributes)
+   - Key fields mode (showing only essential relationship fields)
+
+4. Highlight relationship types using distinctive visual styling:
+   - Master-detail relationships (thick orange lines)
+   - Lookup relationships (blue lines)
+   - Self-join relationships (curved purple lines)
+   - Many-to-many relationships (bidirectional green lines)
+
+5. Include powerful interactive features:
+   - One-click selection and focus
+   - Double-click to expand/collapse nodes
+   - Hover tooltips showing detailed information
+   - Drag and drop object positioning
+   - Zoom and pan controls
+   - Ability to save and restore diagram layouts
+
+6. Provide practical utility features:
+   - Field-level filtering options
+   - Search functionality for quickly finding objects and fields
+   - Export options (PNG image, JSON data)
+   - Print-friendly formatting
+   - Minimap for navigating large schemas
+
+7. Clearly show relationship join fields to help understand:
+   - Which fields connect objects (e.g., AccountId → Id)
+   - Relationship cardinality and dependencies
+   - Custom vs. standard field relationships
+
+8. Deliver a solution that works in any modern browser without requiring installation, backend servers, or Salesforce API authentication."
+
+---
+
+This prompt gives clear, actionable directives for enhancing the Salesforce connection workflow, ensuring correct data retrieval for analyzers, adding export capabilities, and upgrading the Data Model Analyzer with an advanced schema visualizer. Use this as a guide to ensure that the current build is preserved while incorporating these new features seamlessly into the existing MetaScope platform.
