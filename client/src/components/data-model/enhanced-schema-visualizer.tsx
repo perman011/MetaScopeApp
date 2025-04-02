@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { toast as globalToast } from '@/hooks/use-toast';
 
 // Define TypeScript interfaces for our data
 interface FieldMetadata {
@@ -501,17 +502,42 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
                       if (searchQuery.trim()) {
                         const matchCount = filteredObjects.length;
                         if (matchCount > 0) {
-                          toast({
-                            title: `Search Results`,
-                            description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                            variant: "default",
-                          });
+                          // Use the toast function from the hook if available, otherwise use the global toast
+                          try {
+                            if (toast) {
+                              toast({
+                                title: `Search Results`,
+                                description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
+                                variant: "default",
+                              });
+                            } else {
+                              globalToast({
+                                title: `Search Results`,
+                                description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
+                                variant: "default",
+                              });
+                            }
+                          } catch (error) {
+                            console.error("Error showing toast:", error);
+                          }
                         } else {
-                          toast({
-                            title: "No Results Found",
-                            description: `No objects match "${searchQuery}". Try a different search term.`,
-                            variant: "destructive",
-                          });
+                          try {
+                            if (toast) {
+                              toast({
+                                title: "No Results Found",
+                                description: `No objects match "${searchQuery}". Try a different search term.`,
+                                variant: "destructive",
+                              });
+                            } else {
+                              globalToast({
+                                title: "No Results Found",
+                                description: `No objects match "${searchQuery}". Try a different search term.`,
+                                variant: "destructive",
+                              });
+                            }
+                          } catch (error) {
+                            console.error("Error showing toast:", error);
+                          }
                         }
                       }
                     }
@@ -528,17 +554,41 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
                     if (searchQuery.trim()) {
                       const matchCount = filteredObjects.length;
                       if (matchCount > 0) {
-                        toast({
-                          title: `Search Results`,
-                          description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                          variant: "default",
-                        });
+                        try {
+                          if (toast) {
+                            toast({
+                              title: `Search Results`,
+                              description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
+                              variant: "default",
+                            });
+                          } else {
+                            globalToast({
+                              title: `Search Results`,
+                              description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
+                              variant: "default",
+                            });
+                          }
+                        } catch (error) {
+                          console.error("Error showing toast:", error);
+                        }
                       } else {
-                        toast({
-                          title: "No Results Found",
-                          description: `No objects match "${searchQuery}". Try a different search term.`,
-                          variant: "destructive",
-                        });
+                        try {
+                          if (toast) {
+                            toast({
+                              title: "No Results Found",
+                              description: `No objects match "${searchQuery}". Try a different search term.`,
+                              variant: "destructive",
+                            });
+                          } else {
+                            globalToast({
+                              title: "No Results Found",
+                              description: `No objects match "${searchQuery}". Try a different search term.`,
+                              variant: "destructive",
+                            });
+                          }
+                        } catch (error) {
+                          console.error("Error showing toast:", error);
+                        }
                       }
                     }
                   }}

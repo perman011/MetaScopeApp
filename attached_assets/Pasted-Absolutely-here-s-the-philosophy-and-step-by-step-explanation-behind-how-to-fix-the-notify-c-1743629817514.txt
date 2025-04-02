@@ -1,0 +1,62 @@
+Absolutely — here's the **philosophy and step-by-step explanation** behind how to fix the `notify` crash in your `Data Model Analyzer` tab **without code**:
+
+---
+
+### 🧠 What's Happening?
+
+Your component is trying to **show a notification (e.g. toast message)** after loading org data.  
+But the function or object it’s trying to call (`notify`) doesn't exist — it's `null` or `undefined`. That’s why you’re seeing:
+
+> `Cannot read properties of null (reading 'notify')`
+
+---
+
+### 🪜 What You Need to Do
+
+#### 1. **Find the Source of `notify`**
+Go to the part of the component or module where you're trying to show a notification — like:
+
+- When org data loads successfully
+- When loading fails
+- When a user action is performed
+
+Check if you’re referencing a `notify` function or utility. It might be:
+- A custom function you defined (e.g. `notify("Org loaded!")`)
+- A 3rd-party toast library like `react-toastify`, `sonner`, or `shadcn/ui` toasts
+
+---
+
+#### 2. **Ensure It’s Properly Defined**
+If it’s a custom function, make sure it’s:
+- Defined in that file or imported correctly
+- Not being used before initialization (like inside `useEffect` with stale closures)
+
+If it’s from a library (e.g. `toast("...")`), you need to:
+- Import the toast function properly
+- Make sure the toast container/provider is included at the app root level so the context works
+
+---
+
+#### 3. **Guard Against Null**
+Even if you’re pretty sure `notify` should exist, **always add a fallback check**:
+- Only call it if it's available
+- Or provide a default behavior (e.g. console log instead of crashing)
+
+This protects your UI from blowing up if some async flow breaks the context.
+
+---
+
+#### 4. **Check Your Vite Plugin Config**
+Sometimes, these `runtime-error-plugin` overlays can come from **Vite hot module reload** behavior during dev. If this only happens during development, you might also:
+- Check for errors in your `vite.config.js` plugins
+- Temporarily disable the HMR overlay (not recommended for production!)
+
+---
+
+### 💡 Summary
+
+> You're calling `.notify()` during org data load.  
+> That function doesn't exist in that context, so it crashes.  
+> Make sure it's imported, initialized, and only called if it's defined.
+
+Would you like help identifying which library your current `notify` is tied to (like `toast`, `notyf`, `shadcn`, etc.)?

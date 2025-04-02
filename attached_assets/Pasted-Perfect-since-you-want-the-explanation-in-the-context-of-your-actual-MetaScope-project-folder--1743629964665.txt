@@ -1,0 +1,88 @@
+Perfect — since you want the explanation **in the context of your actual MetaScope project folder** and **tech stack**, I’ll align the explanation strictly to your setup:
+
+---
+
+### 📁 Context: Project Folder & Tech Stack
+
+You're using:
+
+- **Frontend:** React + TypeScript + Vite + shadcn/ui + TanStack Query
+- **Routing:** Wouter
+- **Form/Validation:** React Hook Form + Zod
+- **Notification UI:** Likely from `shadcn/ui` (`useToast`) or possibly `sonner`/`react-toastify` if added
+- **Bundler/Dev Server:** Vite
+- **Metadata Loader:** via API call using `React Query` (`useQuery` or `useMutation`)
+  
+---
+
+### ✅ Best-Practice Suggestions (With Folder Awareness)
+
+#### 1. **📂 Ensure Toast Hook is Properly Used in the Component**
+
+Inside your `/components/` or `/pages/data-model-analyzer/` folder, if you're calling `notify()` or `toast()`, make sure you're using **`useToast` from `@/components/ui/use-toast`**, not some stray `notify()` function.
+
+📍 You should:
+- Use the `toast()` function exposed by the `useToast()` hook from `shadcn/ui`
+- Avoid defining a custom `notify()` unless you're wrapping it
+
+> 🔍 If you have a `notify()` somewhere, replace it with a `toast({ title: ..., description: ... })`
+
+---
+
+#### 2. **🧱 Ensure Toast Provider is Registered at the App Root**
+
+Inside `/src/main.tsx` (or `App.tsx`):
+- Wrap your entire app in `<Toaster />` (from shadcn or alternative library)
+- This ensures toast context is available throughout your app
+
+> If `Toaster` is missing from the top-level layout, the `toast()` hook will be `null`, causing your runtime error.
+
+---
+
+#### 3. **🧼 Add a Toast Fallback in the Component**
+
+Wherever you’re calling `toast()` inside the Data Model Analyzer component (under something like `src/pages/data-model-analyzer/index.tsx`):
+- Use a try/catch or conditional to **only call `toast()` if it exists**
+- This protects the component from breaking if there's any failure
+
+---
+
+#### 4. **💾 Keep Toast Logic Localized or Use a Global Wrapper**
+
+If you need custom toast behavior:
+- Define a shared wrapper in `/lib/toast.ts` or `/utils/notify.ts`
+- That wrapper can abstract `toast()` calls, so you can test/fallback easily without duplicating toast logic everywhere
+
+Example folder usage:
+```
+src/
+  components/
+    ui/
+      use-toast.ts      ← shadcn
+  lib/
+    notify.ts           ← optional wrapper
+  pages/
+    data-model-analyzer/
+      index.tsx         ← your crashing component
+  main.tsx              ← ensure <Toaster /> here
+```
+
+---
+
+#### 5. **🛑 Do NOT Use Raw `notify()` Unless It’s a Wrapped Utility**
+
+Avoid calling `notify()` unless you've:
+- Imported it from your `lib/notify.ts`
+- Or it's a custom hook returning a valid function
+
+Otherwise, React will throw exactly the error you're seeing.
+
+---
+
+### 🔚 In Short:
+> 📁 You need to **use `toast()` via `useToast()`** from your `components/ui/use-toast.ts` and ensure `Toaster` is in `main.tsx`.  
+> If you’ve created your own `notify()` function, **centralize it in `lib/notify.ts`** and ensure it wraps or checks the existence of the toast function properly.
+
+---
+
+Let me know if you want me to walk you through verifying your actual `/main.tsx` or toast provider setup.
