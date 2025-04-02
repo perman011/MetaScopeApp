@@ -721,7 +721,7 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
         onClick={toggleLeftPanel}
         className="absolute top-1/2 -translate-y-1/2 bg-primary-600 text-white h-8 w-6 rounded-r-md flex items-center justify-center z-10 transition-all duration-300 shadow-md"
         style={{ 
-          left: leftPanelCollapsed ? 0 : '72px', // Width of the left panel is w-72 (72px)
+          left: leftPanelCollapsed ? 0 : 72, // Width of the left panel is w-72 (72px)
           transform: 'translateY(-50%)', // Keep transform consistent
         }}
         aria-label={leftPanelCollapsed ? "Show controls panel" : "Hide controls panel"}
@@ -874,7 +874,7 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
         onClick={toggleRightPanel}
         className="absolute top-1/2 -translate-y-1/2 bg-primary-600 text-white h-8 w-6 rounded-l-md flex items-center justify-center z-10 transition-all duration-300 shadow-md"
         style={{ 
-          right: rightPanelCollapsed ? 0 : '80px', // Width of right panel is w-80 (80px)
+          right: rightPanelCollapsed ? 0 : 80, // Width of right panel is w-80 (80px)
           transform: 'translateY(-50%)' // Keep transform consistent
         }}
         aria-label={rightPanelCollapsed ? "Show details panel" : "Hide details panel"}
