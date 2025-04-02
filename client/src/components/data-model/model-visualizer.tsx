@@ -1,14 +1,20 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
+import cytoscape from 'cytoscape';
 
 interface ModelVisualizerProps {
   metadata: any;
+  selectedLayout?: string; // Optional prop to receive layout from parent
 }
 
-export default function ModelVisualizer({ metadata }: ModelVisualizerProps) {
+export default function ModelVisualizer({ metadata, selectedLayout = 'force-directed' }: ModelVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const [layout, setLayout] = useState(selectedLayout);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cyRef = useRef<cytoscape.Core | null>(null);
   
-  useEffect(() => {
+  // D3-based force-directed graph visualization
+  const renderD3Visualization = () => {
     if (!metadata || !svgRef.current) return;
     
     // Clear previous visualization
@@ -20,8 +26,9 @@ export default function ModelVisualizer({ metadata }: ModelVisualizerProps) {
     // Create nodes and links for the force-directed graph
     const nodes = objects.map(obj => ({
       id: obj.name,
-      label: obj.name,
+      label: obj.label || obj.name,
       type: "object",
+      isCustom: obj.name.includes('__c'),
       size: obj.fields?.length || 5,
     }));
     
@@ -35,7 +42,7 @@ export default function ModelVisualizer({ metadata }: ModelVisualizerProps) {
           links.push({
             source: obj.name,
             target: rel.object,
-            type: rel.type
+            type: rel.type || 'Lookup'
           });
         }
       });
@@ -54,9 +61,21 @@ export default function ModelVisualizer({ metadata }: ModelVisualizerProps) {
       .force("collide", d3.forceCollide().radius((d: any) => d.size * 4 + 10));
     
     // Define color scale for nodes
-    const color = (type: string) => {
-      if (type === "object") return "#0061D5";
-      return "#6C63FF";
+    const color = (d: any) => {
+      return d.isCustom ? "#ff9e2c" : "#0176d3";
+    };
+    
+    // Define color and width for links based on relationship type
+    const linkColor = (type: string) => {
+      const lowerType = type.toLowerCase();
+      if (lowerType.includes('master')) return "#ea8c55"; // Master-Detail
+      if (lowerType.includes('self')) return "#8a49a8"; // Self-Join
+      if (lowerType.includes('many')) return "#3EB489"; // Many-to-Many
+      return "#5a7d9a"; // Default (Lookup)
+    };
+    
+    const linkWidth = (type: string) => {
+      return type.toLowerCase().includes('master') ? 2.5 : 1.5;
     };
     
     // Create the links
@@ -65,8 +84,8 @@ export default function ModelVisualizer({ metadata }: ModelVisualizerProps) {
       .selectAll("line")
       .data(links)
       .enter().append("line")
-      .attr("stroke", "#718096")
-      .attr("stroke-width", 1.5);
+      .attr("stroke", (d) => linkColor(d.type))
+      .attr("stroke-width", (d) => linkWidth(d.type));
     
     // Create the nodes
     const node = svg.append("g")
@@ -75,12 +94,17 @@ export default function ModelVisualizer({ metadata }: ModelVisualizerProps) {
       .data(nodes)
       .enter().append("g");
     
-    // Add circles to nodes
-    node.append("circle")
-      .attr("r", (d: any) => Math.max(d.size * 2, 20))
-      .attr("fill", (d: any) => color(d.type))
+    // Add rectangle nodes with rounded corners (matching enhanced visualizer)
+    node.append("rect")
+      .attr("width", 80)
+      .attr("height", 80)
+      .attr("rx", 8)
+      .attr("ry", 8)
+      .attr("x", -40)
+      .attr("y", -40)
+      .attr("fill", (d: any) => color(d))
       .attr("opacity", 0.9)
-      .call(d3.drag<SVGCircleElement, any>()
+      .call(d3.drag<SVGRectElement, any>()
         .on("start", dragstarted)
         .on("drag", dragged)
         .on("end", dragended));
@@ -92,7 +116,43 @@ export default function ModelVisualizer({ metadata }: ModelVisualizerProps) {
       .attr("dominant-baseline", "middle")
       .attr("fill", "white")
       .attr("font-weight", "bold")
-      .attr("font-size", (d: any) => Math.min(d.size * 0.8, 14));
+      .attr("font-size", "11px")
+      .style("text-wrap", "wrap")
+      .call(wrap, 70); // Wrap text at 70px width
+    
+    // Function to wrap text
+    function wrap(text: d3.Selection<SVGTextElement, any, any, any>, width: number) {
+      text.each(function() {
+        const text = d3.select(this);
+        const words = text.text().split(/\s+/).reverse();
+        let word: string | undefined;
+        let line: string[] = [];
+        let lineNumber = 0;
+        const lineHeight = 1.1; // ems
+        const y = text.attr("y");
+        const dy = parseFloat(text.attr("dy") || "0");
+        
+        let tspan = text.text(null).append("tspan")
+          .attr("x", 0)
+          .attr("y", y)
+          .attr("dy", dy + "em");
+        
+        while (word = words.pop()) {
+          line.push(word);
+          tspan.text(line.join(" "));
+          if (tspan.node()!.getComputedTextLength() > width) {
+            line.pop();
+            tspan.text(line.join(" "));
+            line = [word];
+            tspan = text.append("tspan")
+              .attr("x", 0)
+              .attr("y", y)
+              .attr("dy", ++lineNumber * lineHeight + dy + "em")
+              .text(word);
+          }
+        }
+      });
+    }
     
     // Update positions on tick
     simulation.on("tick", () => {
@@ -127,9 +187,27 @@ export default function ModelVisualizer({ metadata }: ModelVisualizerProps) {
     return () => {
       simulation.stop();
     };
-  }, [metadata]);
+  };
+  
+  useEffect(() => {
+    // Only render if we have metadata
+    if (!metadata) return;
+    
+    // Use D3 for visualization
+    renderD3Visualization();
+    
+    // Cleanup function
+    return () => {
+      if (cyRef.current) {
+        cyRef.current.destroy();
+        cyRef.current = null;
+      }
+    };
+  }, [metadata, layout]);
   
   return (
-    <svg ref={svgRef} width="100%" height="100%" className="overflow-visible" />
+    <div className="w-full h-full" ref={containerRef}>
+      <svg ref={svgRef} width="100%" height="100%" className="overflow-visible" />
+    </div>
   );
 }

@@ -53,9 +53,10 @@ interface SchemaMetadata {
 
 interface EnhancedSchemaVisualizerProps {
   metadata: any; // Accept any format of metadata that might be returned from the server
+  selectedLayout?: string; // Optional prop to receive layout from parent
 }
 
-export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVisualizerProps) {
+export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: propLayout = 'cose' }: EnhancedSchemaVisualizerProps) {
   const cyRef = useRef<HTMLDivElement>(null);
   const cy = useRef<cytoscape.Core | null>(null);
   const { toast } = useToast();
@@ -64,7 +65,7 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLayout, setSelectedLayout] = useState('cose');
+  const [selectedLayout, setSelectedLayout] = useState(propLayout);
   const [showStandardObjects, setShowStandardObjects] = useState(true);
   const [showCustomObjects, setShowCustomObjects] = useState(true);
   const [selectedObject, setSelectedObject] = useState<ObjectMetadata | null>(null);
@@ -488,11 +489,16 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
     });
   }, [searchQuery]);
 
-  // Update layout when it changes
+  // Update layout when it changes from internal state or prop
   useEffect(() => {
     if (!cy.current) return;
     cy.current.layout({ name: selectedLayout, animate: true } as any).run();
   }, [selectedLayout]);
+  
+  // Update selected layout when propLayout changes
+  useEffect(() => {
+    setSelectedLayout(propLayout);
+  }, [propLayout]);
 
   // Handle zoom controls
   const handleZoomIn = () => {

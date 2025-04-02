@@ -67,6 +67,7 @@ export default function DataModelAnalyzer() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedObjectName, setSelectedObjectName] = useState<string>("");
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [selectedLayout, setSelectedLayout] = useState<string>("cose"); // Default layout
 
   // Fetch metadata for active org
   const { data: metadata, isLoading, refetch } = useQuery<any[]>({
@@ -306,7 +307,25 @@ export default function DataModelAnalyzer() {
               <CardHeader className="border-b border-neutral-200 flex flex-row items-center justify-between py-3">
                 <CardTitle>Object Relationship Map</CardTitle>
                 {objectMetadata && objectMetadata.objects.length > 0 && (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-neutral-600">Layout:</span>
+                      <Select
+                        value={selectedLayout}
+                        onValueChange={setSelectedLayout}
+                      >
+                        <SelectTrigger className="h-8 w-36">
+                          <SelectValue placeholder="Select layout" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cose">Force-Directed</SelectItem>
+                          <SelectItem value="circle">Circular</SelectItem>
+                          <SelectItem value="grid">Grid</SelectItem>
+                          <SelectItem value="concentric">Concentric</SelectItem>
+                          <SelectItem value="breadthfirst">Hierarchical</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <span className="text-sm text-neutral-500">
                       {objectMetadata.objects.length} objects found
                     </span>
@@ -366,9 +385,15 @@ export default function DataModelAnalyzer() {
                     </div>
                   </div>
                 ) : useEnhancedVisualizer ? (
-                  <EnhancedSchemaVisualizer metadata={objectMetadata} />
+                  <EnhancedSchemaVisualizer 
+                    metadata={objectMetadata} 
+                    selectedLayout={selectedLayout}
+                  />
                 ) : (
-                  <ModelVisualizer metadata={objectMetadata} />
+                  <ModelVisualizer 
+                    metadata={objectMetadata} 
+                    selectedLayout={selectedLayout}
+                  />
                 )}
               </CardContent>
             </Card>
