@@ -52,7 +52,7 @@ export default function SideNavigation() {
   const { user } = useAuth();
 
   return (
-    <aside className="w-64 bg-white border-r border-neutral-200 flex flex-col h-full overflow-y-auto hidden md:flex">
+    <aside className="w-64 bg-white border-r border-neutral-200 flex flex-col h-full overflow-y-auto">
       <div className="p-4">
         <div className="relative">
           <Search className="h-4 w-4 text-neutral-500 absolute left-2.5 top-2.5" />
