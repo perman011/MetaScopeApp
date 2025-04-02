@@ -69,6 +69,10 @@ export default function SideNavigation() {
           Dashboard
         </NavItem>
         
+        <NavItem href="/enhanced-dashboard" icon={BarChart3} active={location === "/enhanced-dashboard"}>
+          Enhanced Dashboard
+        </NavItem>
+        
         <NavItem href="/data-model-analyzer" icon={Database} active={location === "/data-model-analyzer"}>
           Data Model Analyzer
         </NavItem>

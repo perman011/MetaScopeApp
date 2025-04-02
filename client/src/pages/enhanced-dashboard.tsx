@@ -10,18 +10,19 @@ import DependencyAnalyzerViz from "@/components/visualization/dependency-analyze
 import WhereIsUsedViz from "@/components/visualization/where-is-used-viz";
 import AutomationAnalyticsViz from "@/components/visualization/automation-analytics-viz";
 import ConfigurationRadarChart from "@/components/visualization/configuration-radar-chart";
+import { HealthScore, Metadata } from "@shared/schema";
 
 export default function EnhancedDashboard() {
   const { activeOrg } = useOrgContext();
 
   // Fetch health score for active org
-  const { data: healthScore, isLoading: isHealthScoreLoading } = useQuery({
+  const { data: healthScore, isLoading: isHealthScoreLoading } = useQuery<HealthScore>({
     queryKey: [`/api/orgs/${activeOrg?.id}/health`],
     enabled: !!activeOrg,
   });
 
   // Fetch metadata for active org
-  const { data: metadata, isLoading: isMetadataLoading } = useQuery({
+  const { data: metadata, isLoading: isMetadataLoading } = useQuery<Metadata[]>({
     queryKey: [`/api/orgs/${activeOrg?.id}/metadata`],
     enabled: !!activeOrg,
   });
@@ -55,7 +56,23 @@ export default function EnhancedDashboard() {
   }, [activeOrg, metadata, isMetadataLoading]);
 
   // Convert metadata to dependency data format if available
-  const dependencyData = {
+  interface DependencyNode {
+    id: string;
+    name: string;
+    type: string;
+    category: string;
+  }
+
+  interface DependencyLink {
+    source: string;
+    target: string;
+    type: string;
+  }
+
+  const dependencyData: {
+    nodes: DependencyNode[];
+    links: DependencyLink[];
+  } = {
     nodes: [],
     links: []
   };
