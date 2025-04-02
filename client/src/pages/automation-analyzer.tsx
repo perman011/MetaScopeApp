@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Select,
   SelectContent,
@@ -23,37 +25,66 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+// Types for automation data
+interface AutomationData {
+  flows: Flow[];
+  processBuilders: ProcessBuilder[];
+  workflowRules: WorkflowRule[];
+  apexTriggers: ApexTrigger[];
+  conflicts: Conflict[];
+  recommendations: Recommendation[];
+}
 
-// Mock automation data since backend integration not implemented yet
-const mockAutomationData = {
-  flows: [
-    { id: 1, name: "Lead Qualification Flow", status: "Active", modified: "2025-03-15", type: "Screen Flow", description: "Guides users through lead qualification process" },
-    { id: 2, name: "Case Escalation Process", status: "Active", modified: "2025-03-12", type: "Record-Triggered Flow", description: "Automatically escalates high-priority cases" },
-    { id: 3, name: "New Customer Onboarding", status: "Draft", modified: "2025-03-10", type: "Screen Flow", description: "Onboarding workflow for new customers" }
-  ],
-  processBuilders: [
-    { id: 1, name: "Account Update Process", status: "Active", modified: "2025-03-14", object: "Account", description: "Updates related contacts when account changes" },
-    { id: 2, name: "Opportunity Stage Change", status: "Active", modified: "2025-03-11", object: "Opportunity", description: "Triggers actions based on opportunity stage changes" }
-  ],
-  workflowRules: [
-    { id: 1, name: "Send Welcome Email", status: "Active", object: "Contact", modified: "2025-03-13", description: "Sends welcome email to new contacts" },
-    { id: 2, name: "Update Account Rating", status: "Inactive", object: "Account", modified: "2025-03-10", description: "Updates account rating based on activity" }
-  ],
-  apexTriggers: [
-    { id: 1, name: "ContactTrigger", object: "Contact", modified: "2025-03-15", events: "Before Insert, After Insert", description: "Handles contact record validations and post-processing" },
-    { id: 2, name: "OpportunityTrigger", object: "Opportunity", modified: "2025-03-12", events: "Before Update, After Update", description: "Maintains opportunity team members and sharing rules" }
-  ],
-  conflicts: [
-    { id: 1, type: "Order of Execution", severity: "High" as const, components: ["ContactTrigger", "Contact Update Process"], description: "Multiple automations may cause recursive updates" },
-    { id: 2, type: "Duplicate Logic", severity: "Medium" as const, components: ["Case Escalation Process", "Case Escalation Workflow"], description: "Similar logic implemented in multiple places" },
-    { id: 3, type: "Performance", severity: "Low" as const, components: ["AccountTrigger"], description: "SOQL query inside a loop may cause governor limits issues" }
-  ],
-  recommendations: [
-    { id: 1, type: "Refactoring", impact: "High" as const, description: "Consolidate Contact triggers and process builders into a single flow" },
-    { id: 2, type: "Migration", impact: "Medium" as const, description: "Convert workflow rules to flow for better maintainability" },
-    { id: 3, type: "Performance", impact: "Medium" as const, description: "Optimize SOQL queries in Apex triggers to avoid governor limits" }
-  ]
-};
+interface Flow {
+  id: string;
+  name: string;
+  status: string;
+  modified: string;
+  type: string;
+  description: string;
+}
+
+interface ProcessBuilder {
+  id: string;
+  name: string;
+  status: string;
+  modified: string;
+  object: string;
+  description: string;
+}
+
+interface WorkflowRule {
+  id: string;
+  name: string;
+  status: string;
+  modified: string;
+  object: string;
+  description: string;
+}
+
+interface ApexTrigger {
+  id: string;
+  name: string;
+  object: string;
+  modified: string;
+  events: string;
+  description: string;
+}
+
+interface Conflict {
+  id: number;
+  type: string;
+  severity: 'High' | 'Medium' | 'Low';
+  components: string[];
+  description: string;
+}
+
+interface Recommendation {
+  id: number;
+  type: string;
+  impact: 'High' | 'Medium' | 'Low';
+  description: string;
+}
 
 interface AutomationTypeCardProps {
   title: string;
@@ -140,19 +171,188 @@ export default function AutomationAnalyzer() {
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const { activeOrg } = useOrgContext();
 
-  // Simulates analysis process
-  const startAnalysis = () => {
+  // Query metadata for active org
+  const { data: metadata, isLoading: isMetadataLoading, refetch: refetchMetadata } = useQuery<any[]>({
+    queryKey: [`/api/orgs/${activeOrg?.id}/metadata`],
+    enabled: !!activeOrg && analysisComplete,
+  });
+
+  // Query automation data for active org (flows, process builders, etc.)
+  const { data: automationData, isLoading: isAutomationLoading, refetch: refetchAutomationData } = useQuery<AutomationData>({
+    queryKey: [`/api/orgs/${activeOrg?.id}/metadata/automations`],
+    enabled: !!activeOrg && analysisComplete,
+    // Transform the raw metadata into our expected automation data format
+    select: (rawData: any) => {
+      // Default empty automation data structure
+      const defaultData: AutomationData = {
+        flows: [],
+        processBuilders: [],
+        workflowRules: [],
+        apexTriggers: [],
+        conflicts: [],
+        recommendations: []
+      };
+      
+      try {
+        if (!rawData) return defaultData;
+
+        // Extract flows from metadata
+        const flows = rawData
+          .filter((item: any) => item.type === 'Flow')
+          .map((flow: any) => ({
+            id: flow.id || flow.name,
+            name: flow.name,
+            status: flow.active ? 'Active' : 'Inactive',
+            modified: flow.lastModifiedDate || new Date().toISOString().split('T')[0],
+            type: flow.processType || 'Flow',
+            description: flow.description || `Flow for ${flow.name}`
+          }));
+
+        // Extract process builders from metadata
+        const processBuilders = rawData
+          .filter((item: any) => item.type === 'ProcessBuilder')
+          .map((process: any) => ({
+            id: process.id || process.name,
+            name: process.name,
+            status: process.active ? 'Active' : 'Inactive',
+            modified: process.lastModifiedDate || new Date().toISOString().split('T')[0],
+            object: process.objectType || 'Unknown',
+            description: process.description || `Process Builder for ${process.name}`
+          }));
+
+        // Extract workflow rules from metadata
+        const workflowRules = rawData
+          .filter((item: any) => item.type === 'WorkflowRule')
+          .map((rule: any) => ({
+            id: rule.id || rule.name,
+            name: rule.name,
+            status: rule.active ? 'Active' : 'Inactive',
+            modified: rule.lastModifiedDate || new Date().toISOString().split('T')[0],
+            object: rule.objectType || 'Unknown',
+            description: rule.description || `Workflow Rule for ${rule.name}`
+          }));
+
+        // Extract apex triggers from metadata
+        const apexTriggers = rawData
+          .filter((item: any) => item.type === 'ApexTrigger')
+          .map((trigger: any) => ({
+            id: trigger.id || trigger.name,
+            name: trigger.name,
+            object: trigger.entityDefinition || 'Unknown',
+            modified: trigger.lastModifiedDate || new Date().toISOString().split('T')[0],
+            events: trigger.events || 'Before/After',
+            description: trigger.description || `Apex Trigger for ${trigger.name}`
+          }));
+
+        // Analyze for conflicts and generate recommendations
+        // This would be more sophisticated in a real implementation
+        const conflicts: Conflict[] = [];
+        const recommendations: Recommendation[] = [];
+
+        // Simple conflict detection example: 
+        // If multiple automations act on the same object
+        const objectAutomationCount = new Map<string, string[]>();
+        
+        // Count automations per object
+        [...workflowRules, ...processBuilders].forEach((item: WorkflowRule | ProcessBuilder) => {
+          if (!objectAutomationCount.has(item.object)) {
+            objectAutomationCount.set(item.object, []);
+          }
+          objectAutomationCount.get(item.object)?.push(item.name);
+        });
+        
+        // Check for objects with multiple automations
+        let conflictId = 1;
+        objectAutomationCount.forEach((automations, objectName) => {
+          if (automations.length > 1) {
+            conflicts.push({
+              id: conflictId++,
+              type: "Multiple Automations",
+              severity: "Medium",
+              components: automations,
+              description: `Multiple automations act on the ${objectName} object which could cause conflicts.`
+            });
+          }
+        });
+
+        // Generate recommendations based on findings
+        let recId = 1;
+        if (workflowRules.length > 0) {
+          recommendations.push({
+            id: recId++,
+            type: "Migration",
+            impact: "Medium",
+            description: "Convert workflow rules to flow for better maintainability and future compatibility."
+          });
+        }
+
+        if (conflicts.length > 0) {
+          recommendations.push({
+            id: recId++,
+            type: "Refactoring",
+            impact: "High",
+            description: "Consolidate redundant automations to reduce complexity and improve maintainability."
+          });
+        }
+
+        return {
+          flows,
+          processBuilders,
+          workflowRules,
+          apexTriggers,
+          conflicts,
+          recommendations
+        };
+      } catch (error) {
+        console.error("Error transforming automation data:", error);
+        return defaultData;
+      }
+    }
+  });
+
+  // Sync metadata if needed
+  const syncMetadata = async () => {
+    if (!activeOrg) return;
+    
     setIsAnalyzing(true);
-    setTimeout(() => {
+    
+    try {
+      // First sync/fetch metadata
+      await apiRequest("POST", `/api/orgs/${activeOrg.id}/sync`, {
+        types: ["Flow", "ApexTrigger", "WorkflowRule", "ProcessBuilder"]
+      });
+      
+      // Refetch metadata and automation data
+      await refetchMetadata();
+      await refetchAutomationData();
+      
       setIsAnalyzing(false);
       setAnalysisComplete(true);
-    }, 2000);
+    } catch (error) {
+      console.error("Error during automation analysis:", error);
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Start the analysis process
+  const startAnalysis = () => {
+    syncMetadata();
   };
 
   // Reset if org changes
   useEffect(() => {
     setAnalysisComplete(false);
   }, [activeOrg]);
+  
+  // Get automation data, falling back to empty arrays when needed
+  const automationDataWithDefaults: AutomationData = {
+    flows: automationData?.flows || [],
+    processBuilders: automationData?.processBuilders || [],
+    workflowRules: automationData?.workflowRules || [],
+    apexTriggers: automationData?.apexTriggers || [],
+    conflicts: automationData?.conflicts || [],
+    recommendations: automationData?.recommendations || []
+  };
 
   return (
     <div className="p-6">
@@ -199,25 +399,25 @@ export default function AutomationAnalyzer() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <AutomationTypeCard
                 title="Flows"
-                count={mockAutomationData.flows.length}
+                count={automationDataWithDefaults.flows.length}
                 icon={Layers}
                 className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200"
               />
               <AutomationTypeCard
                 title="Process Builders"
-                count={mockAutomationData.processBuilders.length}
+                count={automationDataWithDefaults.processBuilders.length}
                 icon={Layers}
                 className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200"
               />
               <AutomationTypeCard
                 title="Workflow Rules"
-                count={mockAutomationData.workflowRules.length}
+                count={automationDataWithDefaults.workflowRules.length}
                 icon={Layers}
                 className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200"
               />
               <AutomationTypeCard
                 title="Apex Triggers"
-                count={mockAutomationData.apexTriggers.length}
+                count={automationDataWithDefaults.apexTriggers.length}
                 icon={Layers}
                 className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
               />
@@ -227,7 +427,7 @@ export default function AutomationAnalyzer() {
               <CardHeader>
                 <CardTitle>Potential Conflicts</CardTitle>
                 <CardDescription>
-                  The analysis identified {mockAutomationData.conflicts.length} potential conflicts in your automation setup.
+                  The analysis identified {automationDataWithDefaults.conflicts.length} potential conflicts in your automation setup.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -242,7 +442,7 @@ export default function AutomationAnalyzer() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockAutomationData.conflicts.map((conflict) => (
+                    {automationDataWithDefaults.conflicts.map((conflict: Conflict) => (
                       <TableRow key={conflict.id}>
                         <TableCell className="font-medium">{conflict.type}</TableCell>
                         <TableCell>
@@ -290,7 +490,7 @@ export default function AutomationAnalyzer() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {mockAutomationData.flows.map((flow) => (
+                        {automationDataWithDefaults.flows.map((flow: Flow) => (
                           <TableRow key={flow.id}>
                             <TableCell className="font-medium">{flow.name}</TableCell>
                             <TableCell>{flow.type}</TableCell>
@@ -327,7 +527,7 @@ export default function AutomationAnalyzer() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {mockAutomationData.processBuilders.map((process) => (
+                        {automationDataWithDefaults.processBuilders.map((process: ProcessBuilder) => (
                           <TableRow key={process.id}>
                             <TableCell className="font-medium">{process.name}</TableCell>
                             <TableCell>{process.object}</TableCell>
@@ -364,7 +564,7 @@ export default function AutomationAnalyzer() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {mockAutomationData.workflowRules.map((rule) => (
+                        {automationDataWithDefaults.workflowRules.map((rule: WorkflowRule) => (
                           <TableRow key={rule.id}>
                             <TableCell className="font-medium">{rule.name}</TableCell>
                             <TableCell>{rule.object}</TableCell>
@@ -401,7 +601,7 @@ export default function AutomationAnalyzer() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {mockAutomationData.apexTriggers.map((trigger) => (
+                        {automationDataWithDefaults.apexTriggers.map((trigger: ApexTrigger) => (
                           <TableRow key={trigger.id}>
                             <TableCell className="font-medium">{trigger.name}</TableCell>
                             <TableCell>{trigger.object}</TableCell>
@@ -435,7 +635,7 @@ export default function AutomationAnalyzer() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockAutomationData.recommendations.map((rec) => (
+                    {automationDataWithDefaults.recommendations.map((rec: Recommendation) => (
                       <TableRow key={rec.id}>
                         <TableCell className="font-medium">{rec.type}</TableCell>
                         <TableCell>

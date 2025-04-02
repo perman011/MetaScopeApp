@@ -212,6 +212,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).send("Internal Server Error");
     }
   });
+  
+  // Automation-specific metadata endpoint
+  app.get("/api/orgs/:id/metadata/automations", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      // Get stored metadata specific to automation components
+      const metadata = await storage.getOrgMetadata(org.id);
+      
+      // Filter for automation-related metadata
+      const automationMetadata = metadata.filter(
+        (m: any) => 
+          m.type === 'Flow' || 
+          m.type === 'ApexTrigger' || 
+          m.type === 'WorkflowRule' || 
+          m.type === 'ProcessBuilder'
+      );
+      
+      res.json(automationMetadata);
+    } catch (error) {
+      console.error("Error fetching automation metadata:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
 
   app.post("/api/orgs/:id/sync", ensureAuthenticated, async (req, res) => {
     try {
