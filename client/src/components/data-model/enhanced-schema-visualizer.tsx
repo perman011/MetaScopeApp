@@ -249,13 +249,16 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
             'text-valign': 'center',
             'text-halign': 'center',
             'background-color': '#0176d3',
-            'width': 'data(size)',
-            'height': 'data(size)',
+            'width': '80px', // Uniform size instead of data-dependent
+            'height': '80px', // Uniform size instead of data-dependent
+            'shape': 'round-rectangle', // Use rounded squares instead of circles
+            // Note: 'border-radius' isn't a standard Cytoscape property
+            // The rounding is controlled by the 'round-rectangle' shape
             'color': 'white',
             'font-weight': 'bold',
             'text-wrap': 'wrap',
-            'text-max-width': '80px',
-            'font-size': '10px',
+            'text-max-width': '70px',
+            'font-size': '11px',
           }
         },
         {
@@ -341,14 +344,14 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
       wheelSensitivity: 0.3,
     });
 
-    // Add nodes (objects)
+    // Add nodes (objects) with uniform size
     filteredObjects.forEach(obj => {
       cy.current?.add({
         group: 'nodes',
         data: { 
           id: obj.name, 
           label: obj.label,
-          size: Math.max(60, Math.min(obj.fields.length * 2 + 40, 100))
+          // No longer using dynamic sizing since we want uniform node sizes
         },
         classes: obj.custom ? 'custom' : 'standard'
       });
