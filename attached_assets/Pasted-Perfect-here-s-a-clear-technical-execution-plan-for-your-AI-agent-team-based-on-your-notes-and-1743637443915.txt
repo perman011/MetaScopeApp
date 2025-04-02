@@ -1,0 +1,79 @@
+Perfect — here's a clear **technical execution plan** for your AI agent team based on your notes and UI feedback.
+
+---
+
+## ✅ Part 1: Sidebar Expand/Collapse Toggle – Correct Placement & Behavior
+
+### 🔍 Issue Summary
+- Current expand/collapse button is **rendering in the middle of the screen as an invisible square** (see circled area).
+- Expected: Button should appear near the edge of the left and right panels (where you marked an ❌).
+- It's likely **not positioned correctly using CSS or layout nesting**.
+
+---
+
+### 🧠 Execution Plan (Left and Right Sidebar Toggle Fix)
+
+#### Step 1: Audit Current Toggle Code
+- Locate the component responsible for sidebar toggle behavior (likely in `DataModelAnalyzer.tsx` or layout wrapper).
+- Identify the component rendering the **toggle button**. It may be:
+  - Floating `<button>` not anchored to a layout container
+  - Rendered without proper position: absolute/fixed
+
+#### Step 2: Reposition the Button
+- Ensure the button is rendered **inside each sidebar panel**, not inside the main graph canvas.
+- For the left panel, place the button at the **far right edge of the left container**.
+- For the right panel, place the button at the **far left edge of the right sidebar**.
+- Use Tailwind utilities like `absolute`, `top-1/2`, `-translate-y-1/2`, `right-0`, or `left-0` to align it properly.
+
+#### Step 3: Style the Button
+- Use a **minimal icon button** (e.g. `chevron-left`, `chevron-right`) from Lucide or similar icon library.
+- Add hover/focus styles and appropriate aria-labels for accessibility.
+- Button state should toggle an internal flag: `isSidebarCollapsed` or similar.
+
+#### Step 4: Hook Up Toggle Logic
+- When clicked:
+  - Collapse the corresponding sidebar (e.g. `setLeftPanelVisible(false)`)
+  - Expand it again when toggled back
+- Ensure it triggers a **layout refresh** so the graph adjusts to the new canvas size
+
+---
+
+## ✅ Part 2: Fix Layout When "Enhanced Visualizer" is Off
+
+### 🔍 Issue Summary
+- Turning off Enhanced Visualizer breaks node positioning — graph is **clumped or spread out randomly**.
+- Expected: Turning toggle off should still respect selected layout (Circular, Grid, etc.)
+
+---
+
+### 🧠 Execution Plan (Enhanced Visualizer Toggle Layout Fix)
+
+#### Step 1: Identify What the Toggle Does
+- Locate logic tied to `EnhancedVisualizer` toggle state.
+- Determine whether it:
+  - Switches between rendering modes
+  - Alters node size/shape/labels
+  - Changes which layout engine is used (or disables layout completely)
+
+#### Step 2: Fix Layout Persistence
+- Ensure that **disabling Enhanced Visualizer does NOT remove or override the selected layout algorithm**.
+- `layout.run()` or equivalent should still be called based on `layoutAlgorithm` state.
+
+#### Step 3: Re-run Layout on Toggle
+- Add a listener or effect to detect when EnhancedVisualizer is toggled.
+- Re-run the layout algorithm (`cy.layout({...}).run()`) to ensure positioning recalculates correctly.
+
+#### Step 4: Test with All Layout Modes
+- Verify correct behavior with all options: Force-Directed, Grid, Circular, etc.
+- Nodes should remain spaced and readable regardless of visualizer state
+
+---
+
+### 🎯 Final Goal
+- ✅ Clean and usable toggles for both side panels
+- ✅ No layout bugs when switching visualizer modes
+- ✅ Chart always stays readable and well-positioned
+
+---
+
+Would you like this structured as a dev ticket template too (title, description, acceptance criteria)?

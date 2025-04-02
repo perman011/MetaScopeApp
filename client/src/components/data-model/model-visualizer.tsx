@@ -10,6 +10,11 @@ interface ModelVisualizerProps {
 export default function ModelVisualizer({ metadata, selectedLayout = 'force-directed' }: ModelVisualizerProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [layout, setLayout] = useState(selectedLayout);
+  
+  // Update layout when prop changes
+  useEffect(() => {
+    setLayout(selectedLayout);
+  }, [selectedLayout]);
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
   

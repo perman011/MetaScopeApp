@@ -206,7 +206,7 @@ export default function DataModelAnalyzer() {
       }
       
       // 2. If metadata itself is the object metadata with objects array
-      if (!Array.isArray(metadata) && metadata.objects && Array.isArray(metadata.objects)) {
+      if (!Array.isArray(metadata) && metadata && metadata.objects && Array.isArray(metadata.objects)) {
         console.log("Found direct objects array in metadata");
         return metadata as ObjectMetadata;
       }
