@@ -249,16 +249,20 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
             'text-valign': 'center',
             'text-halign': 'center',
             'background-color': '#0176d3',
-            'width': '80px', // Uniform size instead of data-dependent
-            'height': '80px', // Uniform size instead of data-dependent
-            'shape': 'round-rectangle', // Use rounded squares instead of circles
-            // Note: 'border-radius' isn't a standard Cytoscape property
-            // The rounding is controlled by the 'round-rectangle' shape
+            'width': '90px', // Slightly wider for better text accommodation
+            'height': '90px', // Slightly taller to accommodate wrapped text
+            'shape': 'round-rectangle', // Rounded squares instead of circles
             'color': 'white',
             'font-weight': 'bold',
-            'text-wrap': 'wrap',
-            'text-max-width': '70px',
-            'font-size': '11px',
+            'text-wrap': 'wrap', // Enable text wrapping
+            'text-max-width': '80px', // Increase max width for text to reduce wrapping
+            'font-size': '12px', // Slightly larger font for better readability
+            'text-margin-y': '5px', // Add vertical margin for better text positioning
+            'text-outline-width': 0, // Remove text outline for cleaner appearance
+            'text-outline-opacity': 0,
+            'text-background-opacity': 0.2, // Slight background behind text for better contrast
+            'text-background-color': '#000',
+            'text-background-padding': '3px',
           }
         },
         {
@@ -706,13 +710,16 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
         </div>
       </div>
       
-      {/* Left Panel Toggle Button */}
+      {/* Left Panel Toggle Button (on the right edge of the left panel) */}
       <button 
         onClick={toggleLeftPanel}
-        className="absolute left-72 top-4 bg-primary-600 text-white h-8 w-8 rounded-r-md flex items-center justify-center z-10 transition-all duration-300"
-        style={{ left: leftPanelCollapsed ? 0 : 'calc(72px * 3)' }}
+        className="absolute top-1/2 -translate-y-1/2 bg-primary-600 text-white h-8 w-6 rounded-r-md flex items-center justify-center z-10 transition-all duration-300 shadow-md"
+        style={{ 
+          left: leftPanelCollapsed ? 0 : '72px',
+          transform: leftPanelCollapsed ? 'translateY(-50%)' : 'translateY(-50%)',
+        }}
       >
-        {leftPanelCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+        {leftPanelCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
       
       {/* Main Graph Area */}
@@ -855,13 +862,16 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
         )}
       </div>
       
-      {/* Right Panel Toggle Button */}
+      {/* Right Panel Toggle Button (on the left edge of the right panel) */}
       <button 
         onClick={toggleRightPanel}
-        className="absolute right-0 top-4 bg-primary-600 text-white h-8 w-8 rounded-l-md flex items-center justify-center z-10 transition-all duration-300"
-        style={{ right: rightPanelCollapsed ? 0 : 'calc(80px)' }}
+        className="absolute top-1/2 -translate-y-1/2 bg-primary-600 text-white h-8 w-6 rounded-l-md flex items-center justify-center z-10 transition-all duration-300 shadow-md"
+        style={{ 
+          right: rightPanelCollapsed ? 0 : '80px',
+          transform: rightPanelCollapsed ? 'translateY(-50%)' : 'translateY(-50%)'
+        }}
       >
-        {rightPanelCollapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+        {rightPanelCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
       </button>
     </div>
   );
