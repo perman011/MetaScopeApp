@@ -86,8 +86,11 @@ export default function AuthPage() {
         <div className="w-full max-w-sm mx-auto lg:w-96">
           <div className="mb-10 text-center">
             <div className="flex items-center justify-center text-primary-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mr-2" viewBox="0 0 24 24" fill="none">
+                <path d="M16 16L22 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" />
+                <path d="M10 5v10M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                <path d="M3 3L7 7M17 3L13 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
               </svg>
               <span className="text-2xl font-bold">MetaScope</span>
             </div>
