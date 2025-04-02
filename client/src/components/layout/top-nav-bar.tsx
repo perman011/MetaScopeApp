@@ -10,13 +10,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
-import { Loader2, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 export default function TopNavBar() {
   const { user, logoutMutation } = useAuth();
   const [, navigate] = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Safely access org context only if we're within an OrgProvider
   let activeOrg = null;
@@ -47,24 +45,13 @@ export default function TopNavBar() {
             <span>MetaScope</span>
           </div>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex space-x-1">
+          {/* Navigation Links */}
+          <div className="flex space-x-1">
             <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
               Help
             </Button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
               Docs
-            </Button>
-          </div>
-
-          {/* Mobile Menu Toggle */}
-          <div className="md:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
         </div>
@@ -93,7 +80,7 @@ export default function TopNavBar() {
                 <DropdownMenuItem onClick={() => navigate("/")}>
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/")}>
+                <DropdownMenuItem onClick={() => navigate("/settings")}>
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -113,104 +100,6 @@ export default function TopNavBar() {
           )}
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-neutral-200 bg-white shadow-sm">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => {
-                navigate("/dashboard");
-                setIsMobileMenuOpen(false);
-              }}
-            >
-              Dashboard
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => {
-                navigate("/data-model-analyzer");
-                setIsMobileMenuOpen(false);
-              }}
-            >
-              Data Model Analyzer
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => {
-                navigate("/soql-editor");
-                setIsMobileMenuOpen(false);
-              }}
-            >
-              SOQL/SOSL Editor
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => {
-                navigate("/security-analyzer");
-                setIsMobileMenuOpen(false);
-              }}
-            >
-              Security Analyzer
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => {
-                navigate("/automation-analyzer");
-                setIsMobileMenuOpen(false);
-              }}
-            >
-              Automation Analyzer
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => {
-                navigate("/ui-component-analyzer");
-                setIsMobileMenuOpen(false);
-              }}
-            >
-              UI Component Analyzer
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => {
-                navigate("/metadata-dependency-analyzer");
-                setIsMobileMenuOpen(false);
-              }}
-            >
-              Dependency Analyzer
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => {
-                navigate("/permissions-analyzer");
-                setIsMobileMenuOpen(false);
-              }}
-            >
-              Permissions Analyzer
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start"
-              onClick={() => {
-                navigate("/apex-debug-analyzer");
-                setIsMobileMenuOpen(false);
-              }}
-            >
-              Apex Debug Analyzer
-            </Button>
-          </div>
-        </div>
-      )}
     </header>
   );
 }
