@@ -64,106 +64,68 @@ export class SalesforceService {
   // Get org users for trace flag creation
   async getOrgUsers(org: SalesforceOrg): Promise<any[]> {
     try {
-      // In a real implementation, this would make an API call to Salesforce
-      // For demonstration purposes, we'll return mock data
-      return [
-        { id: "005xx000001X8zrAAC", name: "System Administrator" },
-        { id: "005xx000001X8zsAAC", name: "Integration User" },
-        { id: "005xx000001X8ztAAC", name: "Regular User" },
-        { id: "005xx000001X8zuAAC", name: "API User" },
-        { id: "005xx000001X8zvAAC", name: "Mekan Developer" }
-      ];
+      console.log(`Fetching users from org ${org.id}`);
+      
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
+      
+      // Fetch users
+      const usersResult = await conn.query('SELECT Id, Name FROM User WHERE IsActive = true ORDER BY Name LIMIT 100');
+      
+      // Transform to match our expected format
+      const users = usersResult.records.map((user: any) => ({
+        id: user.Id,
+        name: user.Name
+      }));
+      
+      return users;
     } catch (error) {
       console.error('Error fetching org users:', error);
-      throw error;
+      // If there's an error, log it but return an empty array rather than failing completely
+      return [];
     }
   }
 
   // Get apex logs from Salesforce
   async getApexLogs(org: SalesforceOrg): Promise<any[]> {
     try {
-      // In a real implementation, this would make an API call to Salesforce
-      // For demonstration purposes, we'll return mock data
-      return [
-        {
-          id: "07Lxx000001X8zrAAC",
-          application: "API",
-          duration: 15482,
-          location: "ProcessBuilder",
-          logLength: 1245678,
-          operation: "Opportunity Trigger",
-          request: "Api",
-          startTime: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-          status: "Success",
-          user: {
-            id: "005xx000001X8zrAAC",
-            name: "System Administrator"
-          }
-        },
-        {
-          id: "07Lxx000001X8zsAAC",
-          application: "Apex Class",
-          duration: 8731,
-          location: "OpportunityTriggerHandler",
-          logLength: 785432,
-          operation: "Bulk API Batch",
-          request: "Apex",
-          startTime: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-          status: "Success",
-          user: {
-            id: "005xx000001X8ztAAC",
-            name: "Regular User"
-          }
-        },
-        {
-          id: "07Lxx000001X8ztAAC",
-          application: "Visualforce Page",
-          duration: 22145,
-          location: "AccountController",
-          logLength: 2134567,
-          operation: "VF Page: /apex/AccountDetail",
-          request: "Visualforce",
-          startTime: new Date(Date.now() - 10800000).toISOString(), // 3 hours ago
-          status: "Success",
-          user: {
-            id: "005xx000001X8zvAAC",
-            name: "Mekan Developer"
-          }
-        },
-        {
-          id: "07Lxx000001X8zuAAC",
-          application: "Lightning",
-          duration: 5623,
-          location: "LightningController",
-          logLength: 456789,
-          operation: "Account Update",
-          request: "Lightning",
-          startTime: new Date(Date.now() - 14400000).toISOString(), // 4 hours ago
-          status: "Success",
-          user: {
-            id: "005xx000001X8zvAAC",
-            name: "Mekan Developer"
-          }
-        },
-        {
-          id: "07Lxx000001X8zvAAC",
-          application: "Flows",
-          duration: 12876,
-          location: "Flow_AutocreatedAPIName_1",
-          logLength: 1654321,
-          operation: "Flow Interview",
-          request: "Flow",
-          startTime: new Date(Date.now() - 18000000).toISOString(), // 5 hours ago
-          status: "Success",
-          user: {
-            id: "005xx000001X8ztAAC",
-            name: "Regular User"
-          }
+      console.log(`Fetching Apex logs from org ${org.id}`);
+      
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
+      
+      // Fetch Apex logs via the tooling API
+      const logsResult = await conn.tooling.query('SELECT Id, Application, DurationMilliseconds, Location, LogLength, Operation, Request, StartTime, Status, LogUserId, LogUser.Name FROM ApexLog ORDER BY StartTime DESC LIMIT 100');
+      
+      // Transform the results to match our expected format
+      const logs = logsResult.records.map((log: any) => ({
+        id: log.Id,
+        application: log.Application,
+        duration: log.DurationMilliseconds,
+        location: log.Location,
+        logLength: log.LogLength,
+        operation: log.Operation,
+        request: log.Request,
+        startTime: log.StartTime,
+        status: log.Status,
+        user: {
+          id: log.LogUserId,
+          name: log.LogUser?.Name || 'Unknown User'
         }
-      ];
+      }));
+      
+      return logs;
     } catch (error) {
       console.error('Error fetching apex logs:', error);
-      throw error;
+      
+      // If there's an error, log it but return an empty array rather than failing completely
+      return [];
     }
   }
 
@@ -362,59 +324,84 @@ export class SalesforceService {
   // Get trace flags from Salesforce
   async getTraceFlags(org: SalesforceOrg): Promise<any[]> {
     try {
-      // In a real implementation, this would fetch trace flags from Salesforce
-      // For demonstration purposes, we'll return mock data
+      console.log(`Fetching trace flags from org ${org.id}`);
       
-      // Current time for calculating relative expiration times
-      const now = new Date();
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
       
-      return [
-        {
-          id: "7tfxx000000blTzAAI",
-          debugLevelId: "7dlxx000000fDrSAAU",
+      // Fetch trace flags using the tooling API
+      const traceFlagsResult = await conn.tooling.query(
+        `SELECT Id, DebugLevelId, LogType, ExpirationDate, StartDate, TracedEntityId, 
+         TracedEntityType FROM TraceFlag ORDER BY ExpirationDate DESC LIMIT 100`
+      );
+      
+      // Get debug level details
+      const debugLevelIds = traceFlagsResult.records.map((flag: any) => flag.DebugLevelId);
+      
+      let debugLevels: any[] = [];
+      if (debugLevelIds.length > 0) {
+        // Create a unique list of debug level IDs using filter instead of Set
+        const uniqueDebugLevelIds = debugLevelIds.filter((id, index) => 
+          debugLevelIds.indexOf(id) === index
+        );
+        
+        // Fetch debug levels
+        const debugLevelsResult = await conn.tooling.query(
+          `SELECT Id, DeveloperName, ApexCode, ApexProfiling, Callout, Database, System, 
+           Validation, Visualforce, Workflow FROM DebugLevel 
+           WHERE Id IN ('${uniqueDebugLevelIds.join("','")}')`
+        );
+        
+        debugLevels = debugLevelsResult.records;
+      }
+      
+      // Transform the results to match our expected format
+      const traceFlags = traceFlagsResult.records.map((flag: any) => {
+        // Find the associated debug level
+        const debugLevel = debugLevels.find((level: any) => level.Id === flag.DebugLevelId) || {
+          Id: flag.DebugLevelId,
+          DeveloperName: 'Unknown',
+          ApexCode: 'INFO',
+          ApexProfiling: 'INFO',
+          Callout: 'INFO',
+          Database: 'INFO',
+          System: 'INFO',
+          Validation: 'INFO', 
+          Visualforce: 'INFO',
+          Workflow: 'INFO'
+        };
+        
+        return {
+          id: flag.Id,
+          debugLevelId: flag.DebugLevelId,
           debugLevel: {
-            id: "7dlxx000000fDrSAAU",
-            developerName: "ApexDebug",
-            apexCode: "DEBUG",
-            apexProfiling: "FINEST",
-            callout: "INFO",
-            database: "FINE",
-            system: "DEBUG",
-            validation: "INFO",
-            visualforce: "INFO",
-            workflow: "INFO"
+            id: debugLevel.Id,
+            developerName: debugLevel.DeveloperName,
+            apexCode: debugLevel.ApexCode,
+            apexProfiling: debugLevel.ApexProfiling,
+            callout: debugLevel.Callout,
+            database: debugLevel.Database,
+            system: debugLevel.System,
+            validation: debugLevel.Validation,
+            visualforce: debugLevel.Visualforce,
+            workflow: debugLevel.Workflow
           },
-          expirationDate: new Date(now.getTime() + 3600000).toISOString(), // 1 hour from now
-          logType: "USER_DEBUG",
-          startDate: new Date(now.getTime() - 3600000).toISOString(), // 1 hour ago
-          tracedEntityId: "005xx000001X8zvAAC",
-          tracedEntityType: "User"
-        },
-        {
-          id: "7tfxx000000blU0AAI",
-          debugLevelId: "7dlxx000000fDrTAAU",
-          debugLevel: {
-            id: "7dlxx000000fDrTAAU",
-            developerName: "DetailedLogging",
-            apexCode: "FINEST",
-            apexProfiling: "FINEST",
-            callout: "FINEST",
-            database: "FINEST",
-            system: "DEBUG",
-            validation: "INFO",
-            visualforce: "INFO",
-            workflow: "INFO"
-          },
-          expirationDate: new Date(now.getTime() - 1800000).toISOString(), // 30 minutes ago (expired)
-          logType: "USER_DEBUG",
-          startDate: new Date(now.getTime() - 7200000).toISOString(), // 2 hours ago
-          tracedEntityId: "005xx000001X8ztAAC",
-          tracedEntityType: "User"
-        }
-      ];
+          expirationDate: flag.ExpirationDate,
+          logType: flag.LogType,
+          startDate: flag.StartDate,
+          tracedEntityId: flag.TracedEntityId,
+          tracedEntityType: flag.TracedEntityType
+        };
+      });
+      
+      return traceFlags;
     } catch (error) {
       console.error('Error fetching trace flags:', error);
-      throw error;
+      // If there's an error, log it but return an empty array rather than failing completely
+      return [];
     }
   }
 
@@ -427,49 +414,116 @@ export class SalesforceService {
     expirationMinutes: number = 30
   ): Promise<any> {
     try {
-      // In a real implementation, this would create a trace flag in Salesforce
+      console.log(`Creating trace flag for entity ${tracedEntityId} in org ${org.id}`);
+      
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
       
       // Current time for calculating start and expiration
       const now = new Date();
       const expirationDate = new Date(now.getTime() + (expirationMinutes * 60 * 1000));
       
-      // Create a debug level first if one wasn't specified
-      const debugLevelInfo = debugLevelId ? { 
-        id: debugLevelId,
-        developerName: "ExistingDebugLevel" 
-      } : {
-        id: "7dlxx00000" + Math.random().toString(36).substring(2, 10).toUpperCase(),
-        developerName: "CustomDebugLevel_" + new Date().getTime()
+      let finalDebugLevelId = debugLevelId;
+      
+      // If no debug level ID was provided, create a new debug level
+      if (!finalDebugLevelId) {
+        // First create a debug level
+        const newDebugLevel = {
+          DeveloperName: `CustomDebugLevel_${Date.now()}`,
+          MasterLabel: `Custom Debug Level ${new Date().toISOString().slice(0, 10)}`,
+          ApexCode: debugLevel?.apexCode || "DEBUG",
+          ApexProfiling: debugLevel?.apexProfiling || "INFO",
+          Callout: debugLevel?.callout || "INFO",
+          Database: debugLevel?.database || "INFO",
+          System: debugLevel?.system || "DEBUG",
+          Validation: debugLevel?.validation || "INFO",
+          Visualforce: debugLevel?.visualforce || "INFO",
+          Workflow: debugLevel?.workflow || "INFO"
+        };
+        
+        try {
+          // Create the debug level in Salesforce
+          const debugLevelResult = await conn.tooling.sobject('DebugLevel').create(newDebugLevel);
+          
+          if (debugLevelResult.success) {
+            finalDebugLevelId = debugLevelResult.id;
+            console.log(`Created new Debug Level with ID: ${finalDebugLevelId}`);
+          } else {
+            console.error('Failed to create Debug Level:', debugLevelResult);
+            throw new Error('Failed to create Debug Level');
+          }
+        } catch (debugLevelError) {
+          console.error('Error creating Debug Level:', debugLevelError);
+          throw debugLevelError;
+        }
+      }
+      
+      // Now create the trace flag
+      const traceFlagData = {
+        DebugLevelId: finalDebugLevelId,
+        StartDate: now.toISOString(),
+        ExpirationDate: expirationDate.toISOString(),
+        LogType: "USER_DEBUG",
+        TracedEntityId: tracedEntityId,
+        // Most traced entities in Salesforce are Users
+        TracedEntityType: tracedEntityId.startsWith('005') ? "User" : "Class"
       };
       
-      // If debugLevel parameters were provided, use them
-      const finalDebugLevel = {
-        ...debugLevelInfo,
-        apexCode: debugLevel?.apexCode || "DEBUG",
-        apexProfiling: debugLevel?.apexProfiling || "INFO",
-        callout: debugLevel?.callout || "INFO",
-        database: debugLevel?.database || "INFO",
-        system: debugLevel?.system || "DEBUG",
-        validation: debugLevel?.validation || "INFO",
-        visualforce: debugLevel?.visualforce || "INFO",
-        workflow: debugLevel?.workflow || "INFO"
-      };
-      
-      // Create the trace flag
-      const traceFlag = {
-        id: "7tfxx00000" + Math.random().toString(36).substring(2, 10).toUpperCase(),
-        debugLevelId: finalDebugLevel.id,
-        debugLevel: finalDebugLevel,
-        expirationDate: expirationDate.toISOString(),
-        logType: "USER_DEBUG",
-        startDate: now.toISOString(),
-        tracedEntityId: tracedEntityId,
-        tracedEntityType: "User" // Assuming we're only tracing users for now
-      };
-      
-      console.log(`Created trace flag for entity ${tracedEntityId}, expires in ${expirationMinutes} minutes`);
-      
-      return traceFlag;
+      try {
+        // Create the trace flag in Salesforce
+        const traceFlagResult = await conn.tooling.sobject('TraceFlag').create(traceFlagData);
+        
+        if (traceFlagResult.success) {
+          console.log(`Created Trace Flag with ID: ${traceFlagResult.id}`);
+          
+          // Get the full trace flag with debug level details
+          const newTraceFlag = await conn.tooling.query(
+            `SELECT Id, DebugLevelId, LogType, ExpirationDate, StartDate, TracedEntityId, 
+             TracedEntityType FROM TraceFlag WHERE Id = '${traceFlagResult.id}'`
+          );
+          
+          // Get the debug level details
+          const debugLevelDetails = await conn.tooling.query(
+            `SELECT Id, DeveloperName, ApexCode, ApexProfiling, Callout, Database, System, 
+             Validation, Visualforce, Workflow FROM DebugLevel WHERE Id = '${finalDebugLevelId}'`
+          );
+          
+          // Format the response to match our expected structure
+          const flag = newTraceFlag.records[0];
+          const level = debugLevelDetails.records[0];
+          
+          return {
+            id: flag.Id,
+            debugLevelId: flag.DebugLevelId,
+            debugLevel: {
+              id: level.Id,
+              developerName: level.DeveloperName,
+              apexCode: level.ApexCode,
+              apexProfiling: level.ApexProfiling,
+              callout: level.Callout,
+              database: level.Database,
+              system: level.System,
+              validation: level.Validation,
+              visualforce: level.Visualforce,
+              workflow: level.Workflow
+            },
+            expirationDate: flag.ExpirationDate,
+            logType: flag.LogType,
+            startDate: flag.StartDate,
+            tracedEntityId: flag.TracedEntityId,
+            tracedEntityType: flag.TracedEntityType
+          };
+        } else {
+          console.error('Failed to create Trace Flag:', traceFlagResult);
+          throw new Error('Failed to create Trace Flag');
+        }
+      } catch (traceFlagError) {
+        console.error('Error creating Trace Flag:', traceFlagError);
+        throw traceFlagError;
+      }
     } catch (error) {
       console.error('Error creating trace flag:', error);
       throw error;
@@ -479,10 +533,18 @@ export class SalesforceService {
   // Delete a trace flag
   async deleteTraceFlag(org: SalesforceOrg, flagId: string): Promise<void> {
     try {
-      // In a real implementation, this would delete the trace flag in Salesforce
       console.log(`Deleting trace flag ${flagId} from org ${org.name}`);
       
-      // Success response (no actual deletion in mock version)
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
+      
+      // Delete the trace flag using the tooling API
+      await conn.tooling.delete('TraceFlag', flagId);
+      
+      console.log(`Trace flag ${flagId} deleted successfully`);
       return;
     } catch (error) {
       console.error('Error deleting trace flag:', error);
@@ -490,7 +552,7 @@ export class SalesforceService {
     }
   }
 
-  // Mock Salesforce metadata types (in a real implementation, this would be retrieved from Salesforce)
+  // Default Salesforce metadata types (used as fallback if Salesforce API call fails)
   private static metadataTypes: SalesforceMetadataType[] = [
     {
       xmlName: "CustomObject",
@@ -525,6 +587,41 @@ export class SalesforceService {
       childXmlNames: []
     }
   ];
+  
+  // Get metadata types from Salesforce
+  async getMetadataTypes(org: SalesforceOrg): Promise<SalesforceMetadataType[]> {
+    try {
+      console.log(`Fetching metadata types from org ${org.id}`);
+      
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
+      
+      // Use the metadata API to describe metadata types
+      const metadataResult = await conn.metadata.describe();
+      
+      // Transform the results to match our expected format
+      const metadataTypes = metadataResult.metadataObjects.map((type: any) => ({
+        xmlName: type.xmlName,
+        directoryName: type.directoryName || '',
+        inFolder: type.inFolder || false,
+        metaFile: type.metaFile || false,
+        suffix: type.suffix || '',
+        childXmlNames: type.childXmlNames || []
+      }));
+      
+      // Update the static metadataTypes property for future use
+      SalesforceService.metadataTypes = metadataTypes;
+      
+      return metadataTypes;
+    } catch (error) {
+      console.error('Error fetching metadata types:', error);
+      // If there's an error, return the default metadata types
+      return SalesforceService.metadataTypes;
+    }
+  }
 
   // Get metadata for a Salesforce org
   async getMetadata(org: SalesforceOrg, types: string[] = []): Promise<any> {

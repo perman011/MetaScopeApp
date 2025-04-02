@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { salesforceService } from "./salesforce";
+import { salesforceService, SalesforceService } from "./salesforce";
 import { z } from "zod";
 import { insertSalesforceOrgSchema } from "@shared/schema";
 
@@ -429,9 +429,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Metadata Types Route
-  app.get("/api/metadata-types", ensureAuthenticated, (req, res) => {
+  app.get("/api/metadata-types", ensureAuthenticated, async (req, res) => {
     try {
-      const types = salesforceService.constructor.prototype.constructor.getMetadataTypes();
+      const orgId = parseInt(req.query.orgId as string);
+      
+      if (isNaN(orgId)) {
+        // If no orgId was provided, return the default metadata types
+        const types = SalesforceService.getMetadataTypes();
+        return res.json(types);
+      } 
+      
+      // Get the org from storage
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).send("Salesforce org not found");
+      }
+      
+      // Use the org to fetch metadata types from Salesforce
+      const types = await salesforceService.getMetadataTypes(org);
       res.json(types);
     } catch (error) {
       console.error("Error fetching metadata types:", error);

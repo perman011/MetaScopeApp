@@ -119,7 +119,7 @@ export default function MetadataDependencyAnalyzer() {
 
   // Filter metadata based on search term and real API data
   const filteredMetadata = selectedMetadataType && metadataDependencies 
-    ? (metadataDependencies[selectedMetadataType as keyof typeof metadataDependencies] || [])
+    ? ((metadataDependencies[selectedMetadataType as keyof typeof metadataDependencies] as MetadataItem[]) || [])
         .filter((item: MetadataItem) => 
           item.name.toLowerCase().includes(searchTerm.toLowerCase())
         ) 
