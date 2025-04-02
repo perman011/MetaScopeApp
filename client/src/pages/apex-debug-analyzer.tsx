@@ -28,6 +28,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Zap, ZapOff, Settings, Send, Sparkles } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -419,6 +433,7 @@ export default function ApexDebugAnalyzer() {
                 <TabsList>
                   <TabsTrigger value="logs">Debug Logs</TabsTrigger>
                   <TabsTrigger value="traceFlags">Trace Flags</TabsTrigger>
+                  <TabsTrigger value="aiAssistant">AI Assistant</TabsTrigger>
                 </TabsList>
 
                 {/* Logs Tab */}
@@ -1059,11 +1074,361 @@ export default function ApexDebugAnalyzer() {
                     </div>
                   </div>
                 </TabsContent>
+
+                {/* AI Assistant Tab */}
+                <TabsContent value="aiAssistant" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>AI Debug Assistant</CardTitle>
+                      <CardDescription>
+                        Use AI to analyze Apex logs, get insights, and solve debugging problems with various AI models
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="mb-6">
+                        <AIModelSelector />
+                      </div>
+                      <div className="mb-4">
+                        <LogSelector />
+                      </div>
+                      <AIAnalysisInterface />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               </Tabs>
             )}
           </div>
         </main>
       </div>
+    </div>
+  );
+}
+
+// AI ASSISTANT COMPONENTS
+
+interface AIModel {
+  id: string;
+  name: string;
+  provider: string;
+  description: string;
+  requiresKey: boolean;
+}
+
+// AI models supported by the application
+const AI_MODELS: AIModel[] = [
+  {
+    id: 'gemini-pro',
+    name: 'Gemini Pro',
+    provider: 'Google',
+    description: 'High-performance model for code analysis and optimization',
+    requiresKey: true
+  },
+  {
+    id: 'gpt-4',
+    name: 'GPT-4',
+    provider: 'OpenAI',
+    description: 'Advanced reasoning and code understanding capabilities',
+    requiresKey: true
+  },
+  {
+    id: 'claude-3',
+    name: 'Claude 3',
+    provider: 'Anthropic',
+    description: 'Excellent at detailed log analysis and debugging assistance',
+    requiresKey: true
+  },
+  {
+    id: 'llama-3',
+    name: 'Llama 3',
+    provider: 'Meta',
+    description: 'Open model with strong performance on Apex code analysis',
+    requiresKey: false
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek Coder',
+    provider: 'DeepSeek',
+    description: 'Specialized in programming tasks and debugging',
+    requiresKey: true
+  }
+];
+
+function AIModelSelector() {
+  const [selectedModel, setSelectedModel] = useState<string>(AI_MODELS[0].id);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const { toast } = useToast();
+  
+  const selectedModelInfo = AI_MODELS.find(model => model.id === selectedModel);
+  
+  const handleModelChange = (modelId: string) => {
+    const model = AI_MODELS.find(m => m.id === modelId);
+    setSelectedModel(modelId);
+    
+    if (model?.requiresKey) {
+      // Check if we already have a key for this model
+      const storedKey = localStorage.getItem(`${modelId}-api-key`);
+      if (!storedKey) {
+        setShowApiKeyDialog(true);
+      }
+    }
+  };
+  
+  const saveApiKey = () => {
+    if (!apiKey.trim()) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter a valid API key",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    localStorage.setItem(`${selectedModel}-api-key`, apiKey);
+    setShowApiKeyDialog(false);
+    setApiKey('');
+    
+    toast({
+      title: "API Key Saved",
+      description: `Your ${selectedModelInfo?.name} API key has been saved`,
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="ai-model" className="text-sm font-medium">AI Model</Label>
+        <Select value={selectedModel} onValueChange={handleModelChange}>
+          <SelectTrigger className="w-full mt-1">
+            <SelectValue placeholder="Select AI model" />
+          </SelectTrigger>
+          <SelectContent>
+            {AI_MODELS.map(model => (
+              <SelectItem key={model.id} value={model.id} className="flex items-center">
+                <div>
+                  <div className="font-medium">{model.name}</div>
+                  <div className="text-xs text-muted-foreground">{model.provider}</div>
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {selectedModelInfo && (
+          <div className="flex items-center mt-2 text-sm text-muted-foreground">
+            {selectedModelInfo.requiresKey ? (
+              <>
+                <div className="flex items-center">
+                  <Zap className="h-4 w-4 mr-1 text-amber-500" />
+                  <span>Requires API key</span>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="ml-2 h-7 px-2 text-xs"
+                  onClick={() => setShowApiKeyDialog(true)}
+                >
+                  <Settings className="h-3.5 w-3.5 mr-1" />
+                  Configure
+                </Button>
+              </>
+            ) : (
+              <div className="flex items-center">
+                <Sparkles className="h-4 w-4 mr-1 text-green-500" />
+                <span>Included with your subscription</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {selectedModelInfo && (
+        <div className="bg-neutral-100 p-3 rounded-md">
+          <div className="text-sm">{selectedModelInfo.description}</div>
+        </div>
+      )}
+      
+      <AlertDialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enter API Key for {selectedModelInfo?.name}</AlertDialogTitle>
+            <AlertDialogDescription>
+              To use {selectedModelInfo?.name} by {selectedModelInfo?.provider}, you need to provide your own API key.
+              This key will be securely stored in your browser's local storage.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Label htmlFor="api-key" className="text-sm font-medium">API Key</Label>
+            <Input
+              id="api-key"
+              type="password"
+              placeholder="Enter your API key"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={saveApiKey}>Save Key</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function LogSelector() {
+  const { activeOrg } = useOrgContext();
+  const [selectedLog, setSelectedLog] = useState<string | null>(null);
+  
+  // Reuse the logs query from parent component
+  const { 
+    data: logs,
+    isLoading: logsLoading
+  } = useQuery<ApexLog[]>({
+    queryKey: [`/api/orgs/${activeOrg?.id}/apex-logs`],
+    enabled: !!activeOrg,
+  });
+  
+  if (logsLoading) {
+    return (
+      <div className="flex items-center space-x-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Loading logs...</span>
+      </div>
+    );
+  }
+  
+  if (!logs || logs.length === 0) {
+    return (
+      <Alert variant="warning">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>No logs available</AlertTitle>
+        <AlertDescription>
+          There are no Apex logs available for analysis. Create trace flags to generate logs.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="selected-log" className="text-sm font-medium">Select Log to Analyze</Label>
+      <Select value={selectedLog || ''} onValueChange={setSelectedLog}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Choose an Apex log" />
+        </SelectTrigger>
+        <SelectContent>
+          {logs.map(log => (
+            <SelectItem key={log.id} value={log.id}>
+              <div className="truncate max-w-[300px]">
+                <span className="font-medium">{log.operation}</span>
+                <span className="text-muted-foreground text-xs ml-2">
+                  ({new Date(log.startTime).toLocaleString()})
+                </span>
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function AIAnalysisInterface() {
+  const [query, setQuery] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const { toast } = useToast();
+  
+  const handleAnalysis = () => {
+    if (!query.trim()) {
+      toast({
+        title: "Query Required",
+        description: "Please enter a question or issue to analyze",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Simulated analysis for demo purposes
+    setIsAnalyzing(true);
+    setResult(null);
+    
+    // In a real implementation, this would call the API with the selected log and model
+    setTimeout(() => {
+      setIsAnalyzing(false);
+      
+      // Example analysis result
+      setResult(`
+## Performance Analysis
+
+Based on the selected log, I've identified potential issues:
+
+1. **Database Query Bottleneck**
+   - 5 SOQL queries taking 3.2s total execution time
+   - Repeated query in AccountController.getRelatedContacts()
+   - Recommendation: Implement a single bulk query instead of multiple calls
+
+2. **Heap Size Issues**
+   - Peak heap usage at 85% of governor limit
+   - Large object instantiation at line 142 in OpportunityService
+   - Recommendation: Break processing into smaller batches
+
+3. **Governor Limit Warnings**
+   - DML statements at 72% of limit
+   - Query rows at 68% of limit
+   - CPU time at 55% of limit
+
+The primary issue appears to be the inefficient query pattern in the AccountController class. Consider refactoring to use a more efficient data access pattern.
+      `);
+    }, 2000);
+  };
+  
+  return (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="analysis-query" className="text-sm font-medium">Your Question or Issue</Label>
+        <Textarea
+          id="analysis-query"
+          placeholder="Describe what you want to analyze or fix... (e.g., Why is my trigger running slowly? What's causing the heap size limit exception?)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="mt-1 min-h-[100px]"
+        />
+      </div>
+      
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleAnalysis} 
+          disabled={isAnalyzing}
+          className="flex items-center"
+        >
+          {isAnalyzing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4 mr-2" />
+              Analyze with AI
+            </>
+          )}
+        </Button>
+      </div>
+      
+      {result && (
+        <div className="mt-6 border rounded-lg p-4 bg-white">
+          <h3 className="text-lg font-medium mb-4 flex items-center">
+            <Sparkles className="h-5 w-5 mr-2 text-primary" />
+            AI Analysis Results
+          </h3>
+          <div className="prose prose-sm max-w-none">
+            <div className="whitespace-pre-wrap">{result}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
