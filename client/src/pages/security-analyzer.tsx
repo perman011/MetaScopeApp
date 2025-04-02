@@ -37,7 +37,7 @@ export default function SecurityAnalyzer() {
   ) || [];
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
+    <div className="p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Security Analyzer Header */}
         <div className="mb-6">

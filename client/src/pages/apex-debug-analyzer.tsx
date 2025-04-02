@@ -403,36 +403,35 @@ export default function ApexDebugAnalyzer() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <main className="container mx-auto p-4 md:p-6 flex-1">
-        <div className="max-w-7xl mx-auto">
-          {activeOrg ? <OrgContext orgId={activeOrg.id} /> : null}
+    <div className="p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {activeOrg ? <OrgContext orgId={activeOrg.id} /> : null}
 
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-neutral-800 mb-2">Apex Debug Analyzer</h1>
-            <p className="text-neutral-500">
-              Analyze Apex debug logs, manage trace flags, and identify performance bottlenecks.
-            </p>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-neutral-800 mb-2">Apex Debug Analyzer</h1>
+          <p className="text-neutral-500">
+            Analyze Apex debug logs, manage trace flags, and identify performance bottlenecks.
+          </p>
+        </div>
 
-          {!activeOrg ? (
-            <Alert className="mb-6">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>No Active Org</AlertTitle>
-              <AlertDescription>
-                Please select a Salesforce org from the dropdown in the top navigation bar.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="logs">Debug Logs</TabsTrigger>
-                <TabsTrigger value="traceFlags">Trace Flags</TabsTrigger>
-                <TabsTrigger value="aiAssistant">AI Assistant</TabsTrigger>
-              </TabsList>
+        {!activeOrg ? (
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No Active Org</AlertTitle>
+            <AlertDescription>
+              Please select a Salesforce org from the dropdown in the top navigation bar.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="logs">Debug Logs</TabsTrigger>
+              <TabsTrigger value="traceFlags">Trace Flags</TabsTrigger>
+              <TabsTrigger value="aiAssistant">AI Assistant</TabsTrigger>
+            </TabsList>
 
-              {/* Logs Tab */}
-              <TabsContent value="logs" className="space-y-4">
+            {/* Logs Tab */}
+            <TabsContent value="logs" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Logs List */}
                     <div className="md:col-span-1 space-y-4">
@@ -1090,11 +1089,10 @@ export default function ApexDebugAnalyzer() {
                   </CardContent>
                 </Card>
               </TabsContent>
-            </Tabs>
-            )}
-          </div>
-        </main>
+          </Tabs>
+        )}
       </div>
+    </div>
   );
 }
 
