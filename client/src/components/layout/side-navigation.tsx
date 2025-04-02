@@ -65,12 +65,8 @@ export default function SideNavigation() {
       </div>
       
       <nav className="flex-1 px-2 space-y-1">
-        <NavItem href="/dashboard" icon={BarChart3} active={location === "/dashboard" || location === "/"}>
+        <NavItem href="/dashboard" icon={BarChart3} active={location === "/dashboard" || location === "/" || location === "/enhanced-dashboard"}>
           Dashboard
-        </NavItem>
-        
-        <NavItem href="/enhanced-dashboard" icon={BarChart3} active={location === "/enhanced-dashboard"}>
-          Enhanced Dashboard
         </NavItem>
         
         <NavItem href="/data-model-analyzer" icon={Database} active={location === "/data-model-analyzer"}>

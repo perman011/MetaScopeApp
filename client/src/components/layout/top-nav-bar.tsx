@@ -40,12 +40,10 @@ export default function TopNavBar() {
             onClick={() => navigate("/")}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mr-2" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-              <path d="M12 6v6l4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <path d="M9 2h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <path d="M7 5.5L4.5 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <path d="M17 5.5L19.5 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <rect x="9" y="9" width="6" height="6" fill="currentColor" opacity="0.3" />
+              <path d="M16 16L22 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" />
+              <path d="M10 5v10M5 10h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <path d="M3 3L7 7M17 3L13 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
             </svg>
             <span>MetaScope</span>
           </div>
