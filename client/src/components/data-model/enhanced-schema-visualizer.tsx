@@ -49,9 +49,7 @@ interface SchemaMetadata {
 }
 
 interface EnhancedSchemaVisualizerProps {
-  metadata: {
-    objects: any[];
-  };
+  metadata: any; // Accept any format of metadata that might be returned from the server
 }
 
 export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVisualizerProps) {
@@ -75,21 +73,72 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
 
   // Process metadata to enhance it with needed properties
   const processMetadata = (): SchemaMetadata => {
-    const enhancedObjects: ObjectMetadata[] = metadata.objects.map(obj => {
+    console.log("Processing metadata:", metadata);
+    
+    // Check if we have a valid metadata object
+    if (!metadata) {
+      console.warn("No metadata available");
+      return { objects: [] };
+    }
+    
+    // Handle different metadata formats
+    let objectsToProcess: any[] = [];
+    
+    if (metadata.objects && Array.isArray(metadata.objects)) {
+      // Standard format with objects array
+      objectsToProcess = metadata.objects;
+      console.log(`Found ${objectsToProcess.length} objects in standard format`);
+    } else if (metadata.data && metadata.data.objects && Array.isArray(metadata.data.objects)) {
+      // Nested format with data.objects array
+      objectsToProcess = metadata.data.objects;
+      console.log(`Found ${objectsToProcess.length} objects in nested data format`);
+    } else if (typeof metadata === 'object' && !Array.isArray(metadata)) {
+      // Object format (key-value pairs of objects)
+      // Convert to array for processing
+      objectsToProcess = Object.entries(metadata).map(([name, details]: [string, any]) => ({
+        name,
+        label: details.label || name,
+        fields: Array.isArray(details.fields) ? details.fields : 
+          Object.entries(details.fields || {}).map(([fieldName, fieldDetails]: [string, any]) => ({
+            name: fieldName,
+            ...fieldDetails
+          })),
+        relationships: details.relationships || []
+      }));
+      console.log(`Converted object format to array with ${objectsToProcess.length} objects`);
+    }
+    
+    if (objectsToProcess.length === 0) {
+      console.warn("No objects found in metadata");
+      return { objects: [] };
+    }
+    
+    const enhancedObjects: ObjectMetadata[] = objectsToProcess.map(obj => {
       const relationships: RelationshipMetadata[] = [];
       
       // Process fields to extract relationships
-      const enhancedFields = (obj.fields || []).map((field: any) => {
+      // First ensure fields is an array
+      const fieldsArray = Array.isArray(obj.fields) ? obj.fields : 
+        Object.entries(obj.fields || {}).map(([name, details]: [string, any]) => ({
+          name,
+          ...details
+        }));
+      
+      const enhancedFields = (fieldsArray || []).map((field: any) => {
         // Check if field is a relationship field
         if (field.type === 'reference' && field.referenceTo) {
           // Determine relationship type
           const type = field.relationshipName?.endsWith('__r') ? 'MasterDetail' : 'Lookup';
           
+          // Convert referenceTo to array if it's not already
+          const referenceToArray = Array.isArray(field.referenceTo) ? 
+            field.referenceTo : [field.referenceTo];
+          
           // Add to relationships array
           relationships.push({
             name: field.relationshipName || `${field.name}Rel`,
             field: field.name,
-            object: Array.isArray(field.referenceTo) ? field.referenceTo[0] : field.referenceTo,
+            object: referenceToArray[0],
             type: type as 'Lookup' | 'MasterDetail',
           });
         }
@@ -98,7 +147,7 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
           name: field.name,
           label: field.label || field.name,
           type: field.type,
-          required: field.required || false,
+          required: field.required || field.nillable === false || false,
           unique: field.unique || false,
           externalId: field.externalId || false,
           precision: field.precision,
@@ -110,13 +159,13 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
       });
       
       // Process existing relationships data if available
-      if (obj.relationships) {
+      if (obj.relationships && Array.isArray(obj.relationships)) {
         obj.relationships.forEach((rel: any) => {
           if (!relationships.some(r => r.name === rel.name)) {
             relationships.push({
               name: rel.name,
-              field: rel.field || '',
-              object: rel.object,
+              field: rel.field || rel.fieldName || '',
+              object: rel.object || rel.referenceTo,
               type: rel.type || 'Lookup',
               childObject: rel.childObject,
               childField: rel.childField,
@@ -135,6 +184,7 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
       } as ObjectMetadata;
     });
     
+    console.log(`Processed ${enhancedObjects.length} objects with relationships`);
     return { objects: enhancedObjects };
   };
 

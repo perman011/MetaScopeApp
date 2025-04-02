@@ -675,22 +675,107 @@ export class SalesforceService {
         if (objectTypes.includes('CustomObject')) {
           // Get the list of objects
           const objectsResult = await conn.describeGlobal();
-          const objects = objectsResult.sobjects.slice(0, 10); // Limit for demo purposes
+          const objects = objectsResult.sobjects.slice(0, 20); // Increased limit for better visualization
+          
+          // Prepare structure for object data
+          const customObjects = {
+            objects: []
+          };
+          
+          // Also create a structured SObjects collection for enhanced visualization
+          const sobjects: Record<string, any> = {};
+          
+          console.log(`Processing ${objects.length} objects from Salesforce`);
           
           for (const obj of objects) {
-            const objDescribe = await conn.describe(obj.name);
-            metadataItems.push({
-              name: obj.name,
-              type: 'CustomObject',
-              id: obj.name,
-              label: obj.label,
-              fields: objDescribe.fields.map((field: any) => ({
-                name: field.name,
-                type: field.type,
-                label: field.label
-              }))
-            });
+            try {
+              const objDescribe = await conn.describe(obj.name);
+              
+              // Process relationships from fields with references
+              const relationships = [];
+              
+              // Extract relationship information from fields
+              objDescribe.fields.forEach((field: any) => {
+                if (field.type === 'reference' && field.referenceTo && field.referenceTo.length > 0) {
+                  relationships.push({
+                    name: field.relationshipName || `${field.name}Rel`,
+                    fieldName: field.name,
+                    referenceTo: field.referenceTo[0],
+                    type: field.cascadeDelete ? 'MasterDetail' : 'Lookup'
+                  });
+                }
+              });
+              
+              // Add to CustomObject format
+              customObjects.objects.push({
+                name: obj.name,
+                label: obj.label,
+                fields: objDescribe.fields.map((field: any) => ({
+                  name: field.name,
+                  type: field.type,
+                  label: field.label,
+                  referenceTo: field.referenceTo,
+                  relationshipName: field.relationshipName
+                })),
+                relationships: relationships
+              });
+              
+              // Add to SObjects format
+              sobjects[obj.name] = {
+                name: obj.name,
+                label: obj.label,
+                fields: {},
+                relationships: relationships
+              };
+              
+              // Process fields into a more structured format
+              objDescribe.fields.forEach((field: any) => {
+                sobjects[obj.name].fields[field.name] = {
+                  name: field.name,
+                  label: field.label,
+                  type: field.type,
+                  required: field.nillable === false,
+                  unique: field.unique === true,
+                  referenceTo: field.referenceTo,
+                  relationshipName: field.relationshipName
+                };
+              });
+              
+              // Also add as individual metadata item for compatibility
+              metadataItems.push({
+                name: obj.name,
+                type: 'CustomObject',
+                id: obj.name,
+                label: obj.label,
+                fields: objDescribe.fields.map((field: any) => ({
+                  name: field.name,
+                  type: field.type,
+                  label: field.label
+                })),
+                relationships: relationships
+              });
+            } catch (err) {
+              console.error(`Error describing object ${obj.name}:`, err);
+            }
           }
+          
+          // Add structured object data to metadata items
+          metadataItems.push({
+            name: 'CustomObjectStructure',
+            type: 'CustomObject',
+            id: 'CustomObjectStructure',
+            data: customObjects
+          });
+          
+          // Add SObjects data for enhanced visualization
+          metadataItems.push({
+            name: 'SObjectStructure',
+            type: 'SObjects',
+            id: 'SObjectStructure',
+            data: sobjects
+          });
+          
+          console.log(`Processed ${customObjects.objects.length} objects with relationships`);
         }
         
         // For custom fields, would need to extract them from object describes

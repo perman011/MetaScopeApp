@@ -43,8 +43,33 @@ export default function DataModelAnalyzer() {
     }
   }, [activeOrg, metadata, isLoading]);
 
-  // Filter object metadata from all metadata
-  const objectMetadata = metadata?.find((m: any) => m.type === 'CustomObject')?.data as ObjectMetadata | undefined;
+  // Filter object metadata from all metadata, or create a placeholder if needed
+  let objectMetadata = metadata?.find((m: any) => m.type === 'CustomObject')?.data as ObjectMetadata | undefined;
+  
+  // If we don't have CustomObject data but have other metadata, create a placeholder
+  if (!objectMetadata && metadata && metadata.length > 0) {
+    // Log available metadata types
+    console.log("Available metadata types:", metadata.map(m => m.type));
+    
+    // Create skeleton object metadata using SObjects if available
+    const sobjectData = metadata?.find((m: any) => m.type === 'SObjects')?.data;
+    if (sobjectData) {
+      objectMetadata = {
+        objects: Object.entries(sobjectData).map(([name, details]: [string, any]) => ({
+          name,
+          label: details.label || name,
+          fields: Object.entries(details.fields || {}).map(([fieldName, fieldDetails]: [string, any]) => ({
+            name: fieldName,
+            label: fieldDetails.label || fieldName,
+            type: fieldDetails.type || 'string',
+            ...fieldDetails
+          })),
+          relationships: []
+        }))
+      };
+      console.log("Created objectMetadata from SObjects", objectMetadata.objects.length);
+    }
+  }
 
   return (
     <div className="p-4 md:p-6">
