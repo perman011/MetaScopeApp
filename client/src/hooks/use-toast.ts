@@ -192,25 +192,33 @@ export function toast(props: Toast) {
 // Safe version that's also exported
 export function safeToast(props: Toast) {
   try {
-    return toast(props)
+    // Try using the window.__TOAST_SERVICE first if it exists
+    if (typeof window !== 'undefined' && (window as any).__TOAST_SERVICE && (window as any).__TOAST_SERVICE.toast) {
+      return (window as any).__TOAST_SERVICE.toast(props);
+    }
+    return toast(props);
   } catch (error) {
-    console.error("Error in safeToast:", error)
-    return createFallbackToast(props)
+    console.error("Error in safeToast:", error);
+    return createFallbackToast(props);
   }
 }
 
 // Global notify function that will never fail
 export const notify = (props: Toast) => {
   try {
-    return safeToast(props)
+    // Try using the window.__TOAST_SERVICE first if it exists
+    if (typeof window !== 'undefined' && (window as any).__TOAST_SERVICE && (window as any).__TOAST_SERVICE.notify) {
+      return (window as any).__TOAST_SERVICE.notify(props);
+    }
+    return safeToast(props);
   } catch (error) {
-    console.error("Error in notify:", error)
-    return createFallbackToast(props)
+    console.error("Error in notify:", error);
+    return createFallbackToast(props);
   }
 }
 
 // Make globalToast an alias for toast for backward compatibility
-export const globalToast = safeToast
+export const globalToast = safeToast;
 
 export function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
