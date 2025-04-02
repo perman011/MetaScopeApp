@@ -32,7 +32,8 @@ interface RelationshipMetadata {
   name: string;
   field: string;
   object: string;
-  type: 'Lookup' | 'MasterDetail' | 'SelfJoin' | 'ManyToMany';
+  // Allow more flexible type names but standardize them during processing
+  type: 'Lookup' | 'MasterDetail' | 'Master Detail' | 'Master-Detail' | 'SelfJoin' | 'Self Join' | 'Self-Join' | 'ManyToMany' | 'Many To Many' | 'Many-to-Many';
   childObject?: string;
   childField?: string;
 }
@@ -287,7 +288,7 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
           selector: 'edge',
           style: {
             'width': 2,
-            'line-color': '#5a7d9a',
+            'line-color': '#5a7d9a', // Default blue for lookup
             'target-arrow-color': '#5a7d9a',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
@@ -296,30 +297,30 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
         {
           selector: 'edge.lookup',
           style: {
-            'line-color': '#5a7d9a',
+            'line-color': '#5a7d9a', // Blue for lookup
             'target-arrow-color': '#5a7d9a',
           }
         },
         {
-          selector: 'edge.masterDetail',
+          selector: 'edge.masterdetail',
           style: {
-            'line-color': '#ea8c55',
+            'line-color': '#ea8c55', // Orange for master-detail
             'target-arrow-color': '#ea8c55',
             'width': 3,
           }
         },
         {
-          selector: 'edge.selfJoin',
+          selector: 'edge.selfjoin',
           style: {
-            'line-color': '#8a49a8',
+            'line-color': '#8a49a8', // Purple for self-join
             'target-arrow-color': '#8a49a8',
             'curve-style': 'bezier',
           }
         },
         {
-          selector: 'edge.manyToMany',
+          selector: 'edge.manytomany',
           style: {
-            'line-color': '#3EB489',
+            'line-color': '#3EB489', // Green for many-to-many
             'target-arrow-color': '#3EB489',
             'target-arrow-shape': 'diamond',
           }
@@ -358,15 +359,23 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
       obj.relationships.forEach(rel => {
         // Only add relationship if both objects are in the graph
         if (filteredObjects.some(o => o.name === rel.object)) {
+          // Convert the relationship type to a valid class name without spaces
+          // and ensure it matches one of our expected types
+          const typeClass = rel.type.toLowerCase().replace(/[- ]/g, '');
+          const normalizedType = 
+            typeClass.includes('master') ? 'masterdetail' :
+            typeClass.includes('self') ? 'selfjoin' :
+            typeClass.includes('many') ? 'manytomany' : 'lookup';
+          
           cy.current?.add({
             group: 'edges',
             data: {
               id: `${obj.name}-${rel.name}-${rel.object}`,
               source: obj.name,
               target: rel.object,
-              type: rel.type.toLowerCase()
+              type: normalizedType // Store normalized type
             },
-            classes: rel.type.toLowerCase().replace(/\s+/g, '')
+            classes: normalizedType // Use consistent class name
           });
         }
       });
@@ -410,14 +419,46 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
   useEffect(() => {
     if (!cy.current) return;
     
+    // Apply filters to all edges based on their type
     cy.current.edges().forEach(edge => {
       const type = edge.data('type');
-      if (!relationshipTypes[type as keyof typeof relationshipTypes]) {
+      
+      // Check if we should show this type of relationship
+      if (type === 'lookup' && !relationshipTypes.lookup) {
+        edge.addClass('hidden');
+      } else if (type === 'masterdetail' && !relationshipTypes.masterDetail) {
+        edge.addClass('hidden');
+      } else if (type === 'selfjoin' && !relationshipTypes.selfJoin) {
+        edge.addClass('hidden');
+      } else if (type === 'manytomany' && !relationshipTypes.manyToMany) {
         edge.addClass('hidden');
       } else {
         edge.removeClass('hidden');
       }
     });
+    
+    // Apply styles to ensure correct colors
+    cy.current.style()
+      .selector('edge.lookup').style({
+        'line-color': '#5a7d9a',
+        'target-arrow-color': '#5a7d9a',
+      })
+      .selector('edge.masterdetail').style({
+        'line-color': '#ea8c55',
+        'target-arrow-color': '#ea8c55',
+        'width': 3,
+      })
+      .selector('edge.selfjoin').style({
+        'line-color': '#8a49a8',
+        'target-arrow-color': '#8a49a8',
+      })
+      .selector('edge.manytomany').style({
+        'line-color': '#3EB489',
+        'target-arrow-color': '#3EB489',
+        'target-arrow-shape': 'diamond',
+      })
+      .update();
+      
   }, [relationshipTypes]);
 
   // Effect to filter based on search
