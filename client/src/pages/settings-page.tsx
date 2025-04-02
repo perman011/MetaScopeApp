@@ -1,5 +1,4 @@
-import TopNavBar from "@/components/layout/top-nav-bar";
-import SideNavigation from "@/components/layout/side-navigation";
+// Removed top-nav-bar and side-navigation imports as they're provided by App.tsx layout
 import { Settings, Save, UserCircle, BellRing, Shield, Database, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -23,24 +22,20 @@ export default function SettingsPage() {
   };
   
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
-      <TopNavBar />
-      <div className="flex flex-1 overflow-hidden">
-        <SideNavigation />
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-5xl mx-auto">
-            <h1 className="text-3xl font-bold text-neutral-800 mb-2">Settings</h1>
-            <p className="text-neutral-600 mb-6">
-              Manage your account settings and preferences.
-            </p>
-            
-            <Tabs defaultValue="account" className="w-full">
-              <TabsList className="grid w-full md:w-[600px] grid-cols-4 mb-8">
-                <TabsTrigger value="account">Account</TabsTrigger>
-                <TabsTrigger value="notifications">Notifications</TabsTrigger>
-                <TabsTrigger value="security">Security</TabsTrigger>
-                <TabsTrigger value="advanced">Advanced</TabsTrigger>
-              </TabsList>
+    <div className="p-6">
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold text-neutral-800 mb-2">Settings</h1>
+        <p className="text-neutral-600 mb-6">
+          Manage your account settings and preferences.
+        </p>
+        
+        <Tabs defaultValue="account" className="w-full">
+          <TabsList className="grid w-full md:w-[600px] grid-cols-4 mb-8">
+            <TabsTrigger value="account">Account</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+          </TabsList>
               
               <TabsContent value="account">
                 <Card>
@@ -325,8 +320,6 @@ export default function SettingsPage() {
                 </Card>
               </TabsContent>
             </Tabs>
-          </div>
-        </main>
       </div>
     </div>
   );
