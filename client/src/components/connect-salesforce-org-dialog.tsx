@@ -34,6 +34,7 @@ import {
   Progress
 } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SalesforceConnectionError } from "@/components/salesforce-connection-error";
 
 interface ConnectSalesforceOrgDialogProps {
   children: React.ReactNode;
@@ -454,13 +455,29 @@ export default function ConnectSalesforceOrgDialog({
               )}
               
               {connectionStatus === 'error' && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Connection failed</AlertTitle>
-                  <AlertDescription>
-                    {connectionError || "Failed to connect to Salesforce. Please check your credentials and try again."}
-                  </AlertDescription>
-                </Alert>
+                <SalesforceConnectionError 
+                  onRetry={() => {
+                    // Retry the connection with the same parameters
+                    if (authMethod === "token") {
+                      connectMutation.mutate({
+                        name: orgName,
+                        instanceUrl: instanceUrl,
+                        accessToken: accessToken,
+                        refreshToken: refreshToken || undefined,
+                        authMethod: "token"
+                      });
+                    } else {
+                      connectMutation.mutate({
+                        name: orgName,
+                        email: email,
+                        password: password,
+                        securityToken: securityToken,
+                        environment: environment,
+                        authMethod: "credentials"
+                      });
+                    }
+                  }} 
+                />
               )}
             </div>
           )}
