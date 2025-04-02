@@ -1,0 +1,73 @@
+Thanks for the screenshot and the description. Here's what we can break down from this:
+
+---
+
+### 🧨 **Issue Summary:**
+You're encountering a runtime error:
+```
+[plugin:runtime-error-plugin] Cannot read properties of null (reading 'notify')
+```
+This usually means **some component is trying to access `.notify` on a variable that is `null` or `undefined`.**
+
+### Likely Cause:
+This error seems tied to a **notification or toast utility** that isn’t properly initialized before use.
+
+You mentioned:
+> the actual model analyzer is there, functions when I search from search button errors out...
+
+So the issue likely occurs:
+- On the **search button click handler**.
+- When a **notification or feedback mechanism (like toast)** is triggered but `notify` is not defined.
+
+---
+
+### ✅ Fix Prompt for Agent AI:
+
+Use this prompt to direct your dev agent clearly:
+
+---
+
+> 🛠 **Fix null notify error on Search**
+>
+> In the **Data Model Analyzer** page (`/data-model-analyzer`), clicking the **search button** triggers a runtime error:
+> ```
+> Cannot read properties of null (reading 'notify')
+> ```
+> Likely cause: A `notify` function (toast/snackbar/etc.) is being called on a null/undefined object. 
+>
+> **Required Fix:**
+> 1. Ensure `notify` is initialized before it's called.
+> 2. If using a custom toast or library like `react-toastify`, verify the hook/provider is present in the root layout or component tree.
+> 3. Add a fallback/log if `notify` is not available.
+> 
+> 🎯 Goal: Searching objects should not throw errors and should return results or a friendly message (e.g. "No results found").
+
+---
+
+### 🔧 UI Enhancements Prompt:
+
+Also, to improve the dropdown and search interaction:
+
+---
+
+> ✨ **Enhance UI: Dropdown for Layout + Object Select**
+>
+> On the **Data Model Analyzer** page:
+>
+> 1. The **"Layout Algorithm"** should be a dropdown menu with options:
+>    - Force-Directed (Default)
+>    - Circular
+>    - Grid
+>    - Concentric
+>    - Breadthfirst
+>
+> 2. The **Object selector** should:
+>    - Be a searchable dropdown
+>    - Load Salesforce object list from org metadata
+>    - Allow selection of 1 object at a time
+> 
+> Libraries like `shadcn/ui` Select or `headlessui` can be used for better accessibility and keyboard support.
+
+---
+
+Would you like me to write a code snippet using `shadcn/ui`'s `<Select />` with search, wired up to your object list and layout options?

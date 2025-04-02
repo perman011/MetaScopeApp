@@ -3,13 +3,14 @@ import cytoscape from 'cytoscape';
 import { Loader2, Search, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 // Define TypeScript interfaces for our data
 interface FieldMetadata {
@@ -55,6 +56,7 @@ interface EnhancedSchemaVisualizerProps {
 export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVisualizerProps) {
   const cyRef = useRef<HTMLDivElement>(null);
   const cy = useRef<cytoscape.Core | null>(null);
+  const { toast } = useToast();
   
   // State for UI controls
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
@@ -486,28 +488,84 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
             <Label>Search Objects</Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-500" />
-              <Input 
-                type="text" 
-                placeholder="Search by name..." 
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <div className="flex">
+                <Input 
+                  type="text" 
+                  placeholder="Search by name..." 
+                  className="pl-8 rounded-r-none"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      // Show toast notification for search just like the button click
+                      if (searchQuery.trim()) {
+                        const matchCount = filteredObjects.length;
+                        if (matchCount > 0) {
+                          toast({
+                            title: `Search Results`,
+                            description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
+                            variant: "default",
+                          });
+                        } else {
+                          toast({
+                            title: "No Results Found",
+                            description: `No objects match "${searchQuery}". Try a different search term.`,
+                            variant: "destructive",
+                          });
+                        }
+                      }
+                    }
+                  }}
+                />
+                <Button 
+                  type="button" 
+                  className="rounded-l-none"
+                  onClick={() => {
+                    // Search updates automatically via the useEffect hook with searchQuery dependency
+                    console.log(`Searching for: ${searchQuery}`);
+                    
+                    // Show toast notification for search
+                    if (searchQuery.trim()) {
+                      const matchCount = filteredObjects.length;
+                      if (matchCount > 0) {
+                        toast({
+                          title: `Search Results`,
+                          description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
+                          variant: "default",
+                        });
+                      } else {
+                        toast({
+                          title: "No Results Found",
+                          description: `No objects match "${searchQuery}". Try a different search term.`,
+                          variant: "destructive",
+                        });
+                      }
+                    }
+                  }}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
           
           {/* Layout Selection */}
           <div className="space-y-2">
             <Label>Layout Algorithm</Label>
-            <Select 
+            <Select
               value={selectedLayout}
               onValueChange={setSelectedLayout}
             >
-              <option value="cose">Force-Directed (Default)</option>
-              <option value="circle">Circular</option>
-              <option value="grid">Grid</option>
-              <option value="concentric">Concentric</option>
-              <option value="breadthfirst">Hierarchical</option>
+              <SelectTrigger>
+                <SelectValue placeholder="Select layout..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cose">Force-Directed (Default)</SelectItem>
+                <SelectItem value="circle">Circular</SelectItem>
+                <SelectItem value="grid">Grid</SelectItem>
+                <SelectItem value="concentric">Concentric</SelectItem>
+                <SelectItem value="breadthfirst">Hierarchical</SelectItem>
+              </SelectContent>
             </Select>
           </div>
           
