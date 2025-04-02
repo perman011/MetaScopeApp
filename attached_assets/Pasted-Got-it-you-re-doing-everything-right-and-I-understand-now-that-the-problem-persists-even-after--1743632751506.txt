@@ -1,0 +1,79 @@
+Got it — you're doing everything right, and I understand now that the problem persists **even after trying fixes**. Since we're keeping it **code-free** and strictly scoped to your architecture, here's how you should **systematically debug and resolve** this issue the right way:
+
+---
+
+### 🧭 Root Cause Analysis Based on Your Stack and Screenshot:
+
+#### ✅ You're inside the `Data Model Analyzer`  
+- Object filters like **Standard Objects / Custom Objects** are visible  
+- This means **part of the component loaded** successfully.
+
+#### ❌ But the **toast/notification system** is still breaking with:
+```
+Cannot read properties of null (reading 'notify')
+```
+
+Which means:
+
+1. You're calling a notification (`notify`, `toast`, etc.) somewhere in response to:
+   - Successful org load
+   - Filtering objects
+   - Selecting relationship types
+   - Something async resolving
+
+2. The **notification function is not available** in that scope — likely due to:
+   - It not being initialized
+   - Context being broken
+   - You are calling a stale or undefined reference
+
+---
+
+### 🧱 Based on Your Architecture, You Should Now:
+
+#### 1. 🔍 **Audit Your Toast Initialization Flow**
+- Go to your **main entry point** (likely `src/main.tsx`)
+- Confirm that your app is wrapped in a global provider like `<Toaster />` from `shadcn/ui` or whatever toast system you are using
+- Confirm it's not conditionally rendered or missing in dev mode
+
+#### 2. 📦 **Trace the Toast Usage in the Component**
+- Go to `DataModelAnalyzer.tsx` or wherever the error is happening
+- Search for `notify`, `toast`, or anything that triggers a message when data loads or errors
+- See **if it’s imported**, and from **which file**
+- Also check if it’s coming from a **custom wrapper** like `lib/notify.ts`
+
+> If you’re using a custom utility (`notify()`), it's possible the **import is broken or points to an undefined module**. That would explain the `null` reference.
+
+#### 3. 🧪 **Temporarily Disable All Notification Calls in That File**
+- This is a debugging technique
+- Comment out all `notify(...)`, `toast(...)`, or any variant used
+- Run the page again and see if:
+  - The object list loads successfully
+  - The error is gone
+
+If it disappears, then you’ve 100% confirmed it’s coming from one of those toast calls.
+
+---
+
+### 📌 Once Verified — Reintroduce Toasts Safely
+
+Once you know which one is causing the issue:
+- Wrap it in a guard (`if (toast)`)
+- Or re-import from a known working file (`@/components/ui/use-toast` if using `shadcn`)
+
+---
+
+### ✅ Summary of Your Next 3 Debug Steps (No Code)
+
+| Step | What to Do | Why |
+|------|------------|-----|
+| 1 | Audit `main.tsx` for toast provider | It must exist at the root |
+| 2 | Search for all `notify`, `toast`, `notifyError`, etc. | One is likely undefined or broken |
+| 3 | Temporarily disable all notification calls | If the error disappears, the culprit is confirmed |
+
+---
+
+Once you've verified that, I can help you decide whether to:
+- Refactor the toast utility into a wrapper
+- Replace `notify` with a fully controlled `toast` system
+
+Just let me know what you find!

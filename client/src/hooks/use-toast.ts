@@ -6,7 +6,7 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 5000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -131,44 +131,88 @@ const listeners: Array<(state: State) => void> = []
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach((listener) => {
-    listener(memoryState)
-  })
+  try {
+    memoryState = reducer(memoryState, action)
+    listeners.forEach((listener) => {
+      listener(memoryState)
+    })
+  } catch (error) {
+    console.error("Error dispatching toast action:", error)
+  }
 }
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
-  const id = genId()
-
-  const update = (props: ToasterToast) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props, id },
-    })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
-  dispatch({
-    type: "ADD_TOAST",
-    toast: {
-      ...props,
-      id,
-      open: true,
-      onOpenChange: (open) => {
-        if (!open) dismiss()
-      },
-    },
-  })
-
+// Helper function to create a fallback toast object
+const createFallbackToast = (props: Toast) => {
+  const { title, description, variant } = props;
+  console.log(`[Toast ${variant || 'default'}]: ${title} - ${description}`);
   return {
-    id: id,
-    dismiss,
-    update,
+    id: "fallback-" + Math.random().toString(36).substr(2, 9),
+    dismiss: () => {},
+    update: () => {},
+  };
+};
+
+// Main toast function that's safe to use anywhere
+export function toast(props: Toast) {
+  try {
+    const id = genId()
+
+    const update = (props: ToasterToast) =>
+      dispatch({
+        type: "UPDATE_TOAST",
+        toast: { ...props, id },
+      })
+    const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+    dispatch({
+      type: "ADD_TOAST",
+      toast: {
+        ...props,
+        id,
+        open: true,
+        onOpenChange: (open) => {
+          if (!open) dismiss()
+        },
+      },
+    })
+
+    return {
+      id: id,
+      dismiss,
+      update,
+    }
+  } catch (error) {
+    console.error("Error showing toast:", error)
+    return createFallbackToast(props)
   }
 }
 
-function useToast() {
+// Safe version that's also exported
+export function safeToast(props: Toast) {
+  try {
+    return toast(props)
+  } catch (error) {
+    console.error("Error in safeToast:", error)
+    return createFallbackToast(props)
+  }
+}
+
+// Global notify function that will never fail
+export const notify = (props: Toast) => {
+  try {
+    return safeToast(props)
+  } catch (error) {
+    console.error("Error in notify:", error)
+    return createFallbackToast(props)
+  }
+}
+
+// Make globalToast an alias for toast for backward compatibility
+export const globalToast = safeToast
+
+export function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
   React.useEffect(() => {
@@ -182,29 +226,20 @@ function useToast() {
   }, [state])
 
   return {
-    ...state,
-    toast,
+    toasts: state.toasts,
+    toast: safeToast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-    isHeadless: false, // Add this property to prevent "Cannot read properties of null (reading 'isHeadless')" error
-    notify: toast, // Add this alias to prevent "Cannot read properties of null (reading 'notify')" error
+    notify: safeToast,  // Add notify as an alias for toast
+    isHeadless: false,  // Add isHeadless property to prevent errors
   }
 }
 
-// Create a safe version of the toast function that won't crash if called outside a component
-function safeToast(props: Toast) {
-  try {
-    return toast(props);
-  } catch (error) {
-    console.error("Error showing toast:", error);
-    return {
-      id: "error",
-      dismiss: () => {},
-      update: () => {},
-    };
+// Make sure we have a default global object with these properties to prevent null errors
+if (typeof window !== 'undefined') {
+  // @ts-ignore - Adding global properties
+  window.__TOAST_SERVICE = {
+    notify,
+    toast: safeToast,
+    isHeadless: false
   }
 }
-
-// Add a global notify function to prevent "Cannot read properties of null (reading 'notify')" error
-const notify = safeToast;
-
-export { useToast, toast, safeToast, notify }

@@ -74,6 +74,33 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
     manyToMany: true,
   });
 
+  // Handler for search function
+  const handleSearch = () => {
+    // Search updates automatically via the useEffect hook with searchQuery dependency
+    console.log(`Searching for: ${searchQuery}`);
+    
+    // Show toast notification for search
+    if (searchQuery.trim()) {
+      try {
+        if (filteredObjects.length > 0) {
+          safeToast({
+            title: "Search Results", 
+            description: `Found ${filteredObjects.length} object${filteredObjects.length !== 1 ? 's' : ''} matching "${searchQuery}"`,
+            variant: "default"
+          });
+        } else {
+          safeToast({
+            title: "No Results Found",
+            description: `No objects match "${searchQuery}". Try a different search term.`,
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error("Error showing search toast:", error);
+      }
+    }
+  };
+
   // Process metadata to enhance it with needed properties
   const processMetadata = (): SchemaMetadata => {
     console.log("Processing metadata:", metadata);
@@ -498,77 +525,14 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      // Handle search on Enter key
-                      if (searchQuery.trim()) {
-                        console.log("Searching for:", searchQuery);
-                        const matchCount = filteredObjects.length;
-                        
-                        try {
-                          if (matchCount > 0) {
-                            if (toast) {
-                              toast({
-                                title: "Search Results", 
-                                description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                                variant: "default"
-                              });
-                            } else {
-                              console.log(`Found ${matchCount} objects matching "${searchQuery}"`);
-                            }
-                          } else {
-                            if (toast) {
-                              toast({
-                                title: "No Results Found",
-                                description: `No objects match "${searchQuery}". Try a different search term.`,
-                                variant: "destructive"
-                              });
-                            } else {
-                              console.log(`No objects match "${searchQuery}". Try a different search term.`);
-                            }
-                          }
-                        } catch (error) {
-                          console.error("Error during search:", error);
-                        }
-                      }
+                      handleSearch();
                     }
                   }}
                 />
                 <Button 
                   type="button" 
                   className="rounded-l-none"
-                  onClick={() => {
-                    // Search updates automatically via the useEffect hook with searchQuery dependency
-                    console.log(`Searching for: ${searchQuery}`);
-                    
-                    // Show toast notification for search
-                    if (searchQuery.trim()) {
-                      const matchCount = filteredObjects.length;
-                      try {
-                        if (matchCount > 0) {
-                          if (toast) {
-                            toast({
-                              title: "Search Results", 
-                              description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                              variant: "default"
-                            });
-                          } else {
-                            console.log(`Found ${matchCount} objects matching "${searchQuery}"`);
-                          }
-                        } else {
-                          if (toast) {
-                            toast({
-                              title: "No Results Found",
-                              description: `No objects match "${searchQuery}". Try a different search term.`,
-                              variant: "destructive"
-                            });
-                          } else {
-                            console.log(`No objects match "${searchQuery}". Try a different search term.`);
-                          }
-                        }
-                      } catch (error) {
-                        console.error("Error during search:", error);
-                      }
-                    }
-                  }}
+                  onClick={() => handleSearch()}
                 >
                   <Search className="h-4 w-4" />
                 </Button>
