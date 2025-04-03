@@ -1,0 +1,108 @@
+This is a great level of detail — and now I’m going to give you a **bulletproof technical task** for your AI agent team with:
+- **Step-by-step execution**
+- **What to remove**
+- **What to refactor**
+- **How to handle UX issues (like too many scrollbars)**
+- And **next-level suggestions for the Enhanced Visualizer**
+
+---
+
+## 🛠️ Technical Prompt for AI Agent
+
+### 🔧 TITLE: Final Refinement – Filters, Layout UX, Scroll Management, Visualizer Mode Enhancements
+
+---
+
+### ✅ Issue 1: Replace “Object Types” and “Relationship Types” Checkboxes with Dropdown Menus
+
+#### ❌ Problem:
+- Filters are taking too much vertical space and are not scalable
+- Relationship types don’t visually show color keys
+
+#### ✅ Fix:
+- Convert both **Object Types** and **Relationship Types** into **dropdown multi-select components**
+- Use searchable dropdowns that allow multi-selection
+- Display selected values as colored tags or pills inline with their type color
+
+#### 🛠️ Dev Steps:
+1. Use `shadcn/ui` `Select` or `Popover + Checkbox` combo
+2. Use Tailwind for styling and padding so they match rest of panel
+3. Show checked items using the correct color:
+   - Lookup → blue  
+   - Master-Detail → orange  
+   - Self-Join → purple  
+   - Many-to-Many → green
+
+---
+
+### ✅ Issue 2: Remove Redundant Layout Picker from Bottom
+
+#### ❌ Problem:
+- There are two layout dropdowns (top-right and bottom-left)
+- This is confusing and redundant
+
+#### ✅ Fix:
+- Remove the layout dropdown inside the left control panel (`Compound Spring Embedder`)
+- Keep only the layout dropdown at the **top-right** of the canvas
+
+#### 🛠️ Dev Steps:
+- Delete the bottom layout dropdown code
+- Ensure layout changes are still triggered by top layout dropdown
+
+---
+
+### ✅ Issue 3: Too Many Scrollbars on the Right Panel
+
+#### ❌ Problem:
+- The object detail panel has **nested scroll containers**
+- UX feels cluttered and scroll interaction is clunky
+
+#### ✅ Fix:
+- Limit to **only one scrollable area** (the full panel content)
+- Avoid scroll inside “Fields” or “Relationships” tabs if already inside a scrolling container
+
+#### 🛠️ Dev Steps:
+1. Remove internal scroll containers inside Tabs (`Fields`, `Relationships`)
+2. Wrap the entire panel in one scroll container:
+   ```tsx
+   <div className="overflow-y-auto max-h-screen">...</div>
+   ```
+3. Ensure each tab expands naturally with content
+
+---
+
+### ✅ Issue 4: Enhanced Visualizer – Layout Breaks When Turned Off
+
+#### ❌ Problem:
+- Turning off Enhanced Visualizer causes layout collapse or poor distribution
+
+#### ✅ Fix:
+- Maintain full layout rendering pipeline even if Enhanced Visualizer is toggled off
+
+---
+
+### 🔁 Suggested Functionalities for Enhanced Visualizer Modes
+
+| Visualizer Mode | Features |
+|-----------------|----------|
+| Enhanced ON (default) | Styled nodes, icons, relationship coloring, intelligent layout |
+| Enhanced OFF | Basic node rendering but still structured layout (no enhanced styles) |
+| 💡 Optional Advanced Toggle Modes | Add toggle presets: `Performance Mode`, `Simple Graph`, `Detailed Graph` |
+| 💬 Tooltip/Info | Add tooltip or `i` icon explaining what Enhanced Visualizer actually does |
+
+---
+
+### ✅ Acceptance Criteria (Test Before Handoff)
+
+| Item | Test Passes When |
+|------|------------------|
+| [ ] Filters are dropdowns with checkboxes | Compact UI, supports multi-select |
+| [ ] Relationship types show color chips/tags | User can visually distinguish |
+| [ ] Only one layout selector is visible | Top layout dropdown works |
+| [ ] Only one scroll inside right panel | Fields/relationships expand with content |
+| [ ] Turning off Enhanced Visualizer keeps graph readable | Layout is applied correctly |
+| [ ] Graph reacts to all filters | Object types and relationship types update graph live |
+
+---
+
+Let me know if you want me to define the **layout of the Enhanced Visualizer modes in a config object** so it can be extended in the future — we can make this future-proof now.

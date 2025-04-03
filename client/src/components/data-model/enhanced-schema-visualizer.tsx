@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { toast as globalToast, notify, safeToast } from '@/hooks/use-toast';
+import { MultiSelect, Option } from '@/components/ui/multi-select';
 
 // Define TypeScript interfaces for our data
 interface FieldMetadata {
@@ -66,9 +67,20 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLayout, setSelectedLayout] = useState(propLayout);
+  
+  // Object type filter state using string array for multi-select
+  const [selectedObjectTypes, setSelectedObjectTypes] = useState<string[]>(['standard', 'custom']);
+  
+  // Relationship type filter state using string array for multi-select
+  const [selectedRelationshipTypes, setSelectedRelationshipTypes] = useState<string[]>([
+    'lookup', 'masterdetail', 'selfjoin', 'manytomany'
+  ]);
+  
+  const [selectedObject, setSelectedObject] = useState<ObjectMetadata | null>(null);
+  
+  // Keep the old state for backward compatibility during transition
   const [showStandardObjects, setShowStandardObjects] = useState(true);
   const [showCustomObjects, setShowCustomObjects] = useState(true);
-  const [selectedObject, setSelectedObject] = useState<ObjectMetadata | null>(null);
   const [relationshipTypes, setRelationshipTypes] = useState({
     lookup: true,
     masterDetail: true,
@@ -251,9 +263,10 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
       obj.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       obj.label.toLowerCase().includes(searchQuery.toLowerCase());
     
+    // Use the new multi-select state (but also validate with legacy state during transition)
     const matchesTypeFilter = 
-      (obj.custom && showCustomObjects) || 
-      (!obj.custom && showStandardObjects);
+      (obj.custom && selectedObjectTypes.includes('custom') && showCustomObjects) || 
+      (!obj.custom && selectedObjectTypes.includes('standard') && showStandardObjects);
     
     return matchesSearch && matchesTypeFilter;
   });
@@ -454,14 +467,8 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
     cy.current.edges().forEach(edge => {
       const type = edge.data('type');
       
-      // Check if we should show this type of relationship
-      if (type === 'lookup' && !relationshipTypes.lookup) {
-        edge.addClass('hidden');
-      } else if (type === 'masterdetail' && !relationshipTypes.masterDetail) {
-        edge.addClass('hidden');
-      } else if (type === 'selfjoin' && !relationshipTypes.selfJoin) {
-        edge.addClass('hidden');
-      } else if (type === 'manytomany' && !relationshipTypes.manyToMany) {
+      // Check if we should show this type of relationship using the new multi-select state
+      if (!selectedRelationshipTypes.includes(type)) {
         edge.addClass('hidden');
       } else {
         edge.removeClass('hidden');
@@ -490,7 +497,7 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
         'target-arrow-shape': 'diamond',
       })
       .update();
-  }, [relationshipTypes]);
+  }, [selectedRelationshipTypes]);
 
   // Zoom controls
   const zoomIn = () => {
@@ -590,71 +597,45 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
             {/* Object Type Filters */}
             <div className="space-y-2">
               <Label>Object Types</Label>
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="standard-objects" 
-                    checked={showStandardObjects} 
-                    onCheckedChange={(checked) => setShowStandardObjects(checked as boolean)}
-                  />
-                  <Label htmlFor="standard-objects" className="cursor-pointer">Standard Objects</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="custom-objects" 
-                    checked={showCustomObjects} 
-                    onCheckedChange={(checked) => setShowCustomObjects(checked as boolean)}
-                  />
-                  <Label htmlFor="custom-objects" className="cursor-pointer">Custom Objects</Label>
-                </div>
-              </div>
+              <MultiSelect 
+                options={[
+                  { value: "standard", label: "Standard Objects", color: "bg-blue-500" },
+                  { value: "custom", label: "Custom Objects", color: "bg-amber-500" }
+                ]}
+                selected={selectedObjectTypes}
+                onChange={(selected) => {
+                  setSelectedObjectTypes(selected);
+                  // Update legacy state for compatibility
+                  setShowStandardObjects(selected.includes("standard"));
+                  setShowCustomObjects(selected.includes("custom"));
+                }}
+                placeholder="Select object types"
+              />
             </div>
             
             {/* Relationship Type Filters */}
             <div className="space-y-2">
               <Label>Relationship Types</Label>
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="lookup-relations" 
-                    checked={relationshipTypes.lookup} 
-                    onCheckedChange={(checked) => 
-                      setRelationshipTypes(prev => ({ ...prev, lookup: checked as boolean }))
-                    }
-                  />
-                  <Label htmlFor="lookup-relations" className="cursor-pointer">Lookup</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="master-detail-relations" 
-                    checked={relationshipTypes.masterDetail} 
-                    onCheckedChange={(checked) => 
-                      setRelationshipTypes(prev => ({ ...prev, masterDetail: checked as boolean }))
-                    }
-                  />
-                  <Label htmlFor="master-detail-relations" className="cursor-pointer">Master-Detail</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="self-join-relations" 
-                    checked={relationshipTypes.selfJoin} 
-                    onCheckedChange={(checked) => 
-                      setRelationshipTypes(prev => ({ ...prev, selfJoin: checked as boolean }))
-                    }
-                  />
-                  <Label htmlFor="self-join-relations" className="cursor-pointer">Self Join</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="many-to-many-relations" 
-                    checked={relationshipTypes.manyToMany} 
-                    onCheckedChange={(checked) => 
-                      setRelationshipTypes(prev => ({ ...prev, manyToMany: checked as boolean }))
-                    }
-                  />
-                  <Label htmlFor="many-to-many-relations" className="cursor-pointer">Many-to-Many</Label>
-                </div>
-              </div>
+              <MultiSelect 
+                options={[
+                  { value: "lookup", label: "Lookup", color: "bg-blue-500" },
+                  { value: "masterdetail", label: "Master-Detail", color: "bg-orange-500" },
+                  { value: "selfjoin", label: "Self Join", color: "bg-purple-500" },
+                  { value: "manytomany", label: "Many-to-Many", color: "bg-green-500" }
+                ]}
+                selected={selectedRelationshipTypes}
+                onChange={(selected) => {
+                  setSelectedRelationshipTypes(selected);
+                  // Update legacy state for compatibility
+                  setRelationshipTypes({
+                    lookup: selected.includes("lookup"),
+                    masterDetail: selected.includes("masterdetail"),
+                    selfJoin: selected.includes("selfjoin"),
+                    manyToMany: selected.includes("manytomany")
+                  });
+                }}
+                placeholder="Select relationship types"
+              />
             </div>
             
             {/* Layout Selection */}
@@ -740,7 +721,7 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
               <div>
                 <div className="flex items-center space-x-2 mb-1">
                   <h3 className="text-xl font-bold">{selectedObject.label}</h3>
-                  <Badge variant={selectedObject.custom ? "yellow" : "blue"}>
+                  <Badge variant="secondary" className={selectedObject.custom ? "bg-amber-500 text-white" : "bg-blue-500 text-white"}>
                     {selectedObject.custom ? 'Custom' : 'Standard'}
                   </Badge>
                 </div>
@@ -788,10 +769,10 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
                         <CardContent className="pt-4">
                           <div className="flex justify-between mb-1">
                             <div className="font-medium">{rel.name}</div>
-                            <Badge variant={
-                              rel.type.toLowerCase().includes('master') ? "orange" : 
-                              rel.type.toLowerCase().includes('self') ? "purple" :
-                              rel.type.toLowerCase().includes('many') ? "green" : "blue"
+                            <Badge variant="secondary" className={
+                              rel.type.toLowerCase().includes('master') ? "bg-orange-500 text-white" : 
+                              rel.type.toLowerCase().includes('self') ? "bg-purple-500 text-white" :
+                              rel.type.toLowerCase().includes('many') ? "bg-green-500 text-white" : "bg-blue-500 text-white"
                             }>
                               {rel.type}
                             </Badge>
