@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import ModelVisualizer from "@/components/data-model/model-visualizer";
 import EnhancedSchemaVisualizer from "@/components/data-model/enhanced-schema-visualizer";
+import TableView from "@/components/data-model/table-view";
 import { useOrgContext } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -63,7 +63,10 @@ interface ObjectMetadata {
 
 export default function DataModelAnalyzer() {
   const { activeOrg } = useOrgContext();
-  const [useEnhancedVisualizer, setUseEnhancedVisualizer] = useState(true);
+  // Enhanced Visualizer toggle switches between Graph View (Cytoscape.js) and Tabular View
+  // Do NOT render both views simultaneously – unmount one completely on toggle
+  // Layout dropdown permanently removed
+  const [useGraphView, setUseGraphView] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedObjectName, setSelectedObjectName] = useState<string>("");
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -248,10 +251,10 @@ export default function DataModelAnalyzer() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-neutral-600">Enhanced Visualizer</span>
+              <span className="text-sm text-neutral-600">Graph View</span>
               <Switch 
-                checked={useEnhancedVisualizer} 
-                onCheckedChange={setUseEnhancedVisualizer} 
+                checked={useGraphView} 
+                onCheckedChange={setUseGraphView} 
               />
             </div>
             {activeOrg && (
@@ -381,25 +384,6 @@ export default function DataModelAnalyzer() {
               <TabsTrigger value="list">List View</TabsTrigger>
               <TabsTrigger value="details">Field Details</TabsTrigger>
             </TabsList>
-            {objectMetadata && objectMetadata.objects.length > 0 && (
-              <div className="hidden md:flex">
-                <Select
-                  value={selectedLayout}
-                  onValueChange={setSelectedLayout}
-                >
-                  <SelectTrigger className="h-8 w-36">
-                    <SelectValue placeholder="Select layout" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cose">Force-Directed</SelectItem>
-                    <SelectItem value="circle">Circular</SelectItem>
-                    <SelectItem value="grid">Grid</SelectItem>
-                    <SelectItem value="concentric">Concentric</SelectItem>
-                    <SelectItem value="breadthfirst">Hierarchical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
           
           <TabsContent value="graph">
@@ -464,15 +448,14 @@ export default function DataModelAnalyzer() {
                       </Button>
                     </div>
                   </div>
-                ) : useEnhancedVisualizer ? (
+                ) : useGraphView ? (
                   <EnhancedSchemaVisualizer 
                     metadata={objectMetadata} 
                     selectedLayout={selectedLayout}
                   />
                 ) : (
-                  <ModelVisualizer 
-                    metadata={objectMetadata} 
-                    selectedLayout={selectedLayout}
+                  <TableView 
+                    metadata={objectMetadata}
                   />
                 )}
               </CardContent>

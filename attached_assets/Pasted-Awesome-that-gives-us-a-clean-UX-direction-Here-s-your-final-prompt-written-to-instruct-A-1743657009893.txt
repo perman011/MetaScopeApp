@@ -1,0 +1,69 @@
+Awesome — that gives us a **clean UX direction**. Here's your **final prompt** written to instruct AI agents precisely:
+
+---
+
+### ✅ AI Developer Prompt: Toggle Between Graph and Tabular View
+
+**Component:** `DataModelAnalyzerPage`
+
+---
+
+### 🎯 Goal
+
+Refactor the `Enhanced Visualizer` toggle to **switch between two completely different views**:
+
+| Enhanced Visualizer Toggle | View Rendered           |
+|----------------------------|--------------------------|
+| ON                         | Graph View (Cytoscape)   |
+| OFF                        | Tabular View (Object ↔ Field matrix or simple object list) |
+
+---
+
+### 🛠️ Required Behavior
+
+#### 1. **Toggle Functionality**
+- **ON (default)** → Render **Graph View** using Cytoscape.js.
+- **OFF** → Replace the graph with a **tabular format** displaying metadata details in a structured table.
+
+---
+
+#### 2. **Tabular View Requirements (OFF state)**
+
+You can implement a simple clean layout like this:
+
+| Object Name | API Name | Field Count | Custom? | Most Connected Object |
+|-------------|----------|-------------|---------|------------------------|
+| Account     | Account  | 34          | ❌      | Contact                |
+| Custom__c   | Custom__c| 8           | ✅      | None                   |
+
+- Use `shadcn/ui` `Table`, `Card`, or `DataTable` components.
+- Populate dynamically using the existing metadata state already used in the graph.
+- Paginate or scroll if objects > 20.
+
+---
+
+### 🔁 Transition Behavior
+
+- **Toggle switch** must perform a **full unmount/remount** of either view to avoid graph artifacts persisting in DOM.
+- Preserve graph state in memory if possible for fast rehydration on toggle ON.
+
+---
+
+### ✅ Additional Cleanup
+
+- 🚫 **Remove "Layout" dropdown** completely (again).
+- ✅ Ensure KPI metrics (Total Objects, Fields, Custom %, etc.) remain visible **regardless of toggle state**.
+
+---
+
+### 💡 Developer Notes (Inline Comment Suggestion)
+
+```tsx
+// Enhanced Visualizer toggle switches between Graph View (Cytoscape.js) and Tabular View
+// Do NOT render both views simultaneously – unmount one completely on toggle
+// Layout dropdown permanently removed
+```
+
+---
+
+Let me know if you want a base JSX implementation stub to help agents start this!
