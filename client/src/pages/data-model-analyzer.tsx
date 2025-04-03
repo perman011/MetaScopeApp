@@ -239,7 +239,7 @@ export default function DataModelAnalyzer() {
     <div className="p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Data Model Header */}
-        <div className="mb-6 flex justify-between items-center flex-wrap gap-4">
+        <div className="mb-4 flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-neutral-800">Data Model Analyzer</h1>
             <p className="mt-1 text-sm text-neutral-500">
@@ -294,41 +294,121 @@ export default function DataModelAnalyzer() {
             </AlertDescription>
           </Alert>
         )}
-
-        <Tabs defaultValue="graph">
-          <TabsList className="mb-4">
-            <TabsTrigger value="graph">Graph View</TabsTrigger>
-            <TabsTrigger value="list">List View</TabsTrigger>
-            <TabsTrigger value="details">Field Details</TabsTrigger>
-          </TabsList>
-
+        
+        {/* KPI Stats Panel */}
+        {objectMetadata && objectMetadata.objects.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+            <Card className="shadow-sm">
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">Total Objects</p>
+                  <h3 className="text-3xl font-bold text-neutral-800">{objectMetadata.objects.length}</h3>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-sm">
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">Total Fields</p>
+                  <h3 className="text-3xl font-bold text-neutral-800">
+                    {objectMetadata.objects.reduce((sum, obj) => sum + (obj.fields?.length || 0), 0)}
+                  </h3>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-sm">
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">Custom vs Standard</p>
+                  <h3 className="text-3xl font-bold text-neutral-800">
+                    <span className="text-amber-500">{objectMetadata.objects.filter(obj => obj.isCustom).length}</span>
+                    <span className="text-xl text-neutral-400 mx-1">/</span>
+                    <span className="text-blue-500">{objectMetadata.objects.filter(obj => !obj.isCustom).length}</span>
+                  </h3>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-sm">
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">Custom Fields %</p>
+                  <h3 className="text-3xl font-bold text-neutral-800">
+                    {Math.round(
+                      (objectMetadata.objects.reduce(
+                        (sum, obj) => sum + (obj.fields?.filter(f => f.isCustom)?.length || 0), 0
+                      ) / 
+                      Math.max(1, objectMetadata.objects.reduce(
+                        (sum, obj) => sum + (obj.fields?.length || 0), 0
+                      ))) * 100
+                    )}%
+                  </h3>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="shadow-sm">
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">Most Referenced</p>
+                  <h3 className="text-xl font-bold text-neutral-800 truncate">
+                    {(() => {
+                      const refCounts = new Map<string, number>();
+                      objectMetadata.objects.forEach(obj => {
+                        obj.relationships?.forEach(rel => {
+                          const count = refCounts.get(rel.object) || 0;
+                          refCounts.set(rel.object, count + 1);
+                        });
+                      });
+                      const entries = Array.from(refCounts.entries());
+                      if (entries.length === 0) return "None";
+                      entries.sort((a, b) => b[1] - a[1]);
+                      return entries[0][0];
+                    })()}
+                  </h3>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        
+        <Tabs defaultValue="graph" className="w-full">
+          <div className="flex justify-between items-center mb-4">
+            <TabsList>
+              <TabsTrigger value="graph">Graph View</TabsTrigger>
+              <TabsTrigger value="list">List View</TabsTrigger>
+              <TabsTrigger value="details">Field Details</TabsTrigger>
+            </TabsList>
+            {objectMetadata && objectMetadata.objects.length > 0 && (
+              <div className="hidden md:flex">
+                <Select
+                  value={selectedLayout}
+                  onValueChange={setSelectedLayout}
+                >
+                  <SelectTrigger className="h-8 w-36">
+                    <SelectValue placeholder="Select layout" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cose">Force-Directed</SelectItem>
+                    <SelectItem value="circle">Circular</SelectItem>
+                    <SelectItem value="grid">Grid</SelectItem>
+                    <SelectItem value="concentric">Concentric</SelectItem>
+                    <SelectItem value="breadthfirst">Hierarchical</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          
           <TabsContent value="graph">
             <Card className="shadow-sm border border-neutral-200">
               <CardHeader className="border-b border-neutral-200 flex flex-row items-center justify-between py-3">
                 <CardTitle>Object Relationship Map</CardTitle>
                 {objectMetadata && objectMetadata.objects.length > 0 && (
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-neutral-600">Layout:</span>
-                      <Select
-                        value={selectedLayout}
-                        onValueChange={setSelectedLayout}
-                      >
-                        <SelectTrigger className="h-8 w-36">
-                          <SelectValue placeholder="Select layout" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cose">Force-Directed</SelectItem>
-                          <SelectItem value="circle">Circular</SelectItem>
-                          <SelectItem value="grid">Grid</SelectItem>
-                          <SelectItem value="concentric">Concentric</SelectItem>
-                          <SelectItem value="breadthfirst">Hierarchical</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <span className="text-sm text-neutral-500">
-                      {objectMetadata.objects.length} objects found
-                    </span>
+                  <div className="text-sm text-neutral-500">
+                    {objectMetadata.objects.length} objects found
                   </div>
                 )}
               </CardHeader>
