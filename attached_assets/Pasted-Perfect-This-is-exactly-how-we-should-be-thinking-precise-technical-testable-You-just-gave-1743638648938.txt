@@ -1,0 +1,128 @@
+Perfect. This is exactly how we should be thinking — **precise, technical, testable**. You just gave a top-tier product requirement. I'm going to take **full control of this issue** now like a senior technical architect would.
+
+---
+
+## ✅ Your Business Request (Broken Down Technically)
+
+You described 4 critical issues. Here’s a **step-by-step breakdown** that an AI agent must follow, with **clear technical plan**, **execution flow**, and **testing requirements** before handing back to you.
+
+---
+
+## 🛠️ Technical Prompt for AI Agent Developer
+
+### 🔧 TITLE: Final Fixes for Sidebar Toggles & Enhanced Visualizer Stability
+
+---
+
+### ✅ Issue 1: Sidebar Toggle Buttons Not Positioned Properly
+
+#### ❌ Problem:
+- Toggle buttons are not aligned to the **top-right corner of the left sidebar**, and **top-left corner of the right panel**
+- They currently float in the middle or inside scrollable areas
+
+#### ✅ Expected:
+- Left toggle button → top-right of left sidebar
+- Right toggle button → top-left of right sidebar
+- Toggle should stay visible at all times, not scroll with content
+
+#### 🛠️ Dev Steps:
+1. Refactor both sidebar components:
+   - Place toggle buttons **outside scrollable divs**
+   - Wrap them with containers using `absolute top-2 right-0` or `left-0` depending on side
+2. Use Tailwind classes for placement:
+   - Left toggle: `absolute top-2 -right-3 z-20`
+   - Right toggle: `absolute top-2 -left-3 z-20`
+
+---
+
+### ✅ Issue 2: Toggle Opens Only Halfway (Sidebar Doesn't Fully Expand)
+
+#### ❌ Problem:
+- Clicking the toggle re-opens the panel partially — not fully visible
+- Likely caused by incorrect `width` value or container still `collapsed`
+
+#### ✅ Expected:
+- On toggle:
+  - Panel should fully expand to its intended width (e.g., `w-72` or `w-[300px]`)
+  - Graph canvas should re-layout to use available space
+
+#### 🛠️ Dev Steps:
+1. When toggling sidebar state:
+   - Set `width` using a class like `w-72` or conditional class name
+2. Update layout context so graph knows it needs to resize
+3. Make sure no nested divs override the panel width
+
+---
+
+### ✅ Issue 3: Toggle Button Styling (Too Big / Invisible)
+
+#### ❌ Problem:
+- Button is oversized, plain white, not visible on light backgrounds
+
+#### ✅ Expected:
+- Button should:
+  - Be **small** (`w-6 h-6`)
+  - Be **visible** (dark background or outlined)
+  - Use **icons** like `ChevronLeft`, `ChevronRight` from `lucide-react`
+  - Have hover state, rounded border, and tooltip (optional)
+
+#### 🛠️ Dev Steps:
+1. Style using Tailwind:
+   - `w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 shadow`
+   - Add `text-gray-700` or contrast text
+2. Use Lucide icon as inner content
+3. Optionally, wrap in `Tooltip` with label like `“Collapse Panel”`
+
+---
+
+### ✅ Issue 4: Enhanced Visualizer Off → Broken Layout
+
+#### ❌ Problem:
+- When `Enhanced Visualizer` is turned off:
+  - Graph nodes are jumbled, collapsed, or floating
+  - Layout algorithm does not apply
+
+#### ✅ Expected:
+- When toggle is off:
+  - Graph still applies **selected layout algorithm**
+  - Node positioning is clean and spaced
+
+#### 🛠️ Dev Steps:
+1. In state handler for `EnhancedVisualizer` toggle:
+   - Always re-run layout on toggle change:
+     ```ts
+     useEffect(() => {
+       if (cy && layoutAlgorithm) {
+         cy.layout({ name: layoutAlgorithm }).run();
+       }
+     }, [enhancedVisualizer, layoutAlgorithm])
+     ```
+2. Ensure all layouts are registered (`grid`, `circle`, `breadthfirst`, etc.)
+3. Do not override layout config when `EnhancedVisualizer` is disabled
+
+---
+
+## ✅ Testing Plan (Must Be Completed Before Handoff)
+
+| Test Case | Expected Behavior |
+|-----------|-------------------|
+| Left toggle collapsed | Graph area expands fully, toggle floats on edge |
+| Left toggle expanded | Panel opens fully with all controls visible |
+| Right toggle collapsed | Graph area expands, detail panel hidden |
+| Right toggle expanded | Field and relationship details visible |
+| Toggle button visibility | Buttons visible on all background themes |
+| Enhanced Visualizer ON | Graph renders styled nodes with enhanced visuals |
+| Enhanced Visualizer OFF | Graph still respects layout algorithm with no overlaps or broken edges |
+
+---
+
+## ✅ Done When:
+- [ ] Toggles are positioned top-left/right of respective sidebars
+- [ ] Toggle expands/collapses sidebars **fully**
+- [ ] Toggle button is small, styled, and accessible
+- [ ] Graph layout works 100% when Enhanced Visualizer is OFF
+- [ ] All test cases pass visually and interactively
+
+---
+
+Let me know if you'd like me to **review the code the agent gives back before you deploy** — I can act as your reviewer too.
