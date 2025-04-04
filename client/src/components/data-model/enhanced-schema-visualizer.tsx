@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import cytoscape from 'cytoscape';
-import { Loader2, Search, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
+import { Loader2, Search, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, RefreshCw, Code, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { toast as globalToast, notify, safeToast } from '@/hooks/use-toast';
 import { MultiSelect, Option } from '@/components/ui/multi-select';
+import SoqlQueryBuilder from './soql-query-builder';
 
 // Define TypeScript interfaces for our data
 interface FieldMetadata {
@@ -67,6 +68,9 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLayout, setSelectedLayout] = useState(propLayout);
+  const [showSoqlBuilder, setShowSoqlBuilder] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [selectedEdge, setSelectedEdge] = useState<any>(null);
   
   // Object type filter state using string array for multi-select
   const [selectedObjectTypes, setSelectedObjectTypes] = useState<string[]>(['standard', 'custom']);
@@ -431,11 +435,34 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
       cy.current?.elements().removeClass('selected');
       node.addClass('selected');
       
+      // Update selected node for SOQL query builder
+      setSelectedNode(node);
+      
       // Find the corresponding object and update selected object
       const selectedObj = processedMetadata.objects.find(obj => obj.name === node.id());
       if (selectedObj) {
         setSelectedObject(selectedObj);
         setRightPanelCollapsed(false);
+      }
+    });
+    
+    cy.current.on('tap', 'edge', (evt) => {
+      const edge = evt.target;
+      cy.current?.elements().removeClass('selected');
+      edge.addClass('selected');
+      
+      // Update selected edge for SOQL query builder
+      setSelectedEdge(edge);
+      
+      // If in SOQL Builder mode, don't show object details when selecting an edge
+      if (!showSoqlBuilder) {
+        // Find the corresponding source object
+        const sourceId = edge.source().id();
+        const sourceObj = processedMetadata.objects.find(obj => obj.name === sourceId);
+        if (sourceObj) {
+          setSelectedObject(sourceObj);
+          setRightPanelCollapsed(false);
+        }
       }
     });
 
@@ -444,6 +471,9 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
         // Clicked on background
         cy.current?.elements().removeClass('selected');
         setSelectedObject(null);
+        // Clear selected node and edge for SOQL builder
+        setSelectedNode(null);
+        setSelectedEdge(null);
       }
     });
 
@@ -458,6 +488,13 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
       }
     };
   }, [metadata, filteredObjects, selectedLayout]);
+
+  // Effect to ensure right panel is open when SOQL builder is activated
+  useEffect(() => {
+    if (showSoqlBuilder) {
+      setRightPanelCollapsed(false);
+    }
+  }, [showSoqlBuilder]);
 
   // Effect to update visibility based on relationship types
   useEffect(() => {
@@ -660,6 +697,18 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
       
       {/* Center Panel - Graph Visualization */}
       <div className="flex-1 h-full relative">
+        {/* SOQL Builder Button */}
+        <div className="absolute top-4 right-4 z-10">
+          <Button 
+            variant={showSoqlBuilder ? "default" : "outline"}
+            onClick={() => setShowSoqlBuilder(!showSoqlBuilder)}
+            className="shadow-sm"
+          >
+            <Database className="mr-2 h-4 w-4" />
+            {showSoqlBuilder ? "Close Query Builder" : "Build SOQL Query"}
+          </Button>
+        </div>
+        
         {/* Zoom Controls */}
         <div className="absolute bottom-4 right-4 z-10 flex flex-col space-y-2">
           <Button 
@@ -709,88 +758,121 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
         
         <div 
           className={`h-full bg-white border-l border-neutral-200 transition-all duration-300 ${
-            rightPanelCollapsed ? 'w-0 overflow-hidden' : 'w-80'
+            rightPanelCollapsed ? 'w-0 overflow-hidden' : showSoqlBuilder ? 'w-[500px]' : 'w-80'
           }`}
         >
-          <div className="p-4 border-b border-neutral-200 bg-neutral-50">
-            <h3 className="text-lg font-semibold text-neutral-700">Object Details</h3>
-          </div>
-          
-          {selectedObject ? (
-            <div className="p-4 space-y-4 overflow-y-auto h-[calc(100%-54px)]">
-              <div>
-                <div className="flex items-center space-x-2 mb-1">
-                  <h3 className="text-xl font-bold">{selectedObject.label}</h3>
-                  <Badge variant="secondary" className={selectedObject.custom ? "bg-amber-500 text-white" : "bg-blue-500 text-white"}>
-                    {selectedObject.custom ? 'Custom' : 'Standard'}
-                  </Badge>
-                </div>
-                <p className="text-sm text-neutral-500">{selectedObject.apiName}</p>
-              </div>
-              
-              <Separator />
-              
-              <Tabs defaultValue="fields">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="fields">Fields</TabsTrigger>
-                  <TabsTrigger value="relationships">Relationships</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="fields" className="mt-4 max-h-[calc(100vh-280px)] overflow-y-auto">
-                  <div className="space-y-4">
-                    {selectedObject.fields.map((field, i) => (
-                      <Card key={i}>
-                        <CardContent className="pt-4">
-                          <div className="flex justify-between mb-1">
-                            <div className="font-medium">{field.label}</div>
-                            <div className="text-xs text-neutral-500">{field.name}</div>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <div>{field.type}</div>
-                            <div className="flex gap-1">
-                              {field.required && (
-                                <Badge variant="outline" className="text-[10px] h-4">Required</Badge>
-                              )}
-                              {field.unique && (
-                                <Badge variant="outline" className="text-[10px] h-4">Unique</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="relationships" className="mt-4 max-h-[calc(100vh-280px)] overflow-y-auto">
-                  <div className="space-y-4">
-                    {selectedObject.relationships.map((rel, i) => (
-                      <Card key={i}>
-                        <CardContent className="pt-4">
-                          <div className="flex justify-between mb-1">
-                            <div className="font-medium">{rel.name}</div>
-                            <Badge variant="secondary" className={
-                              rel.type.toLowerCase().includes('master') ? "bg-orange-500 text-white" : 
-                              rel.type.toLowerCase().includes('self') ? "bg-purple-500 text-white" :
-                              rel.type.toLowerCase().includes('many') ? "bg-green-500 text-white" : "bg-blue-500 text-white"
-                            }>
-                              {rel.type}
-                            </Badge>
-                          </div>
-                          <div className="text-sm">
-                            References: <span className="font-medium">{rel.object}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-              </Tabs>
+          {showSoqlBuilder ? (
+            <div className="h-full">
+              <SoqlQueryBuilder
+                selectedNode={selectedNode}
+                selectedEdge={selectedEdge}
+                onSelectNode={(node) => {
+                  if (cy.current) {
+                    const cyNode = cy.current.getElementById(node.id);
+                    if (cyNode) {
+                      cy.current.elements().removeClass('selected');
+                      cyNode.addClass('selected');
+                      setSelectedNode(cyNode);
+                    }
+                  }
+                }}
+                onSelectEdge={(edge) => {
+                  if (cy.current) {
+                    const cyEdge = cy.current.getElementById(edge.id);
+                    if (cyEdge) {
+                      cy.current.elements().removeClass('selected');
+                      cyEdge.addClass('selected');
+                      setSelectedEdge(cyEdge);
+                    }
+                  }
+                }}
+                metadata={processedMetadata}
+                onClose={() => setShowSoqlBuilder(false)}
+              />
             </div>
           ) : (
-            <div className="p-6 text-center text-neutral-500">
-              <p>Select an object to view details</p>
-            </div>
+            <>
+              <div className="p-4 border-b border-neutral-200 bg-neutral-50">
+                <h3 className="text-lg font-semibold text-neutral-700">Object Details</h3>
+              </div>
+              
+              {selectedObject ? (
+                <div className="p-4 space-y-4 overflow-y-auto h-[calc(100%-54px)]">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="text-xl font-bold">{selectedObject.label}</h3>
+                      <Badge variant="secondary" className={selectedObject.custom ? "bg-amber-500 text-white" : "bg-blue-500 text-white"}>
+                        {selectedObject.custom ? 'Custom' : 'Standard'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-neutral-500">{selectedObject.apiName}</p>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <Tabs defaultValue="fields">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="fields">Fields</TabsTrigger>
+                      <TabsTrigger value="relationships">Relationships</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="fields" className="mt-4 max-h-[calc(100vh-280px)] overflow-y-auto">
+                      <div className="space-y-4">
+                        {selectedObject.fields.map((field, i) => (
+                          <Card key={i}>
+                            <CardContent className="pt-4">
+                              <div className="flex justify-between mb-1">
+                                <div className="font-medium">{field.label}</div>
+                                <div className="text-xs text-neutral-500">{field.name}</div>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <div>{field.type}</div>
+                                <div className="flex gap-1">
+                                  {field.required && (
+                                    <Badge variant="outline" className="text-[10px] h-4">Required</Badge>
+                                  )}
+                                  {field.unique && (
+                                    <Badge variant="outline" className="text-[10px] h-4">Unique</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="relationships" className="mt-4 max-h-[calc(100vh-280px)] overflow-y-auto">
+                      <div className="space-y-4">
+                        {selectedObject.relationships.map((rel, i) => (
+                          <Card key={i}>
+                            <CardContent className="pt-4">
+                              <div className="flex justify-between mb-1">
+                                <div className="font-medium">{rel.name}</div>
+                                <Badge variant="secondary" className={
+                                  rel.type.toLowerCase().includes('master') ? "bg-orange-500 text-white" : 
+                                  rel.type.toLowerCase().includes('self') ? "bg-purple-500 text-white" :
+                                  rel.type.toLowerCase().includes('many') ? "bg-green-500 text-white" : "bg-blue-500 text-white"
+                                }>
+                                  {rel.type}
+                                </Badge>
+                              </div>
+                              <div className="text-sm">
+                                References: <span className="font-medium">{rel.object}</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              ) : (
+                <div className="p-6 text-center text-neutral-500">
+                  <p>Select an object to view details</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
