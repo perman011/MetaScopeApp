@@ -1,0 +1,87 @@
+Feature Name: Dashboard - Field Intelligence Tab
+
+Feature Overview:
+The Field Intelligence tab gives users deep analytics into field usage, health, quality, and maintainability across all objects. It identifies underused fields, inconsistent naming, missing help texts, and fields contributing to technical debt. The tab also presents actionable recommendations to clean, standardize, or retire fields.
+
+Frontend Location:
+Inside the Dashboard page → fourth tab:
+Path: /dashboard?tab=field-intelligence
+
+UI/UX Elements:
+	1.	Field Usage Distribution Chart
+	•	Donut or bar chart categorizing fields by usage range: (High, Medium, Low, Never Used)
+	•	Filterable by object
+	2.	Top Underutilized Fields Table
+	•	Columns: Object, Field API Name, Usage %, Last Updated, Field Type
+	•	CTA per row: “Launch Field Cleanup Tool”
+	3.	Fields Missing Help Text
+	•	Table of fields missing descriptions or help text
+	•	CTA: “Open Bulk Metadata Editor”
+	4.	Fields with Inconsistent Naming Patterns
+	•	Detects fields not following naming standards (e.g., AcctId vs AccountId)
+	•	Category: case inconsistencies, abbreviations, redundant suffixes, unmanaged prefixing
+	5.	Long Tooltips or Label Length Checker
+	•	Visual indicator for fields exceeding UX thresholds (e.g., >100 characters)
+	6.	Field Recommendations Panel
+	•	Personalized suggestions:
+	•	Archive Field X (0% used in last 12 months)
+	•	Add help text to Field Y
+	•	Rename Field Z for clarity
+
+Technical Requirements:
+
+Frontend:
+	•	Component: FieldIntelligenceDashboardTab.tsx
+	•	Use TanStack Table for all tables
+	•	Charts with Recharts or D3
+	•	CTA buttons should route to existing tools: Bulk Editor, Schema Viewer, Analyzer
+	•	Tab panel filters:
+	•	Object selector
+	•	Field type (custom, standard)
+	•	Usage threshold slider
+
+Backend/API:
+	•	Endpoint: GET /api/dashboard/field-intelligence
+	•	Output:
+
+{
+  "usageBuckets": {
+    "High": 230,
+    "Medium": 180,
+    "Low": 102,
+    "Unused": 48
+  },
+  "underusedFields": [
+    { "object": "Account", "field": "Legacy_Code__c", "usagePercent": 0, "lastUsed": "2021-01-01", "fieldType": "Text" }
+  ],
+  "missingHelpText": [
+    { "object": "Opportunity", "field": "Region__c" }
+  ],
+  "namingIssues": [
+    { "object": "Lead", "field": "acctId__c", "issue": "abbreviation inconsistent" }
+  ],
+  "longLabels": [
+    { "object": "Case", "field": "Detailed_Customer_Feedback__c", "labelLength": 140 }
+  ],
+  "recommendations": [
+    "Archive Legacy_Code__c",
+    "Add help text to Region__c",
+    "Rename acctId__c to AccountId__c"
+  ]
+}
+
+Database:
+	•	Use existing metadata_cache or field_usage_stats if available
+	•	Supplement with custom_field_audit_log table to track help text, label, and type changes
+
+Backend Logic:
+	•	Usage calculated by querying record population for each field (SOQL or event data)
+	•	Naming convention checker via regex against org-defined standard (e.g., PascalCase, suffix-free)
+	•	Label length validation (e.g., label.length > 100 = flag)
+	•	Cache analysis weekly and store in metadata_health_scores or dedicated analytics table
+
+AI Agent Notes:
+	•	DO NOT revert to old SOQL Dashboard design — this is a new field analytics engine
+	•	Reuse logic from Permissions Analyzer or Metadata Analyzer where applicable
+	•	Keep existing analyzer tools intact and just link to them (don’t move functionality)
+	•	All results must be filterable and exportable

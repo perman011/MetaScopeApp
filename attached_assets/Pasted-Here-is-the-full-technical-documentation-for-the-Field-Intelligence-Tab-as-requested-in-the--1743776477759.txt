@@ -1,0 +1,176 @@
+Here is the **full technical documentation** for the **Field Intelligence Tab** as requested in the last prompt — formatted and complete, ready to pass to your AI agents or engineering team:
+
+---
+
+# 📊 **Dashboard – Field Intelligence Tab**  
+**Purpose:** A full-scale, in-depth analytics subtab that identifies weak spots in field usage, quality, and design — and provides interactive actions to clean, optimize, or enhance fields across the Salesforce org.
+
+---
+
+### 🔖 **Feature Name**  
+**Dashboard - Field Intelligence Tab**
+
+---
+
+### 🧩 **Feature Overview**  
+The **Field Intelligence** tab gives users a deep, actionable look into the **health of fields** across the org. It analyzes:
+- Field usage by object and percentage
+- Missing help text
+- Inconsistent naming
+- Overly long labels/tooltips
+- Fields contributing to clutter or tech debt
+
+This tab is fully filterable and includes direct actions to **bulk edit**, **rename**, **retire**, or **audit** fields in one click.
+
+---
+
+### 🧑‍💼 **User Story**  
+> *As a Salesforce admin or architect,*  
+> I want to see underused, poorly named, or undocumented fields  
+> so I can clean up the data model and reduce user confusion and clutter.
+
+---
+
+### 🧭 **Frontend Placement**  
+- Parent Tab: `Dashboard`  
+- Route: `/dashboard?tab=field-intelligence`  
+- Tab Position: **Fourth**
+
+---
+
+### 🖼️ **UI/UX Breakdown**
+
+#### 1. **Field Usage Distribution Chart**  
+- 📊 Donut chart: High, Medium, Low, Unused fields  
+- 🔍 Filters: Object, Standard/Custom toggle
+
+#### 2. **Top Underutilized Fields Table**  
+- Columns: Object, Field API Name, Usage %, Last Updated, Field Type  
+- CTA per row: `Launch Field Cleanup`
+
+#### 3. **Fields Missing Help Text**  
+- Table view: Object, Field API  
+- CTA: `Open Bulk Metadata Editor`
+
+#### 4. **Inconsistent Naming Pattern Table**  
+- Detects irregularities: casing, abbreviation, inconsistent prefixes  
+- Examples: `acctId__c` instead of `AccountId__c`
+
+#### 5. **Long Tooltip / Label Checker**  
+- Flags fields with UI labels/tooltips >100 characters  
+- Tooltip warning badge
+
+#### 6. **Field Recommendations Panel**  
+- AI-generated recommendations  
+- Example:  
+  - ✅ “Archive Legacy_Code__c (0% used in 12 months)”  
+  - ✍️ “Add help text to Region__c”  
+  - 🧼 “Rename acctId__c to AccountId__c”
+
+---
+
+### 🧪 **Frontend Implementation**
+
+- **Component Name**: `FieldIntelligenceDashboardTab.tsx`
+- **React Tech**:
+  - `TanStack Table` for data display  
+  - `Recharts` or `D3` for visualizations  
+  - Filters (object selector, usage range)  
+  - `shadcn/ui` components for cards, tabs, filters  
+  - `Framer Motion` for smooth transitions  
+- **UX Notes**:
+  - Keep layout responsive and mobile-ready  
+  - CTA buttons open specific analyzers (don’t embed them here)
+
+---
+
+### 🔌 **API Endpoint**
+
+**GET** `/api/dashboard/field-intelligence`
+
+#### Sample JSON Response:
+```json
+{
+  "usageBuckets": {
+    "High": 230,
+    "Medium": 180,
+    "Low": 102,
+    "Unused": 48
+  },
+  "underusedFields": [
+    {
+      "object": "Account",
+      "field": "Legacy_Code__c",
+      "usagePercent": 0,
+      "lastUsed": "2021-01-01",
+      "fieldType": "Text"
+    }
+  ],
+  "missingHelpText": [
+    { "object": "Opportunity", "field": "Region__c" }
+  ],
+  "namingIssues": [
+    {
+      "object": "Lead",
+      "field": "acctId__c",
+      "issue": "abbreviation inconsistent"
+    }
+  ],
+  "longLabels": [
+    {
+      "object": "Case",
+      "field": "Detailed_Customer_Feedback__c",
+      "labelLength": 140
+    }
+  ],
+  "recommendations": [
+    "Archive Legacy_Code__c",
+    "Add help text to Region__c",
+    "Rename acctId__c to AccountId__c"
+  ]
+}
+```
+
+---
+
+### 🗃️ **Database Requirements** (Optional)
+
+- Table: `field_usage_stats`  
+  - Fields: org_id, object, field, last_used_date, usage_percent  
+- Table: `custom_field_audit_log`  
+  - Fields: label_length, help_text_present, naming_convention_score
+
+If not storing, compute on the fly using SOQL + tooling metadata.
+
+---
+
+### 🧠 **Backend Logic**
+
+1. **Field Usage**  
+   - SOQL queries to count population per field per object  
+   - Join with last modified data
+
+2. **Help Text & Label Check**  
+   - Use Tooling API metadata for help text presence  
+   - Label/tooltip length check: `label.length > 100`
+
+3. **Naming Convention Analysis**  
+   - Apply regex or AI model (e.g., detect snake_case or inconsistent casing)
+
+4. **Recommendation Engine**  
+   - Based on thresholds (0% usage, missing docs, bad naming)  
+   - Prioritize based on org-wide usage stats and health score
+
+---
+
+### 🤖 **AI Agent Instructions**
+
+- 🚫 **DO NOT revert or reference the legacy SOQL Dashboard tab**
+- ✅ Use all existing tools (Bulk Editor, Analyzer, Schema Visualizer) via routing, not embedding
+- 🔁 Reuse field metadata fetch logic (don’t duplicate loaders)
+- 🔐 Respect field-level visibility (show only what the user has access to)
+- 🧼 Link every recommendation to an action (edit, delete, rename, annotate)
+
+---
+
+Let me know when you’re ready for the **Automation Summary tab**, and I’ll create that next.
