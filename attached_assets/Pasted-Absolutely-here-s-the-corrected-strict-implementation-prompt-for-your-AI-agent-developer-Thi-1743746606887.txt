@@ -1,0 +1,118 @@
+Absolutely — here's the corrected, **strict implementation prompt** for your AI agent developer. This version is based 100% on the design images and your original ask: full drag-and-drop **Query Canvas** for building complex SOQL (like the one you posted), and a functional **“Ask AI”** query assistant.
+
+---
+
+## ✅ FINAL PROMPT FOR AGENT DEVELOPER  
+### Title: **Fix Query Canvas and Activate AI Query Assistant (Based on Screenshot UI)**
+
+---
+
+### 🧩 OVERVIEW
+
+You are working on the **SOQL/SOSL Editor module** inside MetaScope. Your task is to **strictly follow the UI mockups** and make the **Query Canvas** capable of generating advanced SOQL queries via drag-and-drop, **and** fix the **AI Assistant button** to generate valid SOQL from natural language based on connected Salesforce org metadata.
+
+**DO NOT ignore layout or positioning instructions. Your UI must match the mockups exactly.**
+
+---
+
+### 📌 PART 1: QUERY CANVAS FUNCTIONALITY (MUST FOLLOW IMAGE)
+
+#### 👇 Functional Requirements:
+
+1. **FROM Section (Top Block)**
+   - Use dropdown to pick object (e.g. `Account`)
+   - Fetch real object list from connected org (`describeGlobal()` via JSForce)
+
+2. **SELECT Block**
+   - Allow users to drag fields from left-side field list into the block
+   - Support regular fields (e.g., `Name`, `Industry`)
+   - Support `TYPEOF` structure for polymorphic fields (`Owner`)
+     - Add inline editor: choose field → when type → fields to return
+
+3. **SUBQUERIES Block (Nested/Child relationships)**
+   - Allow adding child relationships (like `Contacts`, `ActivityHistories`)
+   - Drag child fields into these sections
+   - Show inline WHERE, ORDER BY, LIMIT options within each subquery
+   - Subqueries must be collapsible and stackable
+
+4. **WHERE Block**
+   - Add filters using field pickers (dynamic based on selected object)
+   - Support operators: =, !=, <, >, LIKE, IN, NOT IN
+   - Enable nesting: e.g., `Id IN (SELECT AccountId FROM Opportunity WHERE Amount > 100000)`
+
+5. **ORDER BY Block**
+   - Pick sortable field + ASC/DESC
+   - Allow multi-level sorting if needed
+
+6. **LIMIT Block**
+   - Input field for row limit (numeric only)
+
+7. **Query Preview Panel (Right Side or Bottom)**
+   - Show live generated SOQL string
+   - Update in real-time based on drag/drop blocks
+   - Match styling in screenshot: soft box with grey code-style background
+
+8. **[Run Query] Button**
+   - Connected to existing query execution backend
+
+---
+
+### 📌 PART 2: AI ASSISTANT QUERY GENERATION (BUTTON IN IMAGE)
+
+#### 🔘 Location:
+- The **“🤖 Ask AI to Write My Query”** button is already placed top right (as shown in UI screenshot). You must activate it.
+
+#### 🧠 Function:
+1. On click:
+   - Open modal with input:
+     - "Describe what you'd like to query..."
+     - [Submit] button
+
+2. On submit:
+   - Send prompt + current org metadata to backend (OpenAI/GPT)
+   - Inject system prompt:
+     ```text
+     You are a Salesforce SOQL expert. Based on the user’s input and this org’s metadata, generate a valid SOQL query. Use only known fields and relationships. Return only the query.
+     ```
+
+3. On GPT response:
+   - Display query in a result window
+   - Give user options:
+     - [Insert into Editor Mode]
+     - [Visualize in Builder Mode] (optional)
+     - [Cancel]
+
+---
+
+### 🧱 TECHNICAL NOTES
+
+- Use JSForce to pull metadata from connected org
+- Store metadata locally in session or indexedDB
+- Use Zod schemas to validate block inputs
+- Style using Tailwind CSS to match existing design
+- Component tree to update:
+  ```
+  <QueryCanvas />
+    ├── <FromSelector />
+    ├── <SelectFields />
+    ├── <TypeofHandler />
+    ├── <SubqueryBlock />
+    ├── <WhereFilterBlock />
+    ├── <OrderByBlock />
+    ├── <LimitBlock />
+    └── <QueryPreview />
+  ```
+
+---
+
+### ✅ DELIVERABLES
+
+- Fully functional drag-and-drop SOQL builder that can generate the full complex query:
+  - With subqueries, filters, typeof, and inline limits
+- Fully functional “Ask AI to Write My Query” button
+- Result inserted into editor or canvas
+- UI matches provided screenshots **exactly**
+
+---
+
+Would you like a version of this prompt converted into a `.md` developer task card or sprint ticket?
