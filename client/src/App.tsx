@@ -68,7 +68,8 @@ function AuthenticatedRoutes() {
               <Route path="/metadata-dependency-analyzer" component={MetadataDependencyAnalyzer} />
               <Route path="/permissions-analyzer" component={PermissionsAnalyzer} />
               <Route path="/apex-debug-analyzer" component={ApexDebugAnalyzer} />
-              <Route path="/field-intelligence" component={FieldIntelligence} />
+              {/* Field Intelligence is now only accessible as a tab within Dashboard */}
+              {/* <Route path="/field-intelligence" component={FieldIntelligence} /> */}
               <Route path="/settings" component={SettingsPage} />
               <Route path="/support" component={Support} />
               <Route path="/subscription" component={Subscription} />

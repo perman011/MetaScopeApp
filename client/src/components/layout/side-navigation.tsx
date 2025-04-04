@@ -74,10 +74,6 @@ export default function SideNavigation() {
           Data Model Analyzer
         </NavItem>
         
-        <NavItem href="/field-intelligence" icon={Table} active={location === "/field-intelligence"}>
-          Field Intelligence
-        </NavItem>
-        
         <NavItem href="/soql-editor" icon={Code} active={location === "/soql-editor"}>
           SOQL/SOSL Editor
         </NavItem>
