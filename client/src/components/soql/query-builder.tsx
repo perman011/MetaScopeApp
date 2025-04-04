@@ -1,20 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Search, Plus, X, BrainCircuit } from 'lucide-react';
+import { Search, Plus, X } from 'lucide-react';
 import { useOrgContext } from '@/hooks/use-org';
 import { mockSalesforceMetadata } from '@/lib/mock-data';
-import { apiRequest } from '@/lib/queryClient';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 
 interface QueryBuilderProps {
   onExecuteQuery: (query: string) => void;
+}
+
+// Interface for metadata objects
+interface SalesforceObject {
+  name: string;
+  label: string;
+  custom: boolean;
+  fields: SalesforceField[];
+}
+
+interface SalesforceField {
+  name: string;
+  label: string;
+  type: string;
+  required: boolean;
 }
 
 interface FilterItem {
@@ -28,25 +40,9 @@ interface SortItem {
   direction: 'ASC' | 'DESC';
 }
 
-// Interface for metadata objects
-interface SalesforceObject {
-  name: string;
-  label: string;
-  custom: boolean;
-  fields: SalesforceField[];
-  relationships?: any[];
-}
-
-interface SalesforceField {
-  name: string;
-  label: string;
-  type: string;
-  required: boolean;
-  unique?: boolean;
-}
-
 export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
   const { activeOrg } = useOrgContext();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [showStandardObjects, setShowStandardObjects] = useState(true);
   const [showCustomObjects, setShowCustomObjects] = useState(true);
@@ -59,11 +55,7 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
   const [filters, setFilters] = useState<FilterItem[]>([]);
   const [sortItems, setSortItems] = useState<SortItem[]>([]);
   const [limitValue, setLimitValue] = useState('');
-
-  // AI query state
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [aiGeneratedQuery, setAiGeneratedQuery] = useState('');
-  const [isGeneratingQuery, setIsGeneratingQuery] = useState(false);
+  const [queryPreview, setQueryPreview] = useState('');
   
   // Fetch metadata from the org if available, otherwise use mock data
   useEffect(() => {
@@ -76,8 +68,7 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
     try {
       setIsLoading(true);
       // In real implementation, this would call the API to get metadata
-      // For now, since we don't have direct access to JSForce's describeGlobal,
-      // we'll use mock data for both cases
+      // For now, use mock data
       setOrgMetadata(mockSalesforceMetadata);
     } catch (error) {
       console.error('Error fetching org metadata:', error);
@@ -93,7 +84,7 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
   const getFilteredObjects = () => {
     if (!metadata) return [];
     
-    return metadata.objects.filter(obj => {
+    return metadata.objects.filter((obj: any) => {
       const matchesSearch = !searchQuery || 
         obj.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
         obj.label.toLowerCase().includes(searchQuery.toLowerCase());
@@ -109,7 +100,7 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
   // Get selected object details
   const getSelectedObjectDetails = () => {
     if (!metadata || !selectedObject) return null;
-    return metadata.objects.find(obj => obj.name === selectedObject);
+    return metadata.objects.find((obj: any) => obj.name === selectedObject);
   };
   
   // Field operators options
@@ -189,9 +180,13 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
   const generateQuery = () => {
     if (!selectedObject || selectedFields.length === 0) return '';
     
-    let query = `SELECT ${selectedFields.join(', ')}\nFROM ${selectedObject}`;
+    // Start building the SELECT clause
+    const selectClause = selectedFields.join(', ');
     
-    // Add WHERE clause if filters exist
+    // Start building the complete query
+    let query = `SELECT ${selectClause}\nFROM ${selectedObject}`;
+    
+    // Handle WHERE clause
     if (filters.length > 0) {
       const whereClause = filters
         .filter(f => f.field && f.operator && f.value)
@@ -200,9 +195,17 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
           if (f.operator === 'LIKE') {
             return `${f.field} LIKE '%${f.value}%'`;
           } else if (f.operator === 'IN') {
-            // Assume comma-separated values for IN
-            const values = f.value.split(',').map(v => `'${v.trim()}'`).join(', ');
-            return `${f.field} IN (${values})`;
+            // Check if the values look like a list of IDs or a list of strings
+            if (f.value.includes(',')) {
+              const values = f.value.split(',').map(v => {
+                const trimmed = v.trim();
+                return `'${trimmed}'`;
+              }).join(', ');
+              return `${f.field} IN (${values})`;
+            } else {
+              // Single value
+              return `${f.field} IN ('${f.value}')`;
+            }
           }
           
           // Handle numeric values vs string values
@@ -216,7 +219,7 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
       }
     }
     
-    // Add ORDER BY clause if sort items exist
+    // Add ORDER BY clause
     if (sortItems.length > 0) {
       const orderByClause = sortItems
         .filter(s => s.field)
@@ -228,10 +231,13 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
       }
     }
     
-    // Add LIMIT clause if limit is set
+    // Add LIMIT clause
     if (limitValue && !isNaN(Number(limitValue))) {
       query += `\nLIMIT ${limitValue}`;
     }
+    
+    // Update the query preview
+    setQueryPreview(query);
     
     return query;
   };
@@ -244,406 +250,257 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
     }
   };
   
-  // Generate AI query
-  const generateAiQuery = async () => {
-    if (!aiPrompt.trim()) return;
-    
-    setIsGeneratingQuery(true);
-    
-    try {
-      // In a real implementation, this would call a real AI service
-      // For now, we'll simulate an AI response based on the prompt
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network request
-      
-      // Simple simulation of AI-generated queries based on keywords
-      let generatedQuery = '';
-      
-      if (aiPrompt.toLowerCase().includes('account') && aiPrompt.toLowerCase().includes('revenue')) {
-        generatedQuery = 'SELECT Id, Name, AnnualRevenue\nFROM Account\nWHERE AnnualRevenue > 1000000\nORDER BY AnnualRevenue DESC\nLIMIT 10';
-      } else if (aiPrompt.toLowerCase().includes('contact') && aiPrompt.toLowerCase().includes('email')) {
-        generatedQuery = 'SELECT Id, FirstName, LastName, Email, Phone\nFROM Contact\nWHERE Email != null\nLIMIT 20';
-      } else if (aiPrompt.toLowerCase().includes('opportunity') && aiPrompt.toLowerCase().includes('stage')) {
-        generatedQuery = 'SELECT Id, Name, StageName, Amount, CloseDate\nFROM Opportunity\nWHERE StageName = \'Closed Won\'\nORDER BY CloseDate DESC\nLIMIT 15';
-      } else {
-        // Default fallback
-        generatedQuery = `SELECT Id, Name\nFROM ${aiPrompt.includes('Account') ? 'Account' : 'Contact'}\nLIMIT 10`;
-      }
-      
-      setAiGeneratedQuery(generatedQuery);
-      
-      // Option to use the generated query
-      if (confirm('Apply the generated query?')) {
-        onExecuteQuery(generatedQuery);
-      }
-    } catch (error) {
-      console.error('Error generating AI query:', error);
-    } finally {
-      setIsGeneratingQuery(false);
-    }
-  };
-
   return (
-    <div className="grid grid-cols-2 gap-6">
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Controls</h3>
-          
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <Input
-              type="text"
-              placeholder="Search Objects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="standard-objects" 
-                checked={showStandardObjects}
-                onCheckedChange={(checked) => setShowStandardObjects(checked as boolean)}
-              />
-              <Label htmlFor="standard-objects">Standard Objects</Label>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="custom-objects" 
-                checked={showCustomObjects}
-                onCheckedChange={(checked) => setShowCustomObjects(checked as boolean)}
-              />
-              <Label htmlFor="custom-objects">Custom Objects</Label>
-            </div>
-          </div>
-          
-          {/* AI Query Assistant */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full">
-                <BrainCircuit className="mr-2 h-4 w-4" />
-                Ask AI to Write My Query
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>AI Query Assistant</DialogTitle>
-              </DialogHeader>
-              <div className="py-4">
-                <p className="text-sm text-gray-500 mb-4">
-                  Describe what you want to find in your Salesforce org in natural language.
-                  For example: "Show me top 10 accounts by revenue" or "Find contacts without email addresses"
-                </p>
-                <Textarea 
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="What would you like to find in your org?"
-                  rows={4}
-                  className="w-full"
+    <div className="p-4">
+      <Card>
+        <CardContent className="pt-6">
+          <div className="space-y-4">
+            {/* Object Selection */}
+            <div>
+              <Label className="text-sm font-semibold mb-2">Select Salesforce Object</Label>
+              <div className="flex items-center space-x-4 mb-2">
+                <Input
+                  type="text"
+                  placeholder="Search objects..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1"
+                  autoComplete="off"
+                  prefix={<Search className="w-4 h-4 text-muted-foreground" />}
                 />
-                <div className="mt-4 flex justify-end gap-2">
-                  <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <Button 
-                    onClick={generateAiQuery} 
-                    disabled={!aiPrompt.trim() || isGeneratingQuery}
-                  >
-                    {isGeneratingQuery ? (
-                      <>
-                        <span className="mr-2">Generating...</span>
-                        <span className="spinner" />
-                      </>
-                    ) : (
-                      'Generate Query'
-                    )}
-                  </Button>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="standard-objects"
+                    checked={showStandardObjects}
+                    onCheckedChange={(checked) => setShowStandardObjects(!!checked)}
+                  />
+                  <Label htmlFor="standard-objects" className="text-sm">Standard</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="custom-objects"
+                    checked={showCustomObjects}
+                    onCheckedChange={(checked) => setShowCustomObjects(!!checked)}
+                  />
+                  <Label htmlFor="custom-objects" className="text-sm">Custom</Label>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-        
-        <div className="h-[calc(100vh-500px)] min-h-[200px] overflow-y-auto border rounded-md p-2">
-          {getFilteredObjects().map((obj) => (
-            <div 
-              key={obj.name}
-              className={`p-2 rounded-md mb-2 cursor-pointer hover:bg-neutral-100 ${selectedObject === obj.name ? 'bg-neutral-100' : ''}`}
-              onClick={() => setSelectedObject(obj.name)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="font-medium">{obj.label}</div>
-                <Badge variant={obj.custom ? "secondary" : "outline"}>
-                  {obj.custom ? "Custom" : "Standard"}
-                </Badge>
-              </div>
-              <div className="text-sm text-neutral-500">{obj.name}</div>
+              <Select value={selectedObject} onValueChange={setSelectedObject}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an object" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getFilteredObjects().map((obj: any) => (
+                    <SelectItem key={obj.name} value={obj.name}>
+                      {obj.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          ))}
-          
-          {getFilteredObjects().length === 0 && isLoading ? (
-            <div className="flex items-center justify-center h-full text-neutral-500">
-              Loading objects...
-            </div>
-          ) : getFilteredObjects().length === 0 ? (
-            <div className="flex items-center justify-center h-full text-neutral-500">
-              No objects found
-            </div>
-          ) : null}
-        </div>
-      </div>
-      
-      <Card className="shadow-sm">
-        <CardContent className="p-4 space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Query Canvas</h3>
-            
-            {/* SELECT Block */}
-            <div className="p-3 border rounded-md bg-neutral-50">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-bold">SELECT</div>
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={selectAllFields}
-                    disabled={!selectedObject}
-                  >
-                    Select All
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={deselectAllFields}
-                    disabled={selectedFields.length === 0}
-                  >
-                    Clear
-                  </Button>
+
+            {/* Field Selection */}
+            {selectedObject && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-semibold">Select Fields</Label>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm" onClick={selectAllFields}>Select All</Button>
+                    <Button variant="outline" size="sm" onClick={deselectAllFields}>Deselect All</Button>
+                  </div>
                 </div>
-              </div>
-              
-              {selectedObject ? (
-                <div className="space-y-2 max-h-[150px] overflow-y-auto">
-                  {getSelectedObjectDetails()?.fields.map(field => (
-                    <div 
-                      key={field.name}
-                      className="flex items-center space-x-2"
-                    >
-                      <Checkbox 
-                        id={`field-${field.name}`}
+                <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto border rounded-md p-2">
+                  {getSelectedObjectDetails()?.fields.map((field: any) => (
+                    <div key={field.name} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={field.name}
                         checked={selectedFields.includes(field.name)}
                         onCheckedChange={() => toggleFieldSelection(field.name)}
                       />
-                      <Label 
-                        htmlFor={`field-${field.name}`}
-                        className="cursor-pointer"
-                      >
-                        {field.label} ({field.name})
+                      <Label htmlFor={field.name} className="text-sm">
+                        {field.label} ({field.type})
                       </Label>
                     </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-neutral-500 text-sm">
-                  Select an object to see available fields
-                </div>
-              )}
-            </div>
-            
-            {/* FROM Block */}
-            <div className="p-3 border rounded-md bg-neutral-50">
-              <div className="font-bold mb-2">FROM</div>
-              {selectedObject ? (
-                <div className="bg-white p-2 rounded border">
-                  {getSelectedObjectDetails()?.label} ({selectedObject})
-                </div>
-              ) : (
-                <div className="text-neutral-500 text-sm">
-                  Select an object from the list
-                </div>
-              )}
-            </div>
-            
-            {/* WHERE Block */}
-            <div className="p-3 border rounded-md bg-neutral-50">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-bold">WHERE</div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={addFilter}
-                  disabled={!selectedObject}
-                  className="h-8"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add Filter
-                </Button>
               </div>
-              
-              <div className="space-y-2">
-                {filters.map((filter, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <Select 
-                      value={filter.field}
-                      onValueChange={(value) => {
-                        const newFilters = [...filters];
-                        newFilters[index].field = value;
-                        setFilters(newFilters);
-                      }}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="Select field" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getSelectedObjectDetails()?.fields.map(field => (
-                          <SelectItem key={field.name} value={field.name}>
-                            {field.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select 
-                      value={filter.operator}
-                      onValueChange={(value) => {
-                        const newFilters = [...filters];
-                        newFilters[index].operator = value;
-                        setFilters(newFilters);
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-24">
-                        <SelectValue placeholder="Operator" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {operatorOptions.map(op => (
-                          <SelectItem key={op.value} value={op.value}>
-                            {op.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Input 
-                      value={filter.value}
-                      onChange={(e) => {
-                        const newFilters = [...filters];
-                        newFilters[index].value = e.target.value;
-                        setFilters(newFilters);
-                      }}
-                      placeholder="Value"
-                      className="h-8"
-                    />
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => removeFilter(index)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+            )}
+
+            {/* WHERE Clause Filters */}
+            {selectedObject && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-semibold">Filters (WHERE Clause)</Label>
+                  <Button variant="outline" size="sm" onClick={addFilter}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Filter
+                  </Button>
+                </div>
+                {filters.length > 0 ? (
+                  <div className="space-y-2">
+                    {filters.map((filter, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <Select 
+                          value={filter.field}
+                          onValueChange={(value) => {
+                            const newFilters = [...filters];
+                            newFilters[index].field = value;
+                            setFilters(newFilters);
+                          }}
+                        >
+                          <SelectTrigger className="w-1/3">
+                            <SelectValue placeholder="Field" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getSelectedObjectDetails()?.fields.map((field: any) => (
+                              <SelectItem key={field.name} value={field.name}>
+                                {field.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select 
+                          value={filter.operator}
+                          onValueChange={(value) => {
+                            const newFilters = [...filters];
+                            newFilters[index].operator = value;
+                            setFilters(newFilters);
+                          }}
+                        >
+                          <SelectTrigger className="w-1/5">
+                            <SelectValue placeholder="Operator" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {operatorOptions.map((op) => (
+                              <SelectItem key={op.value} value={op.value}>
+                                {op.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Input
+                          className="flex-1"
+                          placeholder="Value"
+                          value={filter.value}
+                          onChange={(e) => {
+                            const newFilters = [...filters];
+                            newFilters[index].value = e.target.value;
+                            setFilters(newFilters);
+                          }}
+                        />
+                        
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => removeFilter(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                
-                {filters.length === 0 && (
-                  <div className="text-neutral-500 text-sm">
-                    No filters added
-                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No filters added yet</div>
                 )}
               </div>
-            </div>
-            
-            {/* ORDER BY Block */}
-            <div className="p-3 border rounded-md bg-neutral-50">
-              <div className="flex items-center justify-between mb-2">
-                <div className="font-bold">ORDER BY</div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={addSortItem}
-                  disabled={!selectedObject}
-                  className="h-8"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add Sort
-                </Button>
-              </div>
-              
-              <div className="space-y-2">
-                {sortItems.map((sort, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <Select 
-                      value={sort.field}
-                      onValueChange={(value) => {
-                        const newSortItems = [...sortItems];
-                        newSortItems[index].field = value;
-                        setSortItems(newSortItems);
-                      }}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="Select field" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getSelectedObjectDetails()?.fields.map(field => (
-                          <SelectItem key={field.name} value={field.name}>
-                            {field.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select 
-                      value={sort.direction}
-                      onValueChange={(value: 'ASC' | 'DESC') => {
-                        const newSortItems = [...sortItems];
-                        newSortItems[index].direction = value;
-                        setSortItems(newSortItems);
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-28">
-                        <SelectValue placeholder="Direction" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ASC">Ascending</SelectItem>
-                        <SelectItem value="DESC">Descending</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => removeSortItem(index)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+            )}
+
+            {/* ORDER BY Clause */}
+            {selectedObject && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-semibold">Sorting (ORDER BY Clause)</Label>
+                  <Button variant="outline" size="sm" onClick={addSortItem}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Sort
+                  </Button>
+                </div>
+                {sortItems.length > 0 ? (
+                  <div className="space-y-2">
+                    {sortItems.map((sort, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <Select 
+                          value={sort.field}
+                          onValueChange={(value) => {
+                            const newSortItems = [...sortItems];
+                            newSortItems[index].field = value;
+                            setSortItems(newSortItems);
+                          }}
+                        >
+                          <SelectTrigger className="w-2/3">
+                            <SelectValue placeholder="Field" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getSelectedObjectDetails()?.fields.map((field: any) => (
+                              <SelectItem key={field.name} value={field.name}>
+                                {field.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Select 
+                          value={sort.direction}
+                          onValueChange={(value: 'ASC' | 'DESC') => {
+                            const newSortItems = [...sortItems];
+                            newSortItems[index].direction = value;
+                            setSortItems(newSortItems);
+                          }}
+                        >
+                          <SelectTrigger className="w-1/3">
+                            <SelectValue placeholder="Direction" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ASC">Ascending</SelectItem>
+                            <SelectItem value="DESC">Descending</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => removeSortItem(index)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                
-                {sortItems.length === 0 && (
-                  <div className="text-neutral-500 text-sm">
-                    No sorting options added
-                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No sorting added yet</div>
                 )}
               </div>
-            </div>
-            
-            {/* LIMIT Block */}
-            <div className="p-3 border rounded-md bg-neutral-50">
-              <div className="font-bold mb-2">LIMIT</div>
-              <Input 
-                type="number"
-                value={limitValue}
-                onChange={(e) => setLimitValue(e.target.value)}
-                placeholder="Enter limit"
-                className="h-8"
-              />
-            </div>
-            
-            <div className="flex justify-end mt-4">
-              <Button 
+            )}
+
+            {/* LIMIT Clause */}
+            {selectedObject && (
+              <div>
+                <Label className="text-sm font-semibold mb-2">Limit Results</Label>
+                <Input
+                  type="number"
+                  placeholder="Limit (optional)"
+                  value={limitValue}
+                  onChange={(e) => setLimitValue(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            )}
+
+            {/* Query Preview */}
+            {selectedObject && selectedFields.length > 0 && (
+              <div>
+                <Label className="text-sm font-semibold mb-2">Query Preview</Label>
+                <div className="bg-muted p-4 rounded-md whitespace-pre-wrap font-mono text-xs">
+                  {generateQuery()}
+                </div>
+              </div>
+            )}
+
+            {/* Execute Query Button */}
+            <div>
+              <Button
                 onClick={runQuery}
                 disabled={!selectedObject || selectedFields.length === 0}
                 className="w-full"

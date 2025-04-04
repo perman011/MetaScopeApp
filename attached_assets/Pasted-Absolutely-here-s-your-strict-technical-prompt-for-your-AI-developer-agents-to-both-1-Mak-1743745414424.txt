@@ -1,0 +1,115 @@
+Absolutely — here’s your **strict technical prompt** for your AI developer agents to both:
+
+1. **Make the Query Canvas capable of building the full advanced SOQL query via drag & drop**, and  
+2. **Enable the “Ask AI to Write My Query” button** with full backend logic and metadata-awareness.
+
+---
+
+## 🧠 PROMPT: Enable Full Query Builder and AI Assistant for MetaScope
+
+---
+
+### ✅ OBJECTIVE
+
+**Refactor the SOQL/SOSL Editor to support building complex Salesforce queries via drag-and-drop and enable the AI assistant button to generate valid SOQL using org-specific metadata.**
+
+---
+
+### 🧱 PART 1: Query Canvas – Enable Full Complex Query Support
+
+#### 🎯 Goal:
+Canvas must allow users to visually build **complex SOQL queries** like this one:
+
+```sql
+SELECT 
+  Name,
+  (SELECT LastName, Email, CreatedDate FROM Contacts WHERE CreatedDate = LAST_N_DAYS:30 AND Email != null ORDER BY CreatedDate DESC LIMIT 5),
+  (SELECT Subject, ActivityDate FROM ActivityHistories WHERE ActivityDate > LAST_N_DAYS:60 AND Status = 'Completed' LIMIT 3),
+  TYPEOF Owner WHEN User THEN FirstName, LastName, Email WHEN Queue THEN Name ELSE Name END,
+  CreatedDate,
+  Industry
+FROM Account
+WHERE Id IN (
+  SELECT AccountId FROM Opportunity WHERE Amount > 100000 AND CloseDate = LAST_N_DAYS:90
+)
+AND Industry != null
+AND CreatedDate < THIS_YEAR
+ORDER BY CreatedDate DESC
+LIMIT 50
+```
+
+---
+
+### 🔧 REQUIRED CANVAS BLOCKS & COMPONENTS
+
+- [ ] `FROM` selector: dropdown with object search (`Account`)
+- [ ] `SELECT` multi-selector: support standard fields + subquery results
+- [ ] `SUBQUERY` block (nested under parent record):
+   - Must allow child relationships like `Contacts`, `ActivityHistories`
+   - Add condition builder inside subquery block
+   - Support `ORDER BY`, `LIMIT`
+- [ ] `WHERE` block:
+   - Complex filters with multiple AND conditions
+   - Support subqueries inside WHERE (`Id IN (SELECT...)`)
+- [ ] `TYPEOF` block:
+   - Allow user to choose a polymorphic field (`Owner`)
+   - Dynamic WHEN/THEN structure
+- [ ] `ORDER BY`, `LIMIT` blocks
+- [ ] Query Preview Panel: Live SOQL text view
+- [ ] [Run Query] button uses live SOQL from canvas
+
+---
+
+### 🧠 PART 2: “Ask AI to Write My Query” — AI Button Logic
+
+#### 🧩 UI Placement:
+- Keep `🤖 Ask AI to Write My Query` button in canvas header
+- Opens modal with:
+  - [Prompt input]
+  - [Generate Query] button
+  - [Insert into Canvas] button (after result shown)
+
+#### 🧠 GPT Prompt Example:
+```txt
+You are a Salesforce SOQL expert. Based on the org metadata and this user input, generate a valid Salesforce SOQL query. Use known object and field names only. Return only the query in plain SOQL format.
+```
+
+#### 💾 Data to Inject into Prompt:
+- User input (freeform text)
+- Synced metadata (standard + custom objects and fields)
+- Use local metadata cache or fetch fresh describe if stale
+
+#### 🔁 Result Handling:
+- Parse AI response and inject into:
+  - `Editor Mode` text area
+  - OR convert parsed SOQL into visual blocks (if in `Builder Mode`)
+
+---
+
+### ⚠️ EDGE CASE HANDLING
+- [ ] No results from metadata → show error
+- [ ] AI returns invalid SOQL → validate before run
+- [ ] Invalid subquery or TYPEOF field → error tooltips + logging
+
+---
+
+### ✅ TECH STACK REMINDER
+- Use **React**, **Tailwind**, **React Hook Form**, **Zod**, **JSForce**
+- AI integration via GPT API (stream or simple POST)
+- Maintain **existing monaco editor** for text mode
+- Query execution: existing `ExecuteQuery()` pipeline
+
+---
+
+### 📦 DELIVERABLES
+- [ ] Fully functional drag-and-drop canvas that can visually construct the complex SOQL above
+- [ ] Live SOQL preview panel
+- [ ] Functional AI assistant modal that outputs valid SOQL
+- [ ] Output injected to both canvas and editor modes
+
+---
+
+Let me know if you want:
+- Component hierarchy tree for `QueryBuilder` and `AIQueryModal`
+- JSON state model structure for the query canvas
+- GPT system message refinement for more accuracy
