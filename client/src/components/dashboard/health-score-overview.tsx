@@ -127,14 +127,16 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">Security & Access</div>
-                    <div className={healthScore.securityScore >= 80 ? 'text-green-600' : healthScore.securityScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
+                    <div className={healthScore.securityScore >= 90 ? 'text-green-600' : healthScore.securityScore >= 70 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.securityScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={healthScore.securityScore >= 80 ? 'bg-green-500' : healthScore.securityScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
+                      className={healthScore.securityScore >= 90 ? 'bg-green-500' : healthScore.securityScore >= 70 ? 'bg-amber-500' : 'bg-red-500'} 
                       style={{ width: `${healthScore.securityScore}%` }}
+                      data-testid="security-score-bar"
+                      key={`security-score-${healthScore.securityScore}`}
                     ></div>
                   </div>
                 </div>
@@ -142,14 +144,16 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">Data Model</div>
-                    <div className={healthScore.dataModelScore >= 80 ? 'text-green-600' : healthScore.dataModelScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
+                    <div className={healthScore.dataModelScore >= 90 ? 'text-green-600' : healthScore.dataModelScore >= 70 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.dataModelScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={healthScore.dataModelScore >= 80 ? 'bg-green-500' : healthScore.dataModelScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
+                      className={healthScore.dataModelScore >= 90 ? 'bg-green-500' : healthScore.dataModelScore >= 70 ? 'bg-amber-500' : 'bg-red-500'}
                       style={{ width: `${healthScore.dataModelScore}%` }}
+                      data-testid="data-model-score-bar"
+                      key={`data-model-score-${healthScore.dataModelScore}`}
                     ></div>
                   </div>
                 </div>
@@ -157,14 +161,16 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">Automation Logic</div>
-                    <div className={healthScore.automationScore >= 80 ? 'text-green-600' : healthScore.automationScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
+                    <div className={healthScore.automationScore >= 90 ? 'text-green-600' : healthScore.automationScore >= 70 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.automationScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={healthScore.automationScore >= 80 ? 'bg-green-500' : healthScore.automationScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
+                      className={healthScore.automationScore >= 90 ? 'bg-green-500' : healthScore.automationScore >= 70 ? 'bg-amber-500' : 'bg-red-500'} 
                       style={{ width: `${healthScore.automationScore}%` }}
+                      data-testid="automation-score-bar"
+                      key={`automation-score-${healthScore.automationScore}`}
                     ></div>
                   </div>
                 </div>
@@ -172,14 +178,16 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">Apex Code</div>
-                    <div className={healthScore.apexScore >= 80 ? 'text-green-600' : healthScore.apexScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
+                    <div className={healthScore.apexScore >= 90 ? 'text-green-600' : healthScore.apexScore >= 70 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.apexScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={healthScore.apexScore >= 80 ? 'bg-green-500' : healthScore.apexScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
-                      style={{ width: `${healthScore.apexScore}%` }}
+                      className={healthScore.apexScore >= 90 ? 'bg-green-500' : healthScore.apexScore >= 70 ? 'bg-amber-500' : 'bg-red-500'} 
+                      style={{ width: `${healthScore.apexScore}%`, transition: 'width 0.5s ease-in-out' }}
+                      data-testid="apex-score-bar"
+                      key={`apex-score-${healthScore.apexScore}`}
                     ></div>
                   </div>
                 </div>
@@ -187,14 +195,16 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
                 <div>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <div className="font-medium">UI Components</div>
-                    <div className={healthScore.uiComponentScore >= 80 ? 'text-green-600' : healthScore.uiComponentScore >= 60 ? 'text-amber-600' : 'text-red-600'}>
+                    <div className={healthScore.uiComponentScore >= 90 ? 'text-green-600' : healthScore.uiComponentScore >= 70 ? 'text-amber-600' : 'text-red-600'}>
                       {healthScore.uiComponentScore}/100
                     </div>
                   </div>
                   <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                     <div 
-                      className={healthScore.uiComponentScore >= 80 ? 'bg-green-500' : healthScore.uiComponentScore >= 60 ? 'bg-amber-500' : 'bg-red-500'} 
-                      style={{ width: `${healthScore.uiComponentScore}%` }}
+                      className={healthScore.uiComponentScore >= 90 ? 'bg-green-500' : healthScore.uiComponentScore >= 70 ? 'bg-amber-500' : 'bg-red-500'} 
+                      style={{ width: `${healthScore.uiComponentScore}%`, transition: 'width 0.5s ease-in-out' }}
+                      data-testid="ui-score-bar"
+                      key={`ui-score-${healthScore.uiComponentScore}`}
                     ></div>
                   </div>
                 </div>

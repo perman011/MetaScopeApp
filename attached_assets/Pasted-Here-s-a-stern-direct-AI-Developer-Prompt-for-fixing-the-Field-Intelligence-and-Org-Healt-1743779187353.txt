@@ -1,0 +1,98 @@
+Here's a **stern, direct AI Developer Prompt** for fixing the **Field Intelligence** and **Org Health Score** components exactly as required — no creativity, no substitutions.
+
+---
+
+## 🚨 AI DEVELOPER PROMPT: Critical Fixes for Field Intelligence & Org Health Components
+
+---
+
+### 🧱 Component 1: `FieldIntelligencePanel`
+
+---
+
+### 🚫 Problem #1: "All Objects" dropdown is NOT populating
+
+#### ✅ REQUIRED BEHAVIOR:
+
+- The **dropdown labeled `All Objects`** must populate dynamically with **all objects returned from the org metadata**, including custom and standard objects.
+- Use the same data source already available in `Graph View` or `Data Model Analyzer`.
+- The dropdown must:
+  - Include a searchable select menu using `shadcn/ui` or equivalent.
+  - Filter all field metrics below based on the selected object.
+
+✅ **EXAMPLE:**
+
+```
+- Account
+- Contact
+- Opportunity
+- Custom_Object__c
+```
+
+🛑 **DO NOT hardcode**, mock, or ignore empty states. If no metadata loads, show an error or loading state.
+
+---
+
+### 🚫 Problem #2: Total Fields, Unused Fields, Naming Issues show zero
+
+#### ✅ REQUIRED BEHAVIOR:
+
+- These KPIs must calculate **live metrics** based on:
+  - Total number of fields for selected object (or all).
+  - Count of fields with no tracked usage in the last 90 days = **Unused Fields**.
+  - Count of fields that **violate naming patterns** (e.g., field name includes spaces, starts with lowercase) = **Naming Issues**.
+
+🛑 DO NOT leave these blank or default to `0`. If data is unavailable, show `N/A`.
+
+---
+
+### 🔎 Problem #3: Field Usage & Field Types charts are BLANK
+
+#### ✅ REQUIRED BEHAVIOR:
+
+- Populate `Field Usage` as a **horizontal bar chart** showing usage frequency buckets:
+  ```
+  0% used | <10% used | <50% used | >50% used
+  ```
+
+- Populate `Field Types` as a **pie or donut chart** using real metadata type breakdown:
+  ```
+  % of Text, Picklist, Lookup, Number, etc.
+  ```
+
+🛑 DO NOT leave charts blank if metadata exists. If empty, show placeholder "No field data available".
+
+---
+
+### 🧱 Component 2: `OrgHealthPanel`
+
+---
+
+### 🚫 Problem: Score Breakdown lines have no % color logic
+
+#### ✅ REQUIRED BEHAVIOR:
+
+- Each category (Security, Data Model, Automation Logic, etc.) must show:
+  - **Color-coded progress bars** based on score:
+    - ✅ Green: `90–100`
+    - ⚠️ Yellow: `70–89`
+    - 🔴 Red: `<70`
+
+- All score bars should animate in or load visibly from left to right.
+
+🛑 DO NOT render the bars as grey. DO NOT skip color logic.
+
+---
+
+### 💬 Final Notes
+
+> This prompt must be followed **exactly**.  
+> No alternate UI interpretations.  
+> Do not invent fallback logic.  
+> This is production-critical behavior.  
+
+**If data is unavailable, show loading or clear "No data available" states, not zero defaults.**
+
+---
+
+Want me to turn this into a checklist format or issue card for tracking too?
