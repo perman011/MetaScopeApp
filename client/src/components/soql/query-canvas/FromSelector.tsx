@@ -1,7 +1,25 @@
 import React, { useState } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { SearchIcon } from 'lucide-react';
+import { Check, ChevronsUpDown, Database } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+
+interface SalesforceObject {
+  name: string;
+  label: string;
+}
 
 interface FromSelectorProps {
   metadata: any;
@@ -14,42 +32,73 @@ export default function FromSelector({
   selectedObject,
   onObjectSelected
 }: FromSelectorProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [open, setOpen] = useState(false);
   
-  // Filter objects based on search term
-  const filteredObjects = metadata?.objects?.filter((obj: any) => 
-    obj.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    obj.label.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  // Get all objects from metadata
+  const objects: SalesforceObject[] = metadata?.objects || [];
+  
+  // Find the selected object details
+  const selectedObjectDetails = selectedObject 
+    ? objects.find(obj => obj.name === selectedObject) 
+    : undefined;
   
   return (
-    <div className="space-y-4">
-      <div className="relative">
-        <Input
-          placeholder="Search objects..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-      </div>
-      
-      <Select value={selectedObject} onValueChange={onObjectSelected}>
-        <SelectTrigger>
-          <SelectValue placeholder="Select Salesforce object" />
-        </SelectTrigger>
-        <SelectContent>
-          {filteredObjects.map((obj: any) => (
-            <SelectItem key={obj.name} value={obj.name}>
-              {obj.label} ({obj.name})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
+          >
+            {selectedObject ? (
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 opacity-70" />
+                <span>{selectedObjectDetails?.label || selectedObject}</span>
+                <span className="text-xs opacity-70">({selectedObject})</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">Search and select Salesforce object</span>
+            )}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="p-0 w-full min-w-[300px]">
+          <Command>
+            <CommandInput placeholder="Search Salesforce objects..." />
+            <CommandList>
+              <CommandEmpty>No objects found.</CommandEmpty>
+              <CommandGroup heading="Salesforce Objects" className="max-h-[300px] overflow-y-auto">
+                {objects.map((obj) => (
+                  <CommandItem
+                    key={obj.name}
+                    value={obj.name}
+                    onSelect={() => {
+                      onObjectSelected(obj.name);
+                      setOpen(false);
+                    }}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Database className="h-4 w-4 opacity-70" />
+                      <span>{obj.label}</span>
+                      <span className="text-xs opacity-70">({obj.name})</span>
+                    </div>
+                    {selectedObject === obj.name && (
+                      <Check className="h-4 w-4 opacity-70" />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
       
       {selectedObject && (
         <div className="text-sm text-muted-foreground">
-          Selected object: <span className="font-medium text-foreground">{selectedObject}</span>
+          Selected object: <span className="font-medium text-foreground">{selectedObjectDetails?.label || selectedObject}</span>
         </div>
       )}
     </div>
