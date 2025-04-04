@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import HealthScoreOverview from "@/components/dashboard/health-score-overview";
-import DataModelOverview from "@/components/dashboard/data-model-overview";
-import SOQLEditorPreview from "@/components/dashboard/soql-editor-preview";
-import SecurityAnalyzerPreview from "@/components/dashboard/security-analyzer-preview";
+import OrgHealth from "@/components/dashboard/org-health";
+import FieldIntelligence from "@/components/dashboard/field-intelligence";
+import ApiUsage from "@/components/dashboard/api-usage";
 import { useOrgContext } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -13,13 +13,14 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   BarChart, 
   Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
-  Tooltip, 
+  Tooltip as RechartsTooltip, 
   Legend, 
   ResponsiveContainer,
   PieChart,
@@ -28,7 +29,6 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { 
   Select,
@@ -37,8 +37,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckIcon, FilterIcon, RefreshCw, Search } from "lucide-react";
+import { RefreshCw, Search, Database, BarChart2, Activity } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { HealthScore, Metadata } from "@shared/schema";
 
 // Mock metadata for analytics display
 const mockMetadataTypes = [
@@ -80,13 +81,13 @@ export default function Dashboard() {
   const [viewType, setViewType] = useState("table");
 
   // Fetch health score for active org
-  const { data: healthScore, isLoading: isHealthScoreLoading } = useQuery({
+  const { data: healthScore, isLoading: isHealthScoreLoading } = useQuery<HealthScore>({
     queryKey: [`/api/orgs/${activeOrg?.id}/health`],
     enabled: !!activeOrg,
   });
 
   // Fetch metadata for active org
-  const { data: metadata, isLoading: isMetadataLoading } = useQuery({
+  const { data: metadata, isLoading: isMetadataLoading } = useQuery<Metadata[]>({
     queryKey: [`/api/orgs/${activeOrg?.id}/metadata`],
     enabled: !!activeOrg,
   });
@@ -181,6 +182,25 @@ export default function Dashboard() {
     }
   }, [activeOrg, metadata, isMetadataLoading]);
 
+  // Extract tab from the URL if present
+  const [location, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState("org-health");
+  
+  // Set the active tab based on URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(location.split("?")[1]);
+    const tab = params.get("tab");
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [location]);
+  
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setLocation(`/dashboard?tab=${value}`);
+  };
+
   return (
     <div className="p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
@@ -192,8 +212,47 @@ export default function Dashboard() {
           </p>
         </div>
         
-        {/* Health Score Overview */}
-        <HealthScoreOverview healthScore={healthScore} isLoading={isHealthScoreLoading} />
+        {/* Dashboard Tabs */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
+          <TabsList className="grid grid-cols-3 mb-4">
+            <TabsTrigger value="org-health" className="flex items-center">
+              <BarChart2 className="h-4 w-4 mr-2" />
+              <span>Org Health</span>
+            </TabsTrigger>
+            <TabsTrigger value="field-intelligence" className="flex items-center">
+              <Database className="h-4 w-4 mr-2" />
+              <span>Field Intelligence</span>
+            </TabsTrigger>
+            <TabsTrigger value="api-usage" className="flex items-center">
+              <Activity className="h-4 w-4 mr-2" />
+              <span>API Usage</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="org-health">
+            <OrgHealth />
+          </TabsContent>
+          
+          <TabsContent value="field-intelligence">
+            {activeOrg ? (
+              <FieldIntelligence orgId={activeOrg.id} />
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <h3 className="text-lg font-medium mb-2">No Salesforce Org Connected</h3>
+                  <p className="text-sm text-neutral-500 mb-4">
+                    Connect a Salesforce org to view field intelligence analytics.
+                  </p>
+                  <Button>Connect Salesforce Org</Button>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="api-usage">
+            <ApiUsage />
+          </TabsContent>
+        </Tabs>
         
         {/* Advanced Metadata Analytics */}
         <Card className="mb-6">
@@ -352,9 +411,9 @@ export default function Dashboard() {
                       tick={{ fontSize: 12 }}
                     />
                     <YAxis />
-                    <Tooltip 
-                      formatter={(value: number, name, props) => [value.toLocaleString(), 'Count']}
-                      labelFormatter={(label) => `Metadata: ${label}`}
+                    <RechartsTooltip 
+                      formatter={(value: number, name: string, props: any) => [value.toLocaleString(), 'Count']}
+                      labelFormatter={(label: string) => `Metadata: ${label}`}
                     />
                     <Bar 
                       dataKey="count" 
@@ -381,19 +440,19 @@ export default function Dashboard() {
                         paddingAngle={2}
                         dataKey="value"
                         // Use shorter labels directly on pie chart
-                        label={({name, percent}) => `${(percent * 100).toFixed(0)}%`}
+                        label={({name, percent}: {name: string, percent: number}) => `${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
                       >
                         {categoryData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip 
+                      <RechartsTooltip 
                         formatter={(value: number, name: string, props: any) => {
                           // Show full category name and count in tooltip
                           return [`${value.toLocaleString()} components`, props.payload.name];
                         }}
-                        labelFormatter={(label) => `Category: ${label}`}
+                        labelFormatter={(label: string) => `Category: ${label}`}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -415,17 +474,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         
-        {/* Data Model Overview */}
-        <DataModelOverview metadata={metadata} isLoading={isMetadataLoading} />
-        
-        {/* Key Components */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* SOQL/SOSL Editor Preview */}
-          <SOQLEditorPreview />
-          
-          {/* Security Analyzer Preview */}
-          <SecurityAnalyzerPreview issues={healthScore?.issues} isLoading={isHealthScoreLoading} />
-        </div>
+
       </div>
     </div>
   );

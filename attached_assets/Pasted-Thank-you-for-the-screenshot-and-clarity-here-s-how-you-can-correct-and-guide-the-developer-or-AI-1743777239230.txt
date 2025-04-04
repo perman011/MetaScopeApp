@@ -1,0 +1,72 @@
+Thank you for the screenshot and clarity — here's how you can correct and guide the developer (or AI agent) step-by-step:
+
+---
+
+## 🚨 Problem: Field Intelligence was incorrectly added as a **main sidebar tab**, instead of a **subtab under Dashboard**
+
+### ❌ Current behavior:
+- Field Intelligence is shown in the sidebar as its own module.
+- Clicking “Connect Salesforce Org” does nothing or redirects inconsistently.
+
+---
+
+## ✅ Expected Behavior (Correct Implementation)
+
+### 1. **Field Intelligence should be a subtab under the main `Dashboard` tab**, **not a new tab in the sidebar.**
+
+### 2. **All new analytics views (Org Health, API Usage, Field Intelligence, etc.) should live under the Dashboard route**  
+Route examples:
+- `/dashboard?tab=org-health`
+- `/dashboard?tab=field-intelligence`
+- `/dashboard?tab=api-usage`
+
+---
+
+## 🛠️ Action Plan for the Developer / Agent
+
+### 🧱 Step-by-Step Fixes
+
+#### ✅ Step 1: **Remove Field Intelligence from Sidebar**
+- Delete or comment out the `Field Intelligence` link from the sidebar navigation file (likely in `Sidebar.tsx` or `navigation.ts`).
+
+#### ✅ Step 2: **Embed Field Intelligence under Dashboard route**
+- In `App.tsx` or route handler, nest all dashboard tabs under `/dashboard`:
+```tsx
+<Route path="/dashboard" element={<Dashboard />}>
+  <Route index element={<OrgHealth />} />
+  <Route path="field-intelligence" element={<FieldIntelligence />} />
+  <Route path="api-usage" element={<ApiUsage />} />
+</Route>
+```
+
+#### ✅ Step 3: **Update Dashboard component to use tabs**  
+- Use a tab navigation component (shadcn/ui `Tabs`, or headlessui) inside the `Dashboard.tsx` layout.
+- Allow switching tabs like this:
+```ts
+<Tabs defaultValue="org-health">
+  <TabsList>
+    <TabsTrigger value="org-health">Org Health</TabsTrigger>
+    <TabsTrigger value="field-intelligence">Field Intelligence</TabsTrigger>
+    <TabsTrigger value="api-usage">API Usage</TabsTrigger>
+  </TabsList>
+  <TabsContent value="org-health">
+    <OrgHealth />
+  </TabsContent>
+  <TabsContent value="field-intelligence">
+    <FieldIntelligence />
+  </TabsContent>
+</Tabs>
+```
+
+#### ✅ Step 4: **Fix Connect Org Logic**
+- Ensure `Connect Salesforce Org` button inside Dashboard passes connected org info down to all subtabs.
+- Check that `Connect Salesforce Org` sets org context in global state (React Context or TanStack Query cache).
+- Field Intelligence should only try to load data if org connection is present.
+
+---
+
+## 🧠 What to Tell the Agent
+
+> Please remove the Field Intelligence tab from the sidebar and place it as a subtab inside the **Dashboard** tab. All analytics views should be tabs within `/dashboard`, not standalone routes. Also, make sure the `Connect Salesforce Org` button works globally and allows each dashboard subtab to access org metadata.
+
+Would you like me to write this as a formal agent instruction task in Markdown or JSON format so you can just paste it?

@@ -24,7 +24,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -301,7 +301,7 @@ export default function FieldIntelligence({ orgId }: FieldIntelligenceProps) {
                       <Cell key={`cell-${index}`} fill={index === 0 ? '#4CAF50' : '#FF5722'} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <RechartsTooltip />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -332,7 +332,7 @@ export default function FieldIntelligence({ orgId }: FieldIntelligenceProps) {
                       />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <RechartsTooltip />
                   <Legend />
                 </PieChart>
               </ResponsiveContainer>
@@ -446,7 +446,7 @@ export default function FieldIntelligence({ orgId }: FieldIntelligenceProps) {
                         tickFormatter={(value) => value.length > 15 ? `${value.substring(0, 15)}...` : value}
                       />
                       <YAxis />
-                      <Tooltip />
+                      <RechartsTooltip />
                       <Bar dataKey="count" fill="#2563eb" />
                     </BarChart>
                   </ResponsiveContainer>
