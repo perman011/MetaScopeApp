@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import QueryEditor from "@/components/soql/query-editor";
+import QueryBuilder from "@/components/soql/query-builder";
 import { useOrgContext } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { executeMockSoqlQuery } from "@/lib/mock-data";
 
 interface QueryResult {
   records: Record<string, any>[];
@@ -15,13 +19,27 @@ interface QueryResult {
 
 export default function SOQLEditor() {
   const { activeOrg } = useOrgContext();
+  const { toast } = useToast();
   const [query, setQuery] = useState<string>("SELECT Id, Name, AccountNumber, Type, Industry, AnnualRevenue\nFROM Account\nWHERE AnnualRevenue > 1000000\nORDER BY AnnualRevenue DESC\nLIMIT 10");
   const [queryResults, setQueryResults] = useState<QueryResult | null>(null);
+  const [mode, setMode] = useState<'editor' | 'builder'>(() => {
+    // Get saved preference from localStorage
+    const savedMode = localStorage.getItem('soql-editor-mode');
+    return (savedMode === 'editor' || savedMode === 'builder') ? savedMode : 'editor';
+  });
 
+  // Save mode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('soql-editor-mode', mode);
+  }, [mode]);
+  
   // Execute query mutation
   const executeQueryMutation = useMutation({
     mutationFn: async (query: string) => {
-      if (!activeOrg) throw new Error("No org selected");
+      if (!activeOrg) {
+        // Use mock query execution when no org is connected
+        return executeMockSoqlQuery(query);
+      }
       const res = await apiRequest("POST", `/api/orgs/${activeOrg.id}/query`, { query });
       return await res.json();
     },
@@ -30,6 +48,11 @@ export default function SOQLEditor() {
     },
     onError: (error) => {
       console.error("Error executing query:", error);
+      toast({
+        variant: "destructive",
+        title: "Query Error",
+        description: error instanceof Error ? error.message : "Failed to execute query"
+      });
     },
   });
 
@@ -87,57 +110,79 @@ export default function SOQLEditor() {
       console.error("Error optimizing query:", error);
     }
   };
+  
+  // Handle query execution from the builder
+  const handleExecuteFromBuilder = (builtQuery: string) => {
+    setQuery(builtQuery);
+    executeQueryMutation.mutate(builtQuery);
+  };
 
   return (
     <div className="p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* SOQL Editor Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-neutral-800">SOQL/SOSL Editor</h1>
-          <p className="mt-1 text-sm text-neutral-500">
-            Write, optimize, and execute Salesforce queries
-          </p>
+        <div className="mb-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold text-neutral-800">SOQL/SOSL Editor</h1>
+            <p className="mt-1 text-sm text-neutral-500">
+              Write, optimize, and execute Salesforce queries
+            </p>
+          </div>
+          <div className="flex items-center">
+            <Tabs value={mode} onValueChange={(value) => setMode(value as 'editor' | 'builder')}>
+              <TabsList>
+                <TabsTrigger value="editor">Editor Mode</TabsTrigger>
+                <TabsTrigger value="builder">Drag & Drop Mode</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
-        {/* Query Editor */}
+        {/* Query Editor/Builder Modes */}
         <Card className="mb-6 shadow-sm border border-neutral-200">
-          <CardHeader className="border-b border-neutral-200">
-            <CardTitle>Query Editor</CardTitle>
+          <CardHeader className="border-b border-neutral-200 flex flex-row items-center justify-between py-3">
+            <CardTitle>{mode === 'editor' ? 'Query Editor' : 'Query Canvas'}</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <QueryEditor value={query} onChange={setQuery} />
-            
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button
-                onClick={() => executeQueryMutation.mutate(query)}
-                disabled={executeQueryMutation.isPending || !query.trim() || !activeOrg}
-              >
-                {executeQueryMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Executing...
-                  </>
-                ) : (
-                  "Execute Query"
-                )}
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={formatQuery}
-                disabled={!query.trim()}
-              >
-                Format
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={optimizeQuery}
-                disabled={!query.trim()}
-              >
-                Optimize
-              </Button>
-            </div>
+            {mode === 'editor' ? (
+              <>
+                <QueryEditor value={query} onChange={setQuery} />
+                
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button
+                    onClick={() => executeQueryMutation.mutate(query)}
+                    disabled={executeQueryMutation.isPending || !query.trim()}
+                  >
+                    {executeQueryMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Executing...
+                      </>
+                    ) : (
+                      "Execute Query"
+                    )}
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={formatQuery}
+                    disabled={!query.trim()}
+                  >
+                    Format
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={optimizeQuery}
+                    disabled={!query.trim()}
+                  >
+                    Optimize
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <QueryBuilder onExecuteQuery={handleExecuteFromBuilder} />
+            )}
           </CardContent>
         </Card>
 

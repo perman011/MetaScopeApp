@@ -1,0 +1,90 @@
+Here’s the **technical prompt** to give to your AI agent developer to build exactly what you want, based on the corrected mockup and strict UX placement:
+
+---
+
+### 🧠 Prompt for AI Agent Developer
+
+**Task: Refactor SOQL/SOSL Editor to include a toggleable drag-and-drop query builder interface.**
+
+---
+
+### 🧩 Context:
+- You are working on **MetaScope**, a Salesforce metadata management platform.
+- This feature belongs strictly under `SOQL/SOSL Editor`.
+- The "Build SOQL Query" function has been removed from Data Model Analyzer and must now live here with a clean UI/UX separation.
+- Keep **Editor Mode** and **Builder Mode** completely functional, side-by-side but toggleable.
+
+---
+
+### 🧰 Requirements:
+
+#### 1. **Mode Toggle (Top Right)**
+- Add toggle buttons:
+  - `Editor Mode`
+  - `Drag & Drop Mode`
+- Toggle switches between:
+  - `<QueryEditor />` – Monaco or Ace-based text editor for SOQL/SOSL
+  - `<QueryBuilder />` – visual, schema-aware drag-and-drop query builder
+
+---
+
+#### 2. **Query Builder Layout**
+
+**QueryCanvas panel:**
+```
+- Search bar: [ Search Objects… ]
+- Object Filters: [ ] Standard Objects [ ] Custom Objects
+- SELECT block: Multi-field drag support
+- FROM: Single object selector
+- WHERE block: +Add Filter (Field, Operator, Value)
+- ORDER BY block: +Add Sort (Field, ASC/DESC)
+- LIMIT: Numeric input
+- [Run Query] (CTA)
+```
+
+- All query segments render inside `<QueryCanvas />`
+- Each block (SELECT, FROM, WHERE…) is modular and stackable
+- Drag from available object schema (fetched from Salesforce)
+
+---
+
+#### 3. **Execution Behavior**
+- On “Run Query” (from Builder):
+  - Generate valid SOQL/SOSL text dynamically
+  - Inject it into the `<QueryEditor />` text area
+  - Execute using existing `ExecuteQuery()` function
+
+---
+
+#### 4. **Error Handling**
+- Add syntax validation and display errors before execution
+- Show tooltips or in-line messages for incorrect filters or object-field mismatches
+
+---
+
+#### 5. **Schema Awareness**
+- Leverage already-fetched metadata from connected org
+- Allow real-time object/field resolution
+- (Optional) Autocomplete drag interface with field types
+
+---
+
+#### 6. **Design Spec**
+- Use Tailwind CSS + shadcn/ui for consistent styling
+- Match styling shown in mock: card-style panel, rounded, paddings
+- Responsive and consistent with MetaScope layout
+
+---
+
+### ⚠️ Constraints:
+- Do **not** reintroduce “Build SOQL Query” into Data Model Analyzer
+- Do **not** remove or override current editor functionality
+- Store view preference (`editor` vs `builder`) in localStorage
+- Maintain tab-to-focus and monaco keyboard bindings
+
+---
+
+Let me know if you want me to generate:
+- Figma-style layout markup
+- React component structure tree
+- Schema for dynamic builder state (JSON model)
