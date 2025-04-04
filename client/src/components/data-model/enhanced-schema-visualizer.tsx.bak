@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import cytoscape from 'cytoscape';
-import { Loader2, Search, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
+import { Loader2, Search, ChevronRight, ChevronLeft, ZoomIn, ZoomOut, RefreshCw, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { toast as globalToast, notify, safeToast } from '@/hooks/use-toast';
+import { MultiSelect, Option } from '@/components/ui/multi-select';
 
 // Define TypeScript interfaces for our data
 interface FieldMetadata {
@@ -32,7 +33,8 @@ interface RelationshipMetadata {
   name: string;
   field: string;
   object: string;
-  type: 'Lookup' | 'MasterDetail' | 'SelfJoin' | 'ManyToMany';
+  // Allow more flexible type names but standardize them during processing
+  type: 'Lookup' | 'MasterDetail' | 'Master Detail' | 'Master-Detail' | 'SelfJoin' | 'Self Join' | 'Self-Join' | 'ManyToMany' | 'Many To Many' | 'Many-to-Many';
   childObject?: string;
   childField?: string;
 }
@@ -52,9 +54,10 @@ interface SchemaMetadata {
 
 interface EnhancedSchemaVisualizerProps {
   metadata: any; // Accept any format of metadata that might be returned from the server
+  selectedLayout?: string; // Optional prop to receive layout from parent
 }
 
-export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVisualizerProps) {
+export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: propLayout = 'cose' }: EnhancedSchemaVisualizerProps) {
   const cyRef = useRef<HTMLDivElement>(null);
   const cy = useRef<cytoscape.Core | null>(null);
   const { toast } = useToast();
@@ -63,16 +66,79 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLayout, setSelectedLayout] = useState('cose');
+  const [selectedLayout, setSelectedLayout] = useState(propLayout);
+  const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [selectedEdge, setSelectedEdge] = useState<any>(null);
+  
+  // Object type filter state using string array for multi-select
+  const [selectedObjectTypes, setSelectedObjectTypes] = useState<string[]>(['standard', 'custom']);
+  
+  // Relationship type filter state using string array for multi-select
+  const [selectedRelationshipTypes, setSelectedRelationshipTypes] = useState<string[]>([
+    'lookup', 'masterdetail', 'selfjoin', 'manytomany'
+  ]);
+  
+  const [selectedObject, setSelectedObject] = useState<ObjectMetadata | null>(null);
+  
+  // Keep the old state for backward compatibility during transition
   const [showStandardObjects, setShowStandardObjects] = useState(true);
   const [showCustomObjects, setShowCustomObjects] = useState(true);
-  const [selectedObject, setSelectedObject] = useState<ObjectMetadata | null>(null);
   const [relationshipTypes, setRelationshipTypes] = useState({
     lookup: true,
     masterDetail: true,
     selfJoin: true,
     manyToMany: true,
   });
+
+  // Toggle panel functions
+  const toggleLeftPanel = () => {
+    setLeftPanelCollapsed(!leftPanelCollapsed);
+    // Give time for resize before re-layout
+    setTimeout(() => {
+      if (cy.current) {
+        cy.current.resize();
+        cy.current.fit();
+      }
+    }, 300);
+  };
+
+  const toggleRightPanel = () => {
+    setRightPanelCollapsed(!rightPanelCollapsed);
+    // Give time for resize before re-layout
+    setTimeout(() => {
+      if (cy.current) {
+        cy.current.resize();
+        cy.current.fit();
+      }
+    }, 300);
+  };
+
+  // Handler for search function
+  const handleSearch = () => {
+    // Search updates automatically via the useEffect hook with searchQuery dependency
+    console.log(`Searching for: ${searchQuery}`);
+    
+    // Show toast notification for search
+    if (searchQuery.trim()) {
+      try {
+        if (filteredObjects.length > 0) {
+          safeToast({
+            title: "Search Results", 
+            description: `Found ${filteredObjects.length} object${filteredObjects.length !== 1 ? 's' : ''} matching "${searchQuery}"`,
+            variant: "default"
+          });
+        } else {
+          safeToast({
+            title: "No Results Found",
+            description: `No objects match "${searchQuery}". Try a different search term.`,
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error("Error showing search toast:", error);
+      }
+    }
+  };
 
   // Process metadata to enhance it with needed properties
   const processMetadata = (): SchemaMetadata => {
@@ -199,9 +265,10 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
       obj.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       obj.label.toLowerCase().includes(searchQuery.toLowerCase());
     
+    // Use the new multi-select state (but also validate with legacy state during transition)
     const matchesTypeFilter = 
-      (obj.custom && showCustomObjects) || 
-      (!obj.custom && showStandardObjects);
+      (obj.custom && selectedObjectTypes.includes('custom') && showCustomObjects) || 
+      (!obj.custom && selectedObjectTypes.includes('standard') && showStandardObjects);
     
     return matchesSearch && matchesTypeFilter;
   });
@@ -221,13 +288,20 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
             'text-valign': 'center',
             'text-halign': 'center',
             'background-color': '#0176d3',
-            'width': 'data(size)',
-            'height': 'data(size)',
+            'width': '90px', // Slightly wider for better text accommodation
+            'height': '90px', // Slightly taller to accommodate wrapped text
+            'shape': 'round-rectangle', // Rounded squares instead of circles
             'color': 'white',
             'font-weight': 'bold',
-            'text-wrap': 'wrap',
-            'text-max-width': '80px',
-            'font-size': '10px',
+            'text-wrap': 'wrap', // Enable text wrapping
+            'text-max-width': '80px', // Increase max width for text to reduce wrapping
+            'font-size': '12px', // Slightly larger font for better readability
+            'text-margin-y': 5, // Add vertical margin (in px) for better text positioning
+            'text-outline-width': 0, // Remove text outline for cleaner appearance
+            'text-outline-opacity': 0,
+            'text-background-opacity': 0.2, // Slight background behind text for better contrast
+            'text-background-color': '#000',
+            'text-background-padding': '3px',
           }
         },
         {
@@ -260,7 +334,7 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
           selector: 'edge',
           style: {
             'width': 2,
-            'line-color': '#5a7d9a',
+            'line-color': '#5a7d9a', // Default blue for lookup
             'target-arrow-color': '#5a7d9a',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
@@ -269,30 +343,30 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
         {
           selector: 'edge.lookup',
           style: {
-            'line-color': '#5a7d9a',
+            'line-color': '#5a7d9a', // Blue for lookup
             'target-arrow-color': '#5a7d9a',
           }
         },
         {
-          selector: 'edge.masterDetail',
+          selector: 'edge.masterdetail',
           style: {
-            'line-color': '#ea8c55',
+            'line-color': '#ea8c55', // Orange for master-detail
             'target-arrow-color': '#ea8c55',
             'width': 3,
           }
         },
         {
-          selector: 'edge.selfJoin',
+          selector: 'edge.selfjoin',
           style: {
-            'line-color': '#8a49a8',
+            'line-color': '#8a49a8', // Purple for self-join
             'target-arrow-color': '#8a49a8',
             'curve-style': 'bezier',
           }
         },
         {
-          selector: 'edge.manyToMany',
+          selector: 'edge.manytomany',
           style: {
-            'line-color': '#3EB489',
+            'line-color': '#3EB489', // Green for many-to-many
             'target-arrow-color': '#3EB489',
             'target-arrow-shape': 'diamond',
           }
@@ -313,14 +387,14 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
       wheelSensitivity: 0.3,
     });
 
-    // Add nodes (objects)
+    // Add nodes (objects) with uniform size
     filteredObjects.forEach(obj => {
       cy.current?.add({
         group: 'nodes',
         data: { 
           id: obj.name, 
           label: obj.label,
-          size: Math.max(60, Math.min(obj.fields.length * 2 + 40, 100))
+          // No longer using dynamic sizing since we want uniform node sizes
         },
         classes: obj.custom ? 'custom' : 'standard'
       });
@@ -331,15 +405,23 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
       obj.relationships.forEach(rel => {
         // Only add relationship if both objects are in the graph
         if (filteredObjects.some(o => o.name === rel.object)) {
+          // Convert the relationship type to a valid class name without spaces
+          // and ensure it matches one of our expected types
+          const typeClass = rel.type.toLowerCase().replace(/[- ]/g, '');
+          const normalizedType = 
+            typeClass.includes('master') ? 'masterdetail' :
+            typeClass.includes('self') ? 'selfjoin' :
+            typeClass.includes('many') ? 'manytomany' : 'lookup';
+          
           cy.current?.add({
             group: 'edges',
             data: {
               id: `${obj.name}-${rel.name}-${rel.object}`,
               source: obj.name,
               target: rel.object,
-              type: rel.type.toLowerCase()
+              type: normalizedType // Store normalized type
             },
-            classes: rel.type.toLowerCase().replace(/\s+/g, '')
+            classes: normalizedType // Use consistent class name
           });
         }
       });
@@ -351,10 +433,30 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
       cy.current?.elements().removeClass('selected');
       node.addClass('selected');
       
+      // Update selected node for SOQL query builder
+      setSelectedNode(node);
+      
       // Find the corresponding object and update selected object
       const selectedObj = processedMetadata.objects.find(obj => obj.name === node.id());
       if (selectedObj) {
         setSelectedObject(selectedObj);
+        setRightPanelCollapsed(false);
+      }
+    });
+    
+    cy.current.on('tap', 'edge', (evt) => {
+      const edge = evt.target;
+      cy.current?.elements().removeClass('selected');
+      edge.addClass('selected');
+      
+      // Update selected edge
+      setSelectedEdge(edge);
+      
+      // Find the corresponding source object
+      const sourceId = edge.source().id();
+      const sourceObj = processedMetadata.objects.find(obj => obj.name === sourceId);
+      if (sourceObj) {
+        setSelectedObject(sourceObj);
         setRightPanelCollapsed(false);
       }
     });
@@ -364,6 +466,9 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
         // Clicked on background
         cy.current?.elements().removeClass('selected');
         setSelectedObject(null);
+        // Clear selected node and edge for SOQL builder
+        setSelectedNode(null);
+        setSelectedEdge(null);
       }
     });
 
@@ -379,90 +484,84 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
     };
   }, [metadata, filteredObjects, selectedLayout]);
 
+  // No SOQL builder effect needed
+
   // Effect to update visibility based on relationship types
   useEffect(() => {
     if (!cy.current) return;
     
+    // Apply filters to all edges based on their type
     cy.current.edges().forEach(edge => {
       const type = edge.data('type');
-      if (!relationshipTypes[type as keyof typeof relationshipTypes]) {
+      
+      // Check if we should show this type of relationship using the new multi-select state
+      if (!selectedRelationshipTypes.includes(type)) {
         edge.addClass('hidden');
       } else {
         edge.removeClass('hidden');
       }
     });
-  }, [relationshipTypes]);
-
-  // Effect to filter based on search
-  useEffect(() => {
-    if (!cy.current) return;
     
-    cy.current.elements().removeClass('hidden');
-    
-    if (!searchQuery) return;
-    
-    cy.current.nodes().forEach(node => {
-      const matches = node.data('label').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      node.id().toLowerCase().includes(searchQuery.toLowerCase());
-      
-      if (!matches) {
-        node.addClass('hidden');
-        // Hide connected edges
-        node.connectedEdges().addClass('hidden');
-      }
-    });
-  }, [searchQuery]);
+    // Apply styles to ensure correct colors
+    cy.current.style()
+      .selector('edge.lookup').style({
+        'line-color': '#5a7d9a',
+        'target-arrow-color': '#5a7d9a',
+      })
+      .selector('edge.masterdetail').style({
+        'line-color': '#ea8c55',
+        'target-arrow-color': '#ea8c55',
+        'width': 3,
+      })
+      .selector('edge.selfjoin').style({
+        'line-color': '#8a49a8',
+        'target-arrow-color': '#8a49a8',
+        'curve-style': 'bezier',
+      })
+      .selector('edge.manytomany').style({
+        'line-color': '#3EB489',
+        'target-arrow-color': '#3EB489',
+        'target-arrow-shape': 'diamond',
+      })
+      .update();
+  }, [selectedRelationshipTypes]);
 
-  // Update layout when it changes
-  useEffect(() => {
-    if (!cy.current) return;
-    cy.current.layout({ name: selectedLayout, animate: true } as any).run();
-  }, [selectedLayout]);
-
-  // Handle zoom controls
-  const handleZoomIn = () => {
-    if (!cy.current) return;
-    cy.current.zoom(cy.current.zoom() * 1.2);
+  // Zoom controls
+  const zoomIn = () => {
+    if (cy.current) {
+      cy.current.zoom(cy.current.zoom() * 1.2);
+      cy.current.center();
+    }
   };
 
-  const handleZoomOut = () => {
-    if (!cy.current) return;
-    cy.current.zoom(cy.current.zoom() / 1.2);
+  const zoomOut = () => {
+    if (cy.current) {
+      cy.current.zoom(cy.current.zoom() * 0.8);
+      cy.current.center();
+    }
   };
 
-  const handleReset = () => {
-    if (!cy.current) return;
-    cy.current.fit();
+  const resetView = () => {
+    if (cy.current) {
+      cy.current.fit();
+      cy.current.center();
+    }
   };
 
-  // Handle panel toggle
-  const toggleLeftPanel = () => {
-    setLeftPanelCollapsed(!leftPanelCollapsed);
-  };
-
-  const toggleRightPanel = () => {
-    setRightPanelCollapsed(!rightPanelCollapsed);
-  };
-
-  // Check if there's any data to display
-  const hasData = processedMetadata.objects.length > 0;
-
-  // If no data, show a message instead
-  if (!hasData) {
+  // If no metadata is available, show a user-friendly notification
+  if (processedMetadata.objects.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-md">
           <h3 className="text-xl font-medium text-neutral-700 mb-3">No Object Metadata Available</h3>
-          <p className="text-neutral-600 mb-6">
-            To visualize your Salesforce data model, you need to connect a Salesforce organization first.
+          <p className="text-neutral-500 mb-6">
+            To see your Salesforce org's data model, you need to connect to a Salesforce org or provide metadata.
           </p>
           <div className="flex items-center justify-center space-x-2">
-            <Button variant="outline" className="flex items-center" asChild>
-              <a href="/">
-                <div className="mr-2">←</div> Go to Dashboard
-              </a>
+            <Button variant="outline" onClick={() => { window.location.href = '/' }}>
+              <div className="mr-2">←</div> Go to Dashboard
             </Button>
-            <Button className="flex items-center">
+            <Button variant="default">
               <div className="mr-2">+</div> Connect Salesforce Org
             </Button>
           </div>
@@ -473,427 +572,255 @@ export default function EnhancedSchemaVisualizer({ metadata }: EnhancedSchemaVis
 
   return (
     <div className="relative flex h-full bg-white">
-      {/* Left Panel */}
-      <div 
-        className={`h-full bg-white border-r border-neutral-200 transition-all duration-300 ${
-          leftPanelCollapsed ? 'w-0 overflow-hidden' : 'w-72'
-        }`}
-      >
-        <div className="p-4 border-b border-neutral-200 bg-neutral-50">
-          <h3 className="text-lg font-semibold text-neutral-700">Controls</h3>
-        </div>
+      {/* Left Panel with Toggle Button */}
+      <div className="relative h-full">
+        {/* Left Panel Toggle Button */}
+        <button 
+          onClick={toggleLeftPanel}
+          className="absolute top-2 -right-3 z-20 w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 shadow flex items-center justify-center text-gray-700"
+          aria-label={leftPanelCollapsed ? "Show controls panel" : "Hide controls panel"}
+        >
+          {leftPanelCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
         
-        <div className="p-4 space-y-6 overflow-y-auto h-[calc(100%-54px)]">
-          {/* Search */}
-          <div className="space-y-2">
-            <Label>Search Objects</Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-500" />
-              <div className="flex">
-                <Input 
-                  type="text" 
-                  placeholder="Search by name..." 
-                  className="pl-8 rounded-r-none"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      // Show toast notification for search just like the button click
-                      if (searchQuery.trim()) {
-                        const matchCount = filteredObjects.length;
-                        if (matchCount > 0) {
-                          // Use the toast function from the hook if available, otherwise use fallbacks
-                          try {
-                            if (toast) {
-                              toast({
-                                title: `Search Results`,
-                                description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                                variant: "default",
-                              });
-                            } else if (globalToast) {
-                              globalToast({
-                                title: `Search Results`,
-                                description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                                variant: "default",
-                              });
-                            } else if (notify) {
-                              notify({
-                                title: `Search Results`,
-                                description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                                variant: "default",
-                              });
-                            } else {
-                              console.log(`Search Results: Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`);
-                            }
-                          } catch (error) {
-                            console.error("Error showing toast:", error);
-                          }
-                        } else {
-                          try {
-                            if (toast) {
-                              toast({
-                                title: "No Results Found",
-                                description: `No objects match "${searchQuery}". Try a different search term.`,
-                                variant: "destructive",
-                              });
-                            } else if (globalToast) {
-                              globalToast({
-                                title: "No Results Found",
-                                description: `No objects match "${searchQuery}". Try a different search term.`,
-                                variant: "destructive",
-                              });
-                            } else if (notify) {
-                              notify({
-                                title: "No Results Found",
-                                description: `No objects match "${searchQuery}". Try a different search term.`,
-                                variant: "destructive",
-                              });
-                            } else {
-                              console.log(`No Results Found: No objects match "${searchQuery}". Try a different search term.`);
-                            }
-                          } catch (error) {
-                            console.error("Error showing toast:", error);
-                          }
-                        }
+        <div 
+          className={`h-full bg-white border-r border-neutral-200 transition-all duration-300 ${
+            leftPanelCollapsed ? 'w-0 overflow-hidden' : 'w-72'
+          }`}
+        >
+          <div className="p-4 border-b border-neutral-200 bg-neutral-50">
+            <h3 className="text-lg font-semibold text-neutral-700">Controls</h3>
+          </div>
+          
+          <div className="p-4 space-y-6 overflow-y-auto h-[calc(100%-54px)]">
+            {/* Search */}
+            <div className="space-y-2">
+              <Label>Search Objects</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-neutral-500" />
+                <div className="flex">
+                  <Input 
+                    type="text" 
+                    placeholder="Search by name..." 
+                    className="pl-8 rounded-r-none"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearch();
                       }
-                    }
-                  }}
-                />
-                <Button 
-                  type="button" 
-                  className="rounded-l-none"
-                  onClick={() => {
-                    // Search updates automatically via the useEffect hook with searchQuery dependency
-                    console.log(`Searching for: ${searchQuery}`);
-                    
-                    // Show toast notification for search
-                    if (searchQuery.trim()) {
-                      const matchCount = filteredObjects.length;
-                      if (matchCount > 0) {
-                        try {
-                          if (toast) {
-                            toast({
-                              title: `Search Results`,
-                              description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                              variant: "default",
-                            });
-                          } else {
-                            globalToast({
-                              title: `Search Results`,
-                              description: `Found ${matchCount} object${matchCount !== 1 ? 's' : ''} matching "${searchQuery}"`,
-                              variant: "default",
-                            });
-                          }
-                        } catch (error) {
-                          console.error("Error showing toast:", error);
-                        }
-                      } else {
-                        try {
-                          if (toast) {
-                            toast({
-                              title: "No Results Found",
-                              description: `No objects match "${searchQuery}". Try a different search term.`,
-                              variant: "destructive",
-                            });
-                          } else {
-                            globalToast({
-                              title: "No Results Found",
-                              description: `No objects match "${searchQuery}". Try a different search term.`,
-                              variant: "destructive",
-                            });
-                          }
-                        } catch (error) {
-                          console.error("Error showing toast:", error);
-                        }
-                      }
-                    }
-                  }}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
+                    }}
+                  />
+                  <Button 
+                    className="rounded-l-none" 
+                    onClick={handleSearch}
+                  >
+                    Search
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* Layout Selection */}
-          <div className="space-y-2">
-            <Label>Layout Algorithm</Label>
-            <Select
-              value={selectedLayout}
-              onValueChange={setSelectedLayout}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select layout..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cose">Force-Directed (Default)</SelectItem>
-                <SelectItem value="circle">Circular</SelectItem>
-                <SelectItem value="grid">Grid</SelectItem>
-                <SelectItem value="concentric">Concentric</SelectItem>
-                <SelectItem value="breadthfirst">Hierarchical</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Object Filters */}
-          <div className="space-y-2">
-            <Label>Object Types</Label>
+
+            {/* Object Type Filters */}
             <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="standardObjects" 
-                  checked={showStandardObjects} 
-                  onCheckedChange={() => setShowStandardObjects(!showStandardObjects)}
-                />
-                <label 
-                  htmlFor="standardObjects" 
-                  className="text-sm cursor-pointer"
-                >
-                  Standard Objects
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="customObjects" 
-                  checked={showCustomObjects} 
-                  onCheckedChange={() => setShowCustomObjects(!showCustomObjects)}
-                />
-                <label 
-                  htmlFor="customObjects" 
-                  className="text-sm cursor-pointer"
-                >
-                  Custom Objects
-                </label>
-              </div>
+              <Label>Object Types</Label>
+              <MultiSelect 
+                options={[
+                  { value: "standard", label: "Standard Objects", color: "bg-blue-500" },
+                  { value: "custom", label: "Custom Objects", color: "bg-amber-500" }
+                ]}
+                selected={selectedObjectTypes}
+                onChange={(selected) => {
+                  setSelectedObjectTypes(selected);
+                  // Update legacy state for compatibility
+                  setShowStandardObjects(selected.includes("standard"));
+                  setShowCustomObjects(selected.includes("custom"));
+                }}
+                placeholder="Select object types"
+              />
             </div>
-          </div>
-          
-          {/* Relationship Filters */}
-          <div className="space-y-2">
-            <Label>Relationship Types</Label>
+            
+            {/* Relationship Type Filters */}
             <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="lookupRel" 
-                  checked={relationshipTypes.lookup} 
-                  onCheckedChange={() => setRelationshipTypes({...relationshipTypes, lookup: !relationshipTypes.lookup})}
-                />
-                <label 
-                  htmlFor="lookupRel" 
-                  className="text-sm cursor-pointer flex items-center space-x-2"
-                >
-                  <span className="w-6 h-1 bg-[#5a7d9a] inline-block"></span>
-                  <span>Lookup</span>
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="masterDetailRel" 
-                  checked={relationshipTypes.masterDetail} 
-                  onCheckedChange={() => setRelationshipTypes({...relationshipTypes, masterDetail: !relationshipTypes.masterDetail})}
-                />
-                <label 
-                  htmlFor="masterDetailRel" 
-                  className="text-sm cursor-pointer flex items-center space-x-2"
-                >
-                  <span className="w-6 h-1 bg-[#ea8c55] inline-block"></span>
-                  <span>Master-Detail</span>
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="selfJoinRel" 
-                  checked={relationshipTypes.selfJoin} 
-                  onCheckedChange={() => setRelationshipTypes({...relationshipTypes, selfJoin: !relationshipTypes.selfJoin})}
-                />
-                <label 
-                  htmlFor="selfJoinRel" 
-                  className="text-sm cursor-pointer flex items-center space-x-2"
-                >
-                  <span className="w-6 h-1 bg-[#8a49a8] inline-block"></span>
-                  <span>Self-Join</span>
-                </label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="manyToManyRel" 
-                  checked={relationshipTypes.manyToMany} 
-                  onCheckedChange={() => setRelationshipTypes({...relationshipTypes, manyToMany: !relationshipTypes.manyToMany})}
-                />
-                <label 
-                  htmlFor="manyToManyRel" 
-                  className="text-sm cursor-pointer flex items-center space-x-2"
-                >
-                  <span className="w-6 h-1 bg-[#3EB489] inline-block"></span>
-                  <span>Many-to-Many</span>
-                </label>
-              </div>
+              <Label>Relationship Types</Label>
+              <MultiSelect 
+                options={[
+                  { value: "lookup", label: "Lookup", color: "bg-blue-500" },
+                  { value: "masterdetail", label: "Master-Detail", color: "bg-orange-500" },
+                  { value: "selfjoin", label: "Self Join", color: "bg-purple-500" },
+                  { value: "manytomany", label: "Many-to-Many", color: "bg-green-500" }
+                ]}
+                selected={selectedRelationshipTypes}
+                onChange={(selected) => {
+                  setSelectedRelationshipTypes(selected);
+                  // Update legacy state for compatibility
+                  setRelationshipTypes({
+                    lookup: selected.includes("lookup"),
+                    masterDetail: selected.includes("masterdetail"),
+                    selfJoin: selected.includes("selfjoin"),
+                    manyToMany: selected.includes("manytomany")
+                  });
+                }}
+                placeholder="Select relationship types"
+              />
+            </div>
+            
+            {/* Layout Selection */}
+            <div className="space-y-2">
+              <Label>Layout</Label>
+              <Select value={selectedLayout} onValueChange={setSelectedLayout}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a layout" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cose">Compound Spring Embedder</SelectItem>
+                  <SelectItem value="breadthfirst">Breadth First</SelectItem>
+                  <SelectItem value="circle">Circle</SelectItem>
+                  <SelectItem value="grid">Grid</SelectItem>
+                  <SelectItem value="concentric">Concentric</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
       </div>
       
-      {/* Left Panel Toggle Button */}
-      <button 
-        onClick={toggleLeftPanel}
-        className="absolute left-72 top-4 bg-primary-600 text-white h-8 w-8 rounded-r-md flex items-center justify-center z-10 transition-all duration-300"
-        style={{ left: leftPanelCollapsed ? 0 : 'calc(72px * 3)' }}
-      >
-        {leftPanelCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-      </button>
-      
-      {/* Main Graph Area */}
-      <div className="flex-1 relative">
+      {/* Center Panel - Graph Visualization */}
+      <div className="flex-1 h-full relative">
         {/* Zoom Controls */}
-        <div className="absolute top-4 right-4 z-10 flex bg-white rounded-md shadow-sm">
-          <Button variant="outline" size="sm" onClick={handleZoomIn}>
-            <ZoomIn size={16} />
+        <div className="absolute bottom-4 right-4 z-10 flex flex-col space-y-2">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={zoomIn}
+            className="w-8 h-8 bg-white shadow"
+          >
+            <ZoomIn className="h-4 w-4" />
           </Button>
-          <Separator orientation="vertical" className="h-8" />
-          <Button variant="outline" size="sm" onClick={handleZoomOut}>
-            <ZoomOut size={16} />
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={zoomOut}
+            className="w-8 h-8 bg-white shadow"
+          >
+            <ZoomOut className="h-4 w-4" />
           </Button>
-          <Separator orientation="vertical" className="h-8" />
-          <Button variant="outline" size="sm" onClick={handleReset}>
-            <RefreshCw size={16} />
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={resetView}
+            className="w-8 h-8 bg-white shadow"
+          >
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
         
         {/* Graph Container */}
         <div 
           ref={cyRef} 
-          className="w-full h-full"
+          className="w-full h-full" 
+          id="cy"
+        />
+      </div>
+      
+      {/* Right Panel with Toggle Button */}
+      <div className="relative h-full">
+        {/* Right Panel Toggle Button */}
+        <button 
+          onClick={toggleRightPanel}
+          className="absolute top-2 -left-3 z-20 w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 shadow flex items-center justify-center text-gray-700"
+          aria-label={rightPanelCollapsed ? "Show details panel" : "Hide details panel"}
         >
-          {!cy.current && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
-            </div>
-          )}
+          {rightPanelCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+        </button>
+        
+        <div 
+          className={`h-full bg-white border-l border-neutral-200 transition-all duration-300 ${
+            rightPanelCollapsed ? 'w-0 overflow-hidden' : 'w-80'
+          }`}
+        >
+          <div className="p-4 border-b border-neutral-200 bg-neutral-50">
+            <h3 className="text-lg font-semibold text-neutral-700">Object Details</h3>
+          </div>
+          
+          {selectedObject ? (
+                <div className="p-4 space-y-4 overflow-y-auto h-[calc(100%-54px)]">
+                  <div>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="text-xl font-bold">{selectedObject.label}</h3>
+                      <Badge variant="secondary" className={selectedObject.custom ? "bg-amber-500 text-white" : "bg-blue-500 text-white"}>
+                        {selectedObject.custom ? 'Custom' : 'Standard'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-neutral-500">{selectedObject.apiName}</p>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <Tabs defaultValue="fields">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="fields">Fields</TabsTrigger>
+                      <TabsTrigger value="relationships">Relationships</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="fields" className="mt-4 max-h-[calc(100vh-280px)] overflow-y-auto">
+                      <div className="space-y-4">
+                        {selectedObject.fields.map((field, i) => (
+                          <Card key={i}>
+                            <CardContent className="pt-4">
+                              <div className="flex justify-between mb-1">
+                                <div className="font-medium">{field.label}</div>
+                                <div className="text-xs text-neutral-500">{field.name}</div>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <div>{field.type}</div>
+                                <div className="flex gap-1">
+                                  {field.required && (
+                                    <Badge variant="outline" className="text-[10px] h-4">Required</Badge>
+                                  )}
+                                  {field.unique && (
+                                    <Badge variant="outline" className="text-[10px] h-4">Unique</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="relationships" className="mt-4 max-h-[calc(100vh-280px)] overflow-y-auto">
+                      <div className="space-y-4">
+                        {selectedObject.relationships.map((rel, i) => (
+                          <Card key={i}>
+                            <CardContent className="pt-4">
+                              <div className="flex justify-between mb-1">
+                                <div className="font-medium">{rel.name}</div>
+                                <Badge variant="secondary" className={
+                                  rel.type.toLowerCase().includes('master') ? "bg-orange-500 text-white" : 
+                                  rel.type.toLowerCase().includes('self') ? "bg-purple-500 text-white" :
+                                  rel.type.toLowerCase().includes('many') ? "bg-green-500 text-white" : "bg-blue-500 text-white"
+                                }>
+                                  {rel.type}
+                                </Badge>
+                              </div>
+                              <div className="text-sm">
+                                References: <span className="font-medium">{rel.object}</span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              ) : (
+                <div className="p-6 text-center text-neutral-500">
+                  <p>Select an object to view details</p>
+                </div>
+              )}
         </div>
       </div>
-      
-      {/* Right Panel */}
-      <div 
-        className={`h-full bg-white border-l border-neutral-200 transition-all duration-300 overflow-hidden ${
-          rightPanelCollapsed ? 'w-0' : 'w-80'
-        }`}
-      >
-        {selectedObject ? (
-          <>
-            <div className="p-4 border-b border-neutral-200 bg-neutral-50">
-              <h3 className="text-lg font-semibold text-neutral-700">
-                {selectedObject.label}
-                <Badge 
-                  variant={selectedObject.custom ? "secondary" : "outline"} 
-                  className="ml-2"
-                >
-                  {selectedObject.custom ? 'Custom' : 'Standard'}
-                </Badge>
-              </h3>
-              <p className="text-sm text-neutral-500 mt-1">{selectedObject.name}</p>
-            </div>
-            
-            <div className="p-4 overflow-y-auto h-[calc(100%-54px)]">
-              <Tabs defaultValue="fields">
-                <TabsList className="mb-4 w-full">
-                  <TabsTrigger value="fields" className="flex-1">Fields</TabsTrigger>
-                  <TabsTrigger value="relationships" className="flex-1">Relationships</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="fields">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs uppercase bg-neutral-50 text-neutral-500">
-                      <tr>
-                        <th className="px-2 py-2">Field</th>
-                        <th className="px-2 py-2">Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedObject.fields.sort((a, b) => a.name.localeCompare(b.name)).map((field) => (
-                        <tr key={field.name} className="border-b border-neutral-200 hover:bg-neutral-50">
-                          <td className="px-2 py-2 font-medium">
-                            {field.label}
-                            {field.required && (
-                              <Badge variant="destructive" className="ml-1 px-1 py-0">
-                                *
-                              </Badge>
-                            )}
-                            <div className="text-xs text-neutral-500">{field.name}</div>
-                          </td>
-                          <td className="px-2 py-2">
-                            <div>{field.type}</div>
-                            {field.unique && <Badge className="mt-1 px-1 py-0">Unique</Badge>}
-                            {field.externalId && <Badge className="mt-1 px-1 py-0">External ID</Badge>}
-                            {field.referenceTo && (
-                              <div className="text-xs text-primary-600 mt-1">
-                                → {Array.isArray(field.referenceTo) ? field.referenceTo.join(', ') : field.referenceTo}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </TabsContent>
-                
-                <TabsContent value="relationships">
-                  {selectedObject.relationships.length === 0 ? (
-                    <p className="text-neutral-500 text-sm p-4">No relationships defined</p>
-                  ) : (
-                    <div className="space-y-4">
-                      {selectedObject.relationships.map((rel) => (
-                        <Card key={rel.name} className="overflow-hidden">
-                          <div className="flex items-center">
-                            <div 
-                              className={`w-1 self-stretch ${
-                                rel.type === 'MasterDetail' ? 'bg-[#ea8c55]' : 
-                                rel.type === 'SelfJoin' ? 'bg-[#8a49a8]' : 
-                                rel.type === 'ManyToMany' ? 'bg-[#3EB489]' : 
-                                'bg-[#5a7d9a]'
-                              }`}
-                            />
-                            <CardContent className="p-3 flex-1">
-                              <div className="font-medium">{rel.name}</div>
-                              <div className="text-sm text-neutral-600">
-                                Type: {rel.type}
-                              </div>
-                              <div className="text-sm text-neutral-600">
-                                Related Object: {rel.object}
-                              </div>
-                              {rel.field && (
-                                <div className="text-sm text-neutral-600">
-                                  Field: {rel.field}
-                                </div>
-                              )}
-                            </CardContent>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
-          </>
-        ) : (
-          <div className="p-6 text-center text-neutral-500">
-            <p>Select an object to view details</p>
-          </div>
-        )}
-      </div>
-      
-      {/* Right Panel Toggle Button */}
-      <button 
-        onClick={toggleRightPanel}
-        className="absolute right-0 top-4 bg-primary-600 text-white h-8 w-8 rounded-l-md flex items-center justify-center z-10 transition-all duration-300"
-        style={{ right: rightPanelCollapsed ? 0 : 'calc(80px)' }}
-      >
-        {rightPanelCollapsed ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-      </button>
     </div>
   );
 }

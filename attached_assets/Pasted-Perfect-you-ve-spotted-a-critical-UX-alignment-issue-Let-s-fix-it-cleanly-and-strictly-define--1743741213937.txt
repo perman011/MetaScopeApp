@@ -1,0 +1,75 @@
+Perfect — you’ve spotted a critical UX alignment issue. Let's fix it cleanly and **strictly define** how it should behave from both a **UI/UX and technical perspective** so your AI devs don’t break anything that’s working.
+
+---
+
+## ✅ Feature Refactor: **“Build SOQL Query” Button in Data Model Analyzer**
+
+### 🔧 Problem:
+- **Incorrect placement:** "Build SOQL Query" is currently in **Data Model Analyzer**, which is not meant for query execution.
+- **Naming inconsistency:** It says “SQL” but should say “SOQL” and “SOSL” (Salesforce-specific languages).
+- **Function grouping mismatch:** Querying belongs under the **SOQL/SOSL Editor**, not the metadata visualization tool.
+
+---
+
+## ✅ FIX PLAN: UI + Functional Refactor
+
+### 🧩 **1. Remove from Data Model Analyzer**
+- Remove: `Build SOQL Query` button from **Object Relationship Map**
+- Keep Data Model Analyzer strictly for:
+  - Visualizing object and field relationships (Cytoscape.js)
+  - Viewing field counts, types, and metadata
+  - Navigating to object details
+
+---
+
+### 🪄 **2. Add to SOQL/SOSL Editor**
+#### ➕ Add a new **Toggle View** switch at the top:
+```
+[ Editor Mode ]  |  [ Drag & Drop Builder Mode ]
+```
+**Default view** = Editor Mode  
+- Use standard monaco or ace editor  
+- Show SOQL/SOSL execution results in bottom pane  
+
+---
+
+### 🔄 **3. Drag-and-Drop Query Builder (New UI Panel)**
+- From toggle, switch to drag & drop mode:
+  - Left pane: searchable list of objects/fields
+  - Right pane: “Query Canvas”
+  - Users drag fields in
+  - Buttons:
+    - [Add Filter]
+    - [Add Sort]
+    - [Run Query]
+
+✅ Must support:
+- Switching between **SOQL and SOSL mode**
+- Changing selected **Salesforce org context** at the top right (if multiple orgs connected)
+- Basic error messages and query validation
+- Displaying query results in **tabular format**
+
+---
+
+## ✅ STRICT FUNCTION PLACEMENT MAP
+
+| Feature | Final Location | Notes |
+|--------|----------------|-------|
+| `Build SOQL Query` | **SOQL/SOSL Editor** only | Not in Data Model Analyzer |
+| Toggle: Editor vs Builder | SOQL/SOSL Editor (top right) | Persist preference in local storage |
+| Drag & Drop | Only inside Query Builder Mode | Use consistent design system |
+| Metadata viewing | Data Model Analyzer | Object graphs, field stats, no querying |
+| Field-level query shortcut | Optional: Right-click on object in Analyzer → “Query in Editor” | Opens SOQL Editor with object preloaded |
+
+---
+
+### 💻 Bonus Suggestion: Dev-friendly component split
+You may want to separate these components to avoid regressions:
+- `<SOQLQueryEditor />`
+- `<SOQLQueryBuilder />`
+- `<ObjectRelationshipGraph />`
+- `<QueryResultsTable />`
+
+---
+
+Want me to create a visual wireframe or React component structure?
