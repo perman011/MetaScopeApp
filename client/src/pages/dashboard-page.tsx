@@ -11,6 +11,7 @@ import DataModelAnalyzer from "@/components/dashboard/data-model-analyzer";
 import SoqlEditor from "@/components/dashboard/soql-editor";
 import SecurityAnalyzer from "@/components/dashboard/security-analyzer";
 import ActionableInsights from "@/components/dashboard/actionable-insights";
+import FieldIntelligence from "@/components/dashboard/field-intelligence";
 import ConfigurationMoodRingCard from "@/components/configuration-mood-ring-card";
 import { SalesforceOrg, HealthScore } from "@shared/schema";
 import { Loader2 } from "lucide-react";
@@ -113,6 +114,10 @@ export default function DashboardPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                 <DataModelAnalyzer orgId={selectedOrgId} />
                 <SoqlEditor orgId={selectedOrgId} />
+              </div>
+              
+              <div className="grid grid-cols-1 gap-6 mt-6">
+                <FieldIntelligence orgId={selectedOrgId} />
               </div>
               
               <div className="grid grid-cols-1 gap-6 mt-6">

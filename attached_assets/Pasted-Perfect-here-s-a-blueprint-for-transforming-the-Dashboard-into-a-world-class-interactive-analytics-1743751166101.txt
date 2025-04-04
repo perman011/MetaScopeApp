@@ -1,0 +1,69 @@
+Perfect — here’s a blueprint for transforming the Dashboard into a world-class interactive analytics hub that makes MetaScope even more sellable, insightful, and delightful for daily users:
+
+⸻
+
+Redesigned Dashboard Vision
+
+Purpose: One-stop hub for actionable insights across the org — interactive, visual, filterable.
+
+⸻
+
+Top-Level Tabs in Dashboard
+	1.	Org Health (default subtab)
+	•	Score breakdown (Configuration, Automation, Security, UI, Data Quality)
+	•	Trend over time
+	•	Top recommended actions
+	•	Risk zones by type
+	•	CTA: “Launch Health Copilot”
+	2.	API Usage (new)
+	•	Top API consumers (user/app/endpoint)
+	•	Daily/weekly API volume and limits
+	•	Error types + frequency
+	•	Filter: Date range, user, app
+	•	CTA: “Create API guardrails”
+	3.	Object Insights
+	•	Top 10 most used objects (by record count, automation triggers, SOQL frequency)
+	•	Least used objects
+	•	Click to drill down: Open related metadata
+	•	CTA: “Open Object Cleanup”
+	4.	Field Intelligence (new)
+	•	High-impact unused fields
+	•	Fields most commonly filtered on
+	•	Longest tooltips or labels
+	•	Fields with inconsistent naming
+	•	CTA: “Launch Field Cleanup”
+	5.	Automation Summary
+	•	Most triggered flows, workflows
+	•	Overlapping automation map
+	•	Execution failures
+	•	CTA: “Optimize Automations”
+	6.	User Activity Heatmap (NEW)*
+	•	Most active users (by API, login, metadata change)
+	•	Inactive users with edit access
+	•	CTA: “Audit Permissions”
+	7.	Security Pulse
+	•	Permission sets with high exposure
+	•	Profiles with broad FLS
+	•	Users with excessive access
+	•	CTA: “Review Security Analyzer”
+	8.	Release Tracker / Change Log
+	•	Recent metadata changes
+	•	Recent deployments
+	•	Snapshot diffs
+	•	CTA: “Compare to Previous Snapshot”
+
+⸻
+
+Design Principles
+	•	Use Recharts or D3 for interactive visuals
+	•	Embed filter panels: date range, user, object
+	•	Visuals: radar, bar, pie, donut, and heatmaps
+	•	Use Framer Motion for modern animations
+	•	Tabs/cards powered by React Query, styled with shadcn/ui
+	•	Place CTAs on every tab to drive them to deeper analyzers
+
+⸻
+
+Next Steps
+
+Want me to create the technical doc and AI prompts for implementing this new Dashboard structure with the 8 tabs? I’ll assign each tab to a React route + backend endpoint. Just say the word.
