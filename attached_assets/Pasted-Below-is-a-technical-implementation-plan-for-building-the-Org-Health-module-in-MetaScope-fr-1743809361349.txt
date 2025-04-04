@@ -1,0 +1,311 @@
+Below is a **technical implementation plan** for building the **Org Health** module in MetaScope, from **data layer** to **front-end** and **DevOps** considerations. It follows the roadmap structure (Phases 1–5), but with deeper technical details on **how** to implement each step using your stated tech stack:
+
+---
+
+# 1. **Database & Schema (PostgreSQL + Drizzle ORM)**
+
+1. **Add New Tables for Org Health**  
+   - **org_health_checks**: Stores snapshots of an org’s health check (per run).  
+     ```sql
+     CREATE TABLE org_health_checks (
+       id SERIAL PRIMARY KEY,
+       org_id INTEGER NOT NULL REFERENCES orgs(id),
+       overall_score NUMERIC(5,2),
+       created_at TIMESTAMP DEFAULT NOW()
+     );
+     ```
+   - **org_health_details**: Stores detailed category-level scores (e.g., metadata hygiene, security).  
+     ```sql
+     CREATE TABLE org_health_details (
+       id SERIAL PRIMARY KEY,
+       health_check_id INTEGER NOT NULL REFERENCES org_health_checks(id),
+       category VARCHAR(50),
+       score NUMERIC(5,2),
+       detail JSONB,    -- Stores diagnostic info, e.g., list of unused fields
+       created_at TIMESTAMP DEFAULT NOW()
+     );
+     ```
+   - **org_health_recommendations**: Contains actionable insights for each run.  
+     ```sql
+     CREATE TABLE org_health_recommendations (
+       id SERIAL PRIMARY KEY,
+       health_check_id INTEGER NOT NULL REFERENCES org_health_checks(id),
+       recommendation TEXT,
+       priority VARCHAR(20),  -- e.g., HIGH, MEDIUM, LOW
+       created_at TIMESTAMP DEFAULT NOW()
+     );
+     ```
+   - Use **Drizzle ORM** with **Zod** schemas to define these tables programmatically in TypeScript. For example:
+     ```ts
+     import { pgTable, serial, integer, numeric, text, timestamp, jsonb, varchar } from "drizzle-orm/pg-core";
+     import { z } from "zod";
+
+     export const orgHealthChecks = pgTable("org_health_checks", {
+       id: serial("id").primaryKey(),
+       orgId: integer("org_id").notNull(),
+       overallScore: numeric("overall_score", 5, 2),
+       createdAt: timestamp("created_at").defaultNow(),
+     });
+
+     export const orgHealthChecksSchema = z.object({
+       orgId: z.number(),
+       overallScore: z.number(),
+     });
+
+     // Repeat similarly for org_health_details, org_health_recommendations
+     ```
+
+2. **Relationships & Indices**  
+   - Index **org_id** in **org_health_checks** for quick lookups.  
+   - Foreign keys reference **orgs** table (assumes you have a table that stores Salesforce connection details).
+
+3. **Storing Historical Snapshots**  
+   - Each new **health check** run inserts a row into **org_health_checks** plus multiple rows into **org_health_details**.  
+   - This approach preserves historical data for time-series analysis.
+
+---
+
+# 2. **Salesforce Integration (JSForce + Metadata Fetch)**
+
+1. **Connect to Salesforce via JSForce**  
+   - Already have org connections? Reuse them. Otherwise, store or retrieve the OAuth tokens/credentials needed.  
+   - In your **Node.js/Express** backend, create a service file, e.g., `salesforceService.ts`:
+     ```ts
+     import jsforce from 'jsforce';
+
+     export async function fetchOrgMetadata(connectionParams) {
+       const conn = new jsforce.Connection({
+         accessToken: connectionParams.accessToken,
+         instanceUrl: connectionParams.instanceUrl,
+       });
+       // E.g., fetch custom objects, fields, apex classes, etc.
+       const sObjectList = await conn.describeGlobal();
+       // ... additional calls for detailed metadata ...
+       return sObjectList;
+     }
+     ```
+
+2. **Metadata Types to Pull**  
+   - **Custom Objects & Fields** (to assess usage or redundancy)  
+   - **Permission Sets, Profiles** (security analysis)  
+   - **Apex Classes, Triggers** (code coverage, complexity)  
+   - **Automations**: Flows, Workflow Rules, Process Builders, etc.
+
+3. **Batching & Rate Limits**  
+   - Use JSForce’s bulk methods or the Metadata API if large volumes are involved.  
+   - Implement a queue or scheduling logic to avoid hitting Salesforce governor limits.
+
+---
+
+# 3. **Health Check Engine & Scoring**
+
+1. **Category Modules**  
+   - Create separate **TypeScript modules** for each category (metadata hygiene, security, automation, performance).  
+   - Each module exports a function that **analyzes** the relevant fetched data and returns:
+     ```ts
+     export interface CategoryCheckResult {
+       category: string;
+       score: number;
+       detail: Record<string, any>; // or a typed object with findings
+       recommendations: {
+         recommendation: string;
+         priority: "HIGH" | "MEDIUM" | "LOW";
+       }[];
+     }
+     ```
+
+2. **Aggregator**  
+   - A central “health check engine” function calls each category module, aggregates results, and computes an **overall score**:
+     ```ts
+     export async function computeHealthScore(metadata: any): Promise<{
+       overallScore: number;
+       categoryResults: CategoryCheckResult[];
+     }> {
+       const checks: CategoryCheckResult[] = [];
+       
+       checks.push(await analyzeMetadataHygiene(metadata));
+       checks.push(await analyzeSecurityControls(metadata));
+       checks.push(await analyzeAutomationEfficiency(metadata));
+       // ...
+       
+       // Weighted average or custom logic
+       const overallScore = checks.reduce((acc, c) => acc + c.score, 0) / checks.length;
+       
+       return { overallScore, categoryResults: checks };
+     }
+     ```
+
+3. **Saving Results**  
+   - After computing the score, insert a row into **org_health_checks**, then insert multiple rows into **org_health_details**.  
+   - For each **recommendation** in the results, insert a row into **org_health_recommendations**.
+
+4. **Scheduled or On-Demand Execution**  
+   - Provide both a **manual** trigger (e.g., user clicks “Run Health Check”) and a **scheduled job** (e.g., daily, weekly).  
+   - Use **Node cron** or a 3rd-party scheduling service to run the “health check engine” automatically:
+     ```ts
+     import cron from 'node-cron';
+
+     cron.schedule('0 3 * * *', () => {
+       // At 3 AM daily, run checks for each connected org
+       runAllOrgHealthChecks();
+     });
+     ```
+
+---
+
+# 4. **Backend API Endpoints (Node.js + Express.js)**
+
+1. **Endpoints**  
+   - `POST /api/orgs/:orgId/health-check`: Trigger on-demand check.  
+   - `GET /api/orgs/:orgId/health-checks`: List historical checks.  
+   - `GET /api/orgs/:orgId/health-checks/:checkId`: Fetch details for a specific run.
+
+2. **Controller Example**  
+   ```ts
+   import { Request, Response } from 'express';
+   import { computeHealthScore } from './healthEngine';
+   import { drizzleDb } from '../db';
+
+   export async function runHealthCheck(req: Request, res: Response) {
+     const orgId = parseInt(req.params.orgId, 10);
+     // Retrieve org connection from DB
+     const orgConnection = await drizzleDb.query.orgs.findFirst({ where: { id: orgId } });
+     const metadata = await fetchOrgMetadata(orgConnection);
+     const { overallScore, categoryResults } = await computeHealthScore(metadata);
+
+     // Insert into org_health_checks
+     const insertedCheck = await drizzleDb.insert(orgHealthChecks).values({
+       orgId,
+       overallScore,
+     }).returningAll();
+
+     // For each category result, insert details + recommendations
+     for (const cat of categoryResults) {
+       const detailInsert = await drizzleDb.insert(orgHealthDetails).values({
+         healthCheckId: insertedCheck[0].id,
+         category: cat.category,
+         score: cat.score,
+         detail: cat.detail,
+       }).returningAll();
+
+       for (const rec of cat.recommendations) {
+         await drizzleDb.insert(orgHealthRecommendations).values({
+           healthCheckId: insertedCheck[0].id,
+           recommendation: rec.recommendation,
+           priority: rec.priority,
+         });
+       }
+     }
+     return res.json({ message: "Health check completed", checkId: insertedCheck[0].id });
+   }
+   ```
+
+3. **Authentication**  
+   - Use your existing **Passport.js** middleware to ensure only authorized users can trigger or view health checks.
+
+---
+
+# 5. **Front-End Implementation (React + Vite + TanStack React Query)**
+
+1. **Routing & Page Structure**  
+   - Use **Wouter** (or React Router) for routing:  
+     - `/orgs/:orgId/health` → Main Health Dashboard  
+     - `/orgs/:orgId/health/:checkId` → Detailed view of a particular check
+
+2. **Data Fetching**  
+   - Create **React Query** hooks for each endpoint:  
+     ```ts
+     import { useQuery } from 'react-query';
+
+     export function useOrgHealthChecks(orgId: number) {
+       return useQuery(['orgHealthChecks', orgId], async () => {
+         const res = await fetch(`/api/orgs/${orgId}/health-checks`);
+         return res.json();
+       });
+     }
+     ```
+   - Similarly for a single check detail (`/api/orgs/:orgId/health-checks/:checkId`).
+
+3. **UI Components**  
+   - **Org Health Dashboard**: Show a summary chart (e.g. **Radar Chart** or **Bar Chart** via Recharts) of the main categories’ scores plus an overall score.  
+   - **Recommendations List**: Table or list of each recommendation with priority labeling (use **shadcn/ui** or your standard table component).  
+   - **Trend Over Time**: If you have multiple historical checks, display a line chart to show overall or category trends.  
+
+4. **Styling & Layout**  
+   - **Tailwind CSS** for utility classes.  
+   - **shadcn/ui** + **Lucide React** icons for consistent UI components.  
+
+5. **User Actions**  
+   - **Run Health Check** button: On click, calls the `POST /api/orgs/:orgId/health-check` endpoint.  
+   - **View Past Results**: A list or table that navigates to detail pages.
+
+---
+
+# 6. **Advanced Analytics & Visualizations**
+
+1. **Time-Series Analysis**  
+   - Store date-based snapshots, then use **Recharts** or **D3** line charts to plot the Org Health Score over time.  
+   - Provide filters for date ranges, specific categories, etc.
+
+2. **Dependency Mapping**  
+   - For an advanced view of metadata relationships, embed **Cytoscape.js** to visualize how different objects, fields, automations, and permissions relate.  
+   - Possibly overlay “health” or “usage” data on each node in the graph (e.g., highlight rarely used fields in red).
+
+3. **Predictive Insights (Future)**  
+   - Add a **Node-based ML** pipeline or an external service to do pattern recognition. E.g., if the number of new fields grows by X each month, predict performance or security risk.
+
+---
+
+# 7. **DevOps & Deployment**
+
+1. **Environment Configuration**  
+   - **Local Development**: .env for database credentials, Salesforce sandbox credentials.  
+   - **Production**: Securely store credentials (e.g., in Replit’s secrets or a standard cloud-based secrets manager).
+
+2. **Continuous Integration / Continuous Deployment**  
+   - Linting (ESLint) + Testing (Jest / Cypress) for both front-end and back-end code.  
+   - Automated checks to ensure Drizzle migrations run properly before deploying new code.
+
+3. **Performance & Load Considerations**  
+   - For large orgs, **batch** or parallelize the health checks. Possibly spread them out for multiple orgs so they don’t run simultaneously at peak hours.
+
+---
+
+# 8. **Testing & QA**
+
+1. **Unit Tests**  
+   - For each category module (metadata hygiene, security controls, etc.), ensure logic is correct.  
+   - Example: Provide mock metadata to verify if the unused fields are detected properly.
+
+2. **Integration Tests**  
+   - Mock real Salesforce calls or use a sandbox to confirm end-to-end flows: from fetching metadata → computing score → saving results → retrieving on the UI.
+
+3. **User Acceptance Tests**  
+   - Focus on the UI to ensure clarity, correctness of the health score, and usability of recommendations.
+
+---
+
+# 9. **Iterate & Expand**
+
+1. **Phase-by-Phase Releases**  
+   - Release the MVP quickly (basic scores, a few checks). Then add advanced checks, industry benchmarks, and predictive analytics gradually.
+
+2. **Feedback Loops**  
+   - Gather user feedback on which checks are most valuable.  
+   - Adjust weighting and add new categories (e.g., Lightning Web Components usage) based on real-world needs.
+
+3. **Optional Consulting Tie-Ins**  
+   - If your business model includes professional services, integrate a “request consultant review” button that triggers a deeper, manual analysis by experts.
+
+---
+
+## **Conclusion**
+
+By following this **technical plan**, you’ll have:
+
+1. A **robust data model** to store health-check snapshots and recommendations.  
+2. A **modular “health check engine”** that systematically queries Salesforce metadata, analyzes it with distinct category modules, and aggregates results into a cohesive Org Health Score.  
+3. A **React front-end** (with React Query, Wouter, and Tailwind) providing real-time dashboards, trend analysis, and guided remediation steps.  
+4. The **foundation** to grow into advanced features like AI-based predictions, multi-org comparisons, and integrated cleanup utilities.
+
+The final outcome is a **daily-use Org Health tool**—not just a one-time audit—that continuously guides admins, architects, and stakeholders in optimizing and maintaining a healthy, scalable Salesforce org.
