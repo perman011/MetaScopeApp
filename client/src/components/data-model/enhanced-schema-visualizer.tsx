@@ -30,10 +30,10 @@ interface FieldMetadata {
 
 interface RelationshipMetadata {
   name: string;
-  field: string;
+  field?: string; // Made optional to match mock data structure
   object: string;
-  // Allow more flexible type names but standardize them during processing
-  type: 'Lookup' | 'MasterDetail' | 'Master Detail' | 'Master-Detail' | 'SelfJoin' | 'Self Join' | 'Self-Join' | 'ManyToMany' | 'Many To Many' | 'Many-to-Many';
+  // Allow any string to be compatible with mock data
+  type: string;
   childObject?: string;
   childField?: string;
 }

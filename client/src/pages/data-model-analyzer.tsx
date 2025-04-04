@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { mockSalesforceMetadata } from "@/lib/mock-data";
 
 // Improved type definitions for field metadata
 interface FieldMetadata {
@@ -42,7 +43,7 @@ interface RelationshipMetadata {
   name: string;
   field?: string;
   object: string;
-  type: 'Lookup' | 'MasterDetail' | 'SelfJoin' | 'ManyToMany';
+  type: string; // Changed from enum to string to accommodate mock data
   childObject?: string;
   childField?: string;
 }
@@ -52,9 +53,10 @@ interface ObjectData {
   name: string;
   label: string;
   apiName?: string;
+  custom?: boolean; // Added to match mock data structure
+  isCustom?: boolean; // Kept for backwards compatibility with existing code
   fields: FieldMetadata[];
   relationships: RelationshipMetadata[];
-  isCustom?: boolean;
 }
 
 interface ObjectMetadata {
@@ -209,7 +211,7 @@ export default function DataModelAnalyzer() {
       }
       
       // 2. If metadata itself is the object metadata with objects array
-      if (!Array.isArray(metadata) && metadata && metadata.objects && Array.isArray(metadata.objects)) {
+      if (!Array.isArray(metadata) && metadata && typeof metadata === 'object' && 'objects' in metadata && Array.isArray((metadata as any).objects)) {
         console.log("Found direct objects array in metadata");
         return metadata as ObjectMetadata;
       }
@@ -407,20 +409,12 @@ export default function DataModelAnalyzer() {
                     </div>
                   </div>
                 ) : !activeOrg ? (
-                  <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-                    <div className="max-w-md">
-                      <h3 className="text-xl font-medium text-neutral-700 mb-3">Connect a Salesforce Org</h3>
-                      <p className="text-neutral-600 mb-6">
-                        To visualize your Salesforce data model, you need to connect a Salesforce organization first.
-                      </p>
-                      <div className="flex items-center justify-center">
-                        <Button className="flex items-center" asChild>
-                          <a href="/">
-                            <div className="mr-2">+</div> Connect Salesforce Org
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="h-[calc(100vh-280px)]">
+                    {useGraphView ? (
+                      <EnhancedSchemaVisualizer metadata={mockSalesforceMetadata} selectedLayout={selectedLayout} />
+                    ) : (
+                      <TableView metadata={mockSalesforceMetadata} />
+                    )}
                   </div>
                 ) : !objectMetadata || objectMetadata.objects.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center p-6 text-center">
@@ -485,13 +479,43 @@ export default function DataModelAnalyzer() {
                     </div>
                   </div>
                 ) : !activeOrg ? (
-                  <div className="h-64 flex items-center justify-center p-6 text-center">
-                    <div>
-                      <h3 className="text-lg font-medium text-neutral-700 mb-2">Connect a Salesforce Org</h3>
-                      <p className="text-neutral-600 mb-4">
-                        To view Salesforce objects, connect an organization first.
-                      </p>
-                    </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-xs uppercase bg-neutral-50 text-neutral-500">
+                        <tr>
+                          <th className="px-6 py-3">Object Name</th>
+                          <th className="px-6 py-3">Label</th>
+                          <th className="px-6 py-3">Type</th>
+                          <th className="px-6 py-3">Fields</th>
+                          <th className="px-6 py-3">Relationships</th>
+                          <th className="px-6 py-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mockSalesforceMetadata.objects.map((obj) => (
+                          <tr key={obj.name} className="border-b hover:bg-neutral-50">
+                            <td className="px-6 py-4 font-medium">{obj.name}</td>
+                            <td className="px-6 py-4">{obj.label}</td>
+                            <td className="px-6 py-4">
+                              <Badge variant={obj.custom ? "secondary" : "outline"}>
+                                {obj.custom ? "Custom" : "Standard"}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4">{obj.fields?.length || 0}</td>
+                            <td className="px-6 py-4">{obj.relationships?.length || 0}</td>
+                            <td className="px-6 py-4">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => setSelectedObjectName(obj.name)}
+                              >
+                                View Fields
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : !objectMetadata || objectMetadata.objects.length === 0 ? (
                   <div className="h-64 flex items-center justify-center p-6 text-center">
@@ -583,13 +607,147 @@ export default function DataModelAnalyzer() {
                     </div>
                   </div>
                 ) : !activeOrg ? (
-                  <div className="h-64 flex items-center justify-center p-6 text-center">
-                    <div>
-                      <h3 className="text-lg font-medium text-neutral-700 mb-2">Connect a Salesforce Org</h3>
-                      <p className="text-neutral-600">
-                        To view field details, connect an organization first.
-                      </p>
+                  <div>
+                    <div className="mb-6">
+                      <div className="flex items-center space-x-4 mb-2">
+                        <Database className="h-5 w-5 text-neutral-500" />
+                        <h3 className="text-lg font-medium text-neutral-700">Select Object</h3>
+                      </div>
+                      <Select
+                        value={selectedObjectName}
+                        onValueChange={setSelectedObjectName}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select an object" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {mockSalesforceMetadata.objects
+                            .sort((a, b) => a.label.localeCompare(b.label))
+                            .map((obj) => (
+                              <SelectItem key={obj.name} value={obj.name}>
+                                {obj.label} ({obj.name})
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+                    
+                    {selectedObjectName ? (
+                      (() => {
+                        const mockSelectedObject = mockSalesforceMetadata.objects.find(obj => obj.name === selectedObjectName);
+                        if (!mockSelectedObject) return null;
+                        
+                        return (
+                          <div>
+                            <div className="mb-4 flex justify-between items-center">
+                              <div>
+                                <h3 className="text-xl font-semibold">{mockSelectedObject.label}</h3>
+                                <p className="text-sm text-neutral-500">API Name: {mockSelectedObject.name}</p>
+                              </div>
+                              <Badge variant={mockSelectedObject.custom ? "secondary" : "outline"}>
+                                {mockSelectedObject.custom ? "Custom Object" : "Standard Object"}
+                              </Badge>
+                            </div>
+                            
+                            <div className="mb-6">
+                              <div className="flex items-center gap-2 mb-4">
+                                <h4 className="text-md font-medium">Fields</h4>
+                                <Badge variant="outline">{mockSelectedObject.fields.length}</Badge>
+                              </div>
+                              
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                  <thead className="text-xs uppercase bg-neutral-50 text-neutral-500">
+                                    <tr>
+                                      <th className="px-4 py-2">Field Label</th>
+                                      <th className="px-4 py-2">API Name</th>
+                                      <th className="px-4 py-2">Data Type</th>
+                                      <th className="px-4 py-2">Required</th>
+                                      <th className="px-4 py-2">Unique</th>
+                                      <th className="px-4 py-2">Relationship</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {mockSelectedObject.fields.map((field) => (
+                                      <tr key={field.name} className="border-b hover:bg-neutral-50">
+                                        <td className="px-4 py-2 font-medium">{field.label}</td>
+                                        <td className="px-4 py-2">{field.name}</td>
+                                        <td className="px-4 py-2">
+                                          <Badge variant="outline" className="capitalize">
+                                            {field.type}
+                                          </Badge>
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          {field.required ? "Yes" : "No"}
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          {field.unique ? "Yes" : "No"}
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          {field.referenceTo ? (
+                                            <Badge variant="secondary">
+                                              {Array.isArray(field.referenceTo) 
+                                                ? field.referenceTo.join(', ') 
+                                                : field.referenceTo}
+                                            </Badge>
+                                          ) : "-"}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                            
+                            {mockSelectedObject.relationships && mockSelectedObject.relationships.length > 0 && (
+                              <div>
+                                <div className="flex items-center gap-2 mb-4">
+                                  <h4 className="text-md font-medium">Relationships</h4>
+                                  <Badge variant="outline">{mockSelectedObject.relationships.length}</Badge>
+                                </div>
+                                
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-sm text-left">
+                                    <thead className="text-xs uppercase bg-neutral-50 text-neutral-500">
+                                      <tr>
+                                        <th className="px-4 py-2">Name</th>
+                                        <th className="px-4 py-2">Type</th>
+                                        <th className="px-4 py-2">Related Object</th>
+                                        <th className="px-4 py-2">Field</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {mockSelectedObject.relationships.map((rel, index) => (
+                                        <tr key={index} className="border-b hover:bg-neutral-50">
+                                          <td className="px-4 py-2 font-medium">{rel.name}</td>
+                                          <td className="px-4 py-2">
+                                            <Badge 
+                                              variant="secondary"
+                                            >
+                                              {rel.type}
+                                            </Badge>
+                                          </td>
+                                          <td className="px-4 py-2">{rel.object}</td>
+                                          <td className="px-4 py-2">{rel.field || "-"}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <div className="text-center p-8 bg-neutral-50 rounded-md">
+                        <Filter className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-neutral-700 mb-2">No Object Selected</h3>
+                        <p className="text-neutral-600">
+                          Select an object from the dropdown to view its field details.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : !objectMetadata || objectMetadata.objects.length === 0 ? (
                   <div className="h-64 flex items-center justify-center p-6 text-center">

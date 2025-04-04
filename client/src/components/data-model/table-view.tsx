@@ -32,7 +32,7 @@ interface RelationshipMetadata {
   name: string;
   field?: string;
   object: string;
-  type: 'Lookup' | 'MasterDetail' | 'SelfJoin' | 'ManyToMany';
+  type: string; // Changed from enum to string to accommodate various data formats
   childObject?: string;
   childField?: string;
 }
@@ -44,6 +44,7 @@ interface ObjectData {
   fields: FieldMetadata[];
   relationships: RelationshipMetadata[];
   isCustom?: boolean;
+  custom?: boolean; // Added to match mock data structure
 }
 
 interface ObjectMetadata {
@@ -122,7 +123,7 @@ export default function TableView({ metadata }: TableViewProps) {
                 <TableCell>{obj.name}</TableCell>
                 <TableCell>{obj.fields.length}</TableCell>
                 <TableCell>
-                  {obj.isCustom ? (
+                  {obj.isCustom || obj.custom ? (
                     <Badge variant="secondary">✓</Badge>
                   ) : (
                     <Badge variant="outline">✗</Badge>
