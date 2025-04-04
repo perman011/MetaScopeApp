@@ -7,8 +7,11 @@ import OrderByBlock from './OrderByBlock';
 import LimitBlock from './LimitBlock';
 import QueryPreview from './QueryPreview';
 import { Button } from '@/components/ui/button';
-import { Play } from 'lucide-react';
+import { Play, Save, Code, Share, Copy } from 'lucide-react';
 import { mockSalesforceMetadata } from '@/lib/mock-data';
+import { FilterCondition as AdvancedFilterCondition } from './ConditionBuilder';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 // Types
 export interface FieldSelection {
@@ -18,7 +21,9 @@ export interface FieldSelection {
   parentObjectApiName?: string;
 }
 
+// Simple filter condition type (for backwards compatibility)
 export interface FilterCondition {
+  id?: string; // Made optional for backward compatibility
   field: string;
   operator: string;
   value: string;
@@ -27,6 +32,15 @@ export interface FilterCondition {
 export interface SortItem {
   field: string;
   direction: 'ASC' | 'DESC';
+}
+
+export interface SavedQuery {
+  id: string;
+  name: string;
+  description?: string;
+  query: string;
+  createdAt: string;
+  object: string;
 }
 
 interface QueryCanvasProps {
@@ -40,8 +54,11 @@ export default function QueryCanvas({ onExecuteQuery }: QueryCanvasProps) {
   // State for selected fields
   const [selectedFields, setSelectedFields] = useState<FieldSelection[]>([]);
   
-  // State for filter conditions
+  // State for filter conditions (simple format for backward compatibility)
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
+  
+  // State for advanced filter conditions
+  const [advancedFilterConditions, setAdvancedFilterConditions] = useState<AdvancedFilterCondition[]>([]);
   
   // State for sort items
   const [sortItems, setSortItems] = useState<SortItem[]>([]);
@@ -54,6 +71,36 @@ export default function QueryCanvas({ onExecuteQuery }: QueryCanvasProps) {
   
   // Load metadata
   const metadata = mockSalesforceMetadata;
+  
+  // Toast for notifications
+  const { toast } = useToast();
+  
+  // Function to generate WHERE clause from advanced conditions
+  const generateWhereClause = (conditions: AdvancedFilterCondition[], isSubGroup = false): string => {
+    if (!conditions || conditions.length === 0) return '';
+    
+    let result = '';
+    
+    conditions.forEach((condition, index) => {
+      // Add logical operator for conditions after the first one
+      if (index > 0) {
+        result += ` ${condition.logicalOperator} `;
+      }
+      
+      // Handle nested groups
+      if (condition.isGroup && condition.conditions && condition.conditions.length > 0) {
+        const nestedClause = generateWhereClause(condition.conditions, true);
+        if (nestedClause) {
+          result += `(${nestedClause})`;
+        }
+      } else if (condition.field && condition.operator && condition.value) {
+        // Handle regular conditions
+        result += `${condition.field} ${condition.operator} ${condition.value}`;
+      }
+    });
+    
+    return result;
+  };
   
   // Update the query whenever any of the parts change
   useEffect(() => {
@@ -76,7 +123,11 @@ export default function QueryCanvas({ onExecuteQuery }: QueryCanvasProps) {
     query += `\nFROM ${selectedObject}`;
     
     // Add WHERE clause if filters exist
-    if (filterConditions.length > 0) {
+    if (advancedFilterConditions.length > 0) {
+      query += '\nWHERE ';
+      query += generateWhereClause(advancedFilterConditions);
+    } else if (filterConditions.length > 0) {
+      // Fallback to simple conditions for backward compatibility
       query += '\nWHERE ';
       query += filterConditions.map((condition, index) => {
         let filterStr = '';
@@ -100,13 +151,14 @@ export default function QueryCanvas({ onExecuteQuery }: QueryCanvasProps) {
     }
     
     setGeneratedQuery(query);
-  }, [selectedObject, selectedFields, filterConditions, sortItems, limitValue]);
+  }, [selectedObject, selectedFields, filterConditions, advancedFilterConditions, sortItems, limitValue]);
   
   // Handle object selection
   const handleObjectSelected = (objectName: string) => {
     setSelectedObject(objectName);
     setSelectedFields([]);
     setFilterConditions([]);
+    setAdvancedFilterConditions([]);
     setSortItems([]);
   };
   
@@ -120,14 +172,19 @@ export default function QueryCanvas({ onExecuteQuery }: QueryCanvasProps) {
     setSelectedFields(prev => prev.filter((_, i) => i !== index));
   };
   
-  // Handle adding a filter condition
+  // Handle adding a filter condition (simple format)
   const handleAddFilterCondition = (condition: FilterCondition) => {
     setFilterConditions(prev => [...prev, condition]);
   };
   
-  // Handle removing a filter condition
+  // Handle removing a filter condition (simple format)
   const handleRemoveFilterCondition = (index: number) => {
     setFilterConditions(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  // Handle updating all advanced filter conditions
+  const handleUpdateAdvancedFilterConditions = (conditions: AdvancedFilterCondition[]) => {
+    setAdvancedFilterConditions(conditions);
   };
   
   // Handle adding a sort item
@@ -148,6 +205,48 @@ export default function QueryCanvas({ onExecuteQuery }: QueryCanvasProps) {
   // Handle executing the query
   const handleExecuteQuery = () => {
     onExecuteQuery(generatedQuery);
+  };
+  
+  // Handle copying query to clipboard
+  const handleCopyQuery = () => {
+    navigator.clipboard.writeText(generatedQuery);
+    toast({
+      title: "Copied to clipboard",
+      description: "The SOQL query has been copied to your clipboard."
+    });
+  };
+  
+  // Handle saving a query
+  const handleSaveQuery = () => {
+    // In a real implementation, this would save to the database
+    // Here we'll just demonstrate the concept with localStorage
+    try {
+      const existingQueries = localStorage.getItem('savedSoqlQueries');
+      const queries: SavedQuery[] = existingQueries ? JSON.parse(existingQueries) : [];
+      
+      const newQuery: SavedQuery = {
+        id: Date.now().toString(),
+        name: `Query on ${selectedObject}`,
+        query: generatedQuery,
+        createdAt: new Date().toISOString(),
+        object: selectedObject
+      };
+      
+      queries.push(newQuery);
+      localStorage.setItem('savedSoqlQueries', JSON.stringify(queries));
+      
+      toast({
+        title: "Query saved",
+        description: "Your query has been saved for future use."
+      });
+    } catch (error) {
+      console.error("Error saving query:", error);
+      toast({
+        title: "Error saving query",
+        description: "There was an error saving your query. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   return (
@@ -194,6 +293,7 @@ export default function QueryCanvas({ onExecuteQuery }: QueryCanvasProps) {
                     filterConditions={filterConditions}
                     onAddFilterCondition={handleAddFilterCondition}
                     onRemoveFilterCondition={handleRemoveFilterCondition}
+                    onUpdateFilterConditions={handleUpdateAdvancedFilterConditions}
                   />
                 </AccordionContent>
               </AccordionItem>
@@ -226,7 +326,29 @@ export default function QueryCanvas({ onExecuteQuery }: QueryCanvasProps) {
             
             <div className="space-y-4 mt-4">
               <div>
-                <h3 className="text-md font-semibold mb-2">Generated SOQL Query</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-md font-semibold">Generated SOQL Query</h3>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleCopyQuery}
+                      className="flex items-center gap-1"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      Copy
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleSaveQuery}
+                      className="flex items-center gap-1"
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                      Save
+                    </Button>
+                  </div>
+                </div>
                 <QueryPreview query={generatedQuery} />
               </div>
               
