@@ -14,7 +14,8 @@ import {
   UserCog,
   Link2,
   Lock,
-  Terminal
+  Terminal,
+  Table
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,10 @@ export default function SideNavigation() {
         
         <NavItem href="/data-model-analyzer" icon={Database} active={location === "/data-model-analyzer"}>
           Data Model Analyzer
+        </NavItem>
+        
+        <NavItem href="/field-intelligence" icon={Table} active={location === "/field-intelligence"}>
+          Field Intelligence
         </NavItem>
         
         <NavItem href="/soql-editor" icon={Code} active={location === "/soql-editor"}>
