@@ -85,7 +85,7 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
           
           {/* Metadata Components */}
           <div className="bg-neutral-50 rounded-lg p-5 border border-neutral-200 cursor-pointer hover:border-primary-300 transition-colors" 
-               onClick={() => window.location.href = '/metadata-analytics'}>
+               onClick={() => window.location.href = '/dashboard/org-health/metadata-components'}>
             <div className="flex items-center">
               <div className="flex-shrink-0 h-12 w-12 bg-secondary-500 bg-opacity-10 rounded-full flex items-center justify-center">
                 <Squares2X2Icon className="h-6 w-6 text-secondary-500" />
@@ -221,7 +221,7 @@ export default function HealthScoreOverview({ healthScore, isLoading }: HealthSc
         <div className="flex items-center justify-between flex-wrap sm:flex-nowrap w-full">
           <div className="text-sm font-medium text-primary-600">
             <a href="#" className="hover:text-primary-700 mr-4">View detailed health report</a>
-            <a href="/metadata-analytics" className="hover:text-primary-700">View Metadata Analytics</a>
+            <a href="/dashboard/org-health/metadata-components" className="hover:text-primary-700">View Metadata Analytics</a>
           </div>
           <div className="text-sm text-neutral-500">
             Last analyzed: {lastAnalyzed}

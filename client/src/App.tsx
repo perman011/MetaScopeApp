@@ -1,3 +1,4 @@
+import React from "react";
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
@@ -72,6 +73,12 @@ function AuthenticatedRoutes() {
               {/* Field Intelligence is now only accessible as a tab within Dashboard */}
               {/* <Route path="/field-intelligence" component={FieldIntelligence} /> */}
               <Route path="/metadata-analytics" component={MetadataAnalytics} />
+              <Route path="/dashboard/org-health/metadata-components" component={() => 
+                <div className="p-6">
+                  <h1 className="text-2xl font-bold mb-6">Metadata Components Analytics</h1>
+                  {React.createElement(require('./pages/dashboard/MetadataAnalyticsPanel').default)}
+                </div>
+              } />
               <Route path="/settings" component={SettingsPage} />
               <Route path="/support" component={Support} />
               <Route path="/subscription" component={Subscription} />
