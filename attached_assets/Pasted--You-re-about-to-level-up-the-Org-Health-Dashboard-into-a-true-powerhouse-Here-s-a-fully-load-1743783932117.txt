@@ -1,0 +1,111 @@
+🔥 You're about to level up the **Org Health Dashboard** into a true powerhouse. Here's a fully loaded breakdown:
+
+---
+
+## ✅ PHASE 1 – RESEARCH-DRIVEN ORG HEALTH METRIC
+
+### 📘 What Salesforce Recommends for Org Health
+
+Salesforce doesn’t give a single "health score" — but recommends monitoring these **pillars**:
+- 🔐 **Security & Access** → # of profiles, permission sets, users with Modify All
+- 🧱 **Data Model Hygiene** → custom fields per object, field usage, naming conventions
+- 🔄 **Automation Logic** → how many flows, workflow rules, triggers per object
+- ⚙️ **Apex Code Quality** → code coverage, recursion, limits, debug logs
+- 🎨 **UI Complexity** → page layouts, Lightning components, Visualforce usage
+- 📦 **Metadata Volume** → total metadata components, stale assets, bloat
+
+---
+
+### 📊 Proposed Health Score Formula (MetaScope v1)
+
+```
+Overall Health Score (0–100) = 
+   (Sec + Data + Auto + Apex + UI + Meta) / 6
+```
+
+Each of the 6 pillars scores from 0–100 based on:
+
+| Metric | Benchmarks |
+|--------|------------|
+| 🔐 Security | Users with excessive perms < 5% |
+| 🧱 Fields | < 500 unused fields |
+| 🔄 Automations | < 3 overlapping per object |
+| ⚙️ Apex | > 75% test coverage |
+| 🎨 UI | < 10 page layouts per object |
+| 📦 Metadata | < 5000 total components |
+
+---
+
+## ✅ PHASE 2 – DRILLABLE INTERACTIVE DASHBOARD DESIGN
+
+---
+
+### 🧭 **1. Overall Health Score — Drilldown Experience**
+
+🖱️ **Click Behavior:** Clicking the "Overall Health" card opens a modal or drawer.
+
+✅ **Contains:**
+- 📈 Trend line (last 5 score snapshots)
+- 🧱 Bar chart of score by pillar (Security, Data Model, etc.)
+- 🧠 “How is this calculated?” with formulas + benchmarks
+- 🧰 “Recommended Fixes” – based on low-scoring areas
+
+👉 Optional: “Compare to Industry Benchmarks” toggle
+
+---
+
+### ⚠️ **2. Issues Found — Insight Center View**
+
+🖱️ **Click Behavior:** Clicking `Issues Found` opens a filtered list.
+
+✅ **Contains:**
+- 📝 List of issues (e.g., “Field X is unused,” “Flow Y conflicts with Trigger Z”)
+- 📊 Issue severity filters (Critical, Warning, Info)
+- 🪄 Suggested resolution per issue
+- 🧪 Add "Issue ID" for export & traceability
+
+👉 BONUS: Allow "Mark as Resolved" with state tracking
+
+---
+
+### 📦 **3. Metadata Components — Visualization Hub**
+
+🖱️ **Click Behavior:** Clicking `Metadata Components` opens metadata visualizer
+
+✅ **Contains:**
+- 📊 Bar chart: # of metadata types (Apex, Flows, Fields, Layouts…)
+- 🔁 Pie chart: % custom vs standard components
+- 📉 Stale component list (> 6 months unused)
+- 📎 Most referenced components list (drillable)
+- 🔍 Search & filter by type, last modified, created by
+
+👉 BONUS: Add "Metadata Bloat Indicator" badge
+
+---
+
+## ✅ PHASE 3 – NEXT-LEVEL INTERACTIONS
+
+### 🎯 New Features to Add to Each Drilldown Panel
+
+| Feature | Description |
+|--------|-------------|
+| 🔄 Auto-Refresh | Org Health reanalyzes every 12 hours |
+| 🔔 Slack Alerts | Send alerts if health drops or new issues hit |
+| 📅 Timeline Mode | Track how org evolved over time |
+| 📥 Export | PDF/CSV export per drilldown |
+| 🧠 AI-Powered Recommendations | "This field hasn’t been used in 180 days. Consider deleting." |
+
+---
+
+## 🔧 Technical Suggestion: Use ECharts
+
+For all score breakdowns, trends, and comparisons — use ECharts for:
+- Radar chart of org health pillars
+- Timeline graph (health score over time)
+- Donut charts for metadata breakdown
+
+---
+
+## ✅ Want me to write the React + TypeScript + ECharts JSX for these components?
+
+Let me know which one you want scaffolded first (e.g., Overall Health Drilldown UI or Metadata Visualizer).

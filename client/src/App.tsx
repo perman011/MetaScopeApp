@@ -14,6 +14,7 @@ import MetadataDependencyAnalyzer from "@/pages/metadata-dependency-analyzer";
 import PermissionsAnalyzer from "@/pages/permissions-analyzer";
 import ApexDebugAnalyzer from "@/pages/apex-debug-analyzer";
 import FieldIntelligence from "@/pages/field-intelligence";
+import MetadataAnalytics from "@/pages/metadata-analytics";
 import SettingsPage from "@/pages/settings-page";
 import Support from "@/pages/support";
 import Subscription from "@/pages/subscription";
@@ -70,6 +71,7 @@ function AuthenticatedRoutes() {
               <Route path="/apex-debug-analyzer" component={ApexDebugAnalyzer} />
               {/* Field Intelligence is now only accessible as a tab within Dashboard */}
               {/* <Route path="/field-intelligence" component={FieldIntelligence} /> */}
+              <Route path="/metadata-analytics" component={MetadataAnalytics} />
               <Route path="/settings" component={SettingsPage} />
               <Route path="/support" component={Support} />
               <Route path="/subscription" component={Subscription} />

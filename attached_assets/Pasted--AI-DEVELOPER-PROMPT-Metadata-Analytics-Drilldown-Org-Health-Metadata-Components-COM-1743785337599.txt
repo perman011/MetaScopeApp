@@ -1,0 +1,114 @@
+## AI DEVELOPER PROMPT – Metadata Analytics Drilldown (Org Health > Metadata Components)
+
+### 📂 COMPONENT FILE
+- `src/pages/dashboard/MetadataAnalyticsPanel.tsx`
+
+### 🌟 PURPOSE
+User clicks `Metadata Components` card from Org Health tab → this opens a **standalone page** with 4 analytics blocks as described below.
+
+Use only the approved stack:
+- ✅ React
+- ✅ TypeScript
+- ✅ Recharts
+- ✅ shadcn/ui
+- ✅ Tailwind CSS
+- ✅ TanStack Query
+
+---
+
+## 🧱 LAYOUT SPEC
+Wrap entire content in a `div` using:
+
+```tsx
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+  {/* Insert 2 charts + 2 tables */}
+</div>
+```
+
+Each section below is inside a `<Card>` from `shadcn/ui`, with a `title` heading.
+
+---
+
+### 🔸 1. Donut Chart — "Custom vs Standard Components"
+
+- Use `Recharts.PieChart` with `innerRadius={60}` for donut appearance.
+- Data: 2 segments only
+```ts
+[
+  { name: 'Custom Components', value: 125 },
+  { name: 'Standard Components', value: 285 },
+]
+```
+- Colors: Tailwind `blue-500` for Custom, `green-500` for Standard
+- Tooltip on hover: `{value} components`
+
+---
+
+### 🔸 2. Bar Chart — "Component Count by Type"
+
+- Use `Recharts.BarChart`
+- X-axis: Metadata type (e.g., ApexClass, Flow, Field)
+- Y-axis: Count
+- Max 10 types
+- Dummy data example:
+```ts
+[
+  { type: 'ApexClass', count: 52 },
+  { type: 'Flow', count: 34 },
+  { type: 'Field', count: 879 },
+  // ... more
+]
+```
+
+---
+
+### 🔸 3. Table — "Most Referenced Components"
+
+- Use `shadcn/ui` DataTable
+- Columns:
+  - `Type`
+  - `Name`
+  - `Reference Count`
+  - `Last Modified (Date)`
+- Use mock data for now.
+- Each row must be clickable (but don’t implement click logic yet).
+- Add pagination with 10 rows per page
+
+---
+
+### 🔸 4. List — "Stale Components (>6 months)"
+
+- Use a vertical scroll list (div with `overflow-y-auto` and `max-height`)
+- Each item must show:
+  - `Component Name`
+  - `Type`
+  - `Last Used Date`
+  - A plain text link: `View Metadata`
+
+Example:
+```
+- Flow: AutoUpdateContacts | Last Used: Aug 2023 | View Metadata
+- Apex: DeprecatedClass | Last Used: Jan 2022 | View Metadata
+```
+
+---
+
+### 🧪 BEHAVIOR
+- All charts/tables are static for now, use mock data.
+- No routing or modals needed inside this component.
+- Add `export default function MetadataAnalyticsPanel()` at the bottom.
+
+---
+
+### ❌ DO NOT
+- ❌ Do not use ECharts, Chart.js, or D3.
+- ❌ Do not design or modify UI beyond what is specified.
+- ❌ Do not fetch live data yet. Use mocked arrays per above format.
+
+---
+
+### ✅ OUTPUT
+One `.tsx` file with 4 sections as described.
+Code only. No opinions. No logic outside scope.
+Submit for integration into MetaScope dashboard layout.
+
