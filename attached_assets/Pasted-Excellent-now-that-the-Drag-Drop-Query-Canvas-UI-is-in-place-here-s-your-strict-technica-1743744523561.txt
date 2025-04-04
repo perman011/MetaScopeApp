@@ -1,0 +1,82 @@
+Excellent — now that the **Drag & Drop Query Canvas UI** is in place, here’s your strict, **technical enhancement prompt** to pass to your AI agent developer to address the current issues and add the AI querying assistant properly.
+
+---
+
+## 🔧 AI Developer Prompt: Fix Object Population + Add AI Assistant to Write Queries
+
+---
+
+### ⚠️ 1. **Fix Object Population Bug**
+
+**Issue**  
+> The query canvas is not showing any objects (e.g., “Account”) even after org connection is confirmed.
+
+**Expected Behavior**
+- When the org is connected and metadata sync is complete, standard & custom objects should populate the search list.
+  
+**Fix Instructions:**
+- Ensure `JSForce` metadata API has completed and stored object list in cache/state.
+- Hook into existing metadata fetcher:
+  - `conn.describeGlobal()` to fetch all object names
+  - For selected object: `conn.sobject(objectName).describe()`
+- Populate the search input with real-time filtering from local state.
+- On selection:
+  - Load fields into `SELECT` panel
+  - Inject object name into `FROM`
+  - Allow dragging fields into WHERE, ORDER BY
+
+**Validation Tip:**  
+Log `describeGlobal()` results to confirm metadata is loaded.
+
+---
+
+### 💡 2. **AI Assistant: “Ask to Write My Query” Feature**
+
+#### 🔥 Purpose:
+Let users generate queries using natural language, e.g.:
+> “Show me top 10 accounts by revenue”  
+> “Find all contacts in California with missing email”
+
+#### 🧠 How to Implement:
+
+##### ✅ UI Placement:
+- Add a button in Query Canvas:
+  - `🤖 Ask AI to Write My Query`
+- Opens a modal or slide-out drawer with a prompt input:
+  - "What would you like to find in your org?"
+  - [Input Field] [Generate Query]
+
+##### ✅ Backend Logic:
+- Use a GPT-powered agent prompt like:
+  ```txt
+  You are a SOQL assistant. Write valid Salesforce SOQL queries based on natural language. Use the user's connected metadata only. Return only the SOQL query, no explanations.
+  ```
+- Use user metadata context:
+  - Inject object model via prompt or internal context
+- On submit:
+  - AI returns SOQL (or SOSL) string
+  - Prepopulate into either:
+    - Text area (Editor Mode)
+    - Query Canvas as pre-filled blocks
+
+---
+
+### 📦 Bonus: Smart Query Improvements
+- Pre-fill `SELECT` fields if user adds `Account` in FROM
+- When AI suggests filters, auto-render in `WHERE` as blocks
+- Use field types to guide AI formatting (`Currency`, `Date`, `Picklist`)
+
+---
+
+### ✅ Deliverables
+- [ ] Fix object search and population using describeGlobal
+- [ ] Add “Ask AI” button with prompt modal
+- [ ] Pipe output to existing query builder/editor
+- [ ] Use already synced object model to keep GPT accurate
+
+---
+
+Let me know if you'd like:
+- Prompt engineering sample for the AI query assistant
+- Full user flow mockup (Figma style)
+- Component tree breakdown (`QueryAI.tsx`, `QueryCanvas.tsx`, etc.)

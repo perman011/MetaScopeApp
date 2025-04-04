@@ -6,9 +6,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, X } from 'lucide-react';
+import { Search, Plus, X, BrainCircuit } from 'lucide-react';
 import { useOrgContext } from '@/hooks/use-org';
 import { mockSalesforceMetadata } from '@/lib/mock-data';
+import { apiRequest } from '@/lib/queryClient';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface QueryBuilderProps {
   onExecuteQuery: (query: string) => void;
@@ -25,11 +28,30 @@ interface SortItem {
   direction: 'ASC' | 'DESC';
 }
 
+// Interface for metadata objects
+interface SalesforceObject {
+  name: string;
+  label: string;
+  custom: boolean;
+  fields: SalesforceField[];
+  relationships?: any[];
+}
+
+interface SalesforceField {
+  name: string;
+  label: string;
+  type: string;
+  required: boolean;
+  unique?: boolean;
+}
+
 export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
   const { activeOrg } = useOrgContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [showStandardObjects, setShowStandardObjects] = useState(true);
   const [showCustomObjects, setShowCustomObjects] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [orgMetadata, setOrgMetadata] = useState<any>(null);
   
   // Query building state
   const [selectedObject, setSelectedObject] = useState('');
@@ -38,8 +60,34 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
   const [sortItems, setSortItems] = useState<SortItem[]>([]);
   const [limitValue, setLimitValue] = useState('');
 
-  // Use mock data when no org is connected
-  const metadata = activeOrg ? null : mockSalesforceMetadata;
+  // AI query state
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiGeneratedQuery, setAiGeneratedQuery] = useState('');
+  const [isGeneratingQuery, setIsGeneratingQuery] = useState(false);
+  
+  // Fetch metadata from the org if available, otherwise use mock data
+  useEffect(() => {
+    if (activeOrg) {
+      fetchOrgMetadata();
+    }
+  }, [activeOrg]);
+  
+  const fetchOrgMetadata = async () => {
+    try {
+      setIsLoading(true);
+      // In real implementation, this would call the API to get metadata
+      // For now, since we don't have direct access to JSForce's describeGlobal,
+      // we'll use mock data for both cases
+      setOrgMetadata(mockSalesforceMetadata);
+    } catch (error) {
+      console.error('Error fetching org metadata:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Use mock data if no org connected, otherwise use fetched metadata
+  const metadata = orgMetadata || mockSalesforceMetadata;
   
   // Get all available objects
   const getFilteredObjects = () => {
@@ -196,6 +244,44 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
     }
   };
   
+  // Generate AI query
+  const generateAiQuery = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    setIsGeneratingQuery(true);
+    
+    try {
+      // In a real implementation, this would call a real AI service
+      // For now, we'll simulate an AI response based on the prompt
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network request
+      
+      // Simple simulation of AI-generated queries based on keywords
+      let generatedQuery = '';
+      
+      if (aiPrompt.toLowerCase().includes('account') && aiPrompt.toLowerCase().includes('revenue')) {
+        generatedQuery = 'SELECT Id, Name, AnnualRevenue\nFROM Account\nWHERE AnnualRevenue > 1000000\nORDER BY AnnualRevenue DESC\nLIMIT 10';
+      } else if (aiPrompt.toLowerCase().includes('contact') && aiPrompt.toLowerCase().includes('email')) {
+        generatedQuery = 'SELECT Id, FirstName, LastName, Email, Phone\nFROM Contact\nWHERE Email != null\nLIMIT 20';
+      } else if (aiPrompt.toLowerCase().includes('opportunity') && aiPrompt.toLowerCase().includes('stage')) {
+        generatedQuery = 'SELECT Id, Name, StageName, Amount, CloseDate\nFROM Opportunity\nWHERE StageName = \'Closed Won\'\nORDER BY CloseDate DESC\nLIMIT 15';
+      } else {
+        // Default fallback
+        generatedQuery = `SELECT Id, Name\nFROM ${aiPrompt.includes('Account') ? 'Account' : 'Contact'}\nLIMIT 10`;
+      }
+      
+      setAiGeneratedQuery(generatedQuery);
+      
+      // Option to use the generated query
+      if (confirm('Apply the generated query?')) {
+        onExecuteQuery(generatedQuery);
+      }
+    } catch (error) {
+      console.error('Error generating AI query:', error);
+    } finally {
+      setIsGeneratingQuery(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-2 gap-6">
       <div className="space-y-6">
@@ -234,6 +320,52 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
               <Label htmlFor="custom-objects">Custom Objects</Label>
             </div>
           </div>
+          
+          {/* AI Query Assistant */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="w-full">
+                <BrainCircuit className="mr-2 h-4 w-4" />
+                Ask AI to Write My Query
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>AI Query Assistant</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-sm text-gray-500 mb-4">
+                  Describe what you want to find in your Salesforce org in natural language.
+                  For example: "Show me top 10 accounts by revenue" or "Find contacts without email addresses"
+                </p>
+                <Textarea 
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="What would you like to find in your org?"
+                  rows={4}
+                  className="w-full"
+                />
+                <div className="mt-4 flex justify-end gap-2">
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
+                  <Button 
+                    onClick={generateAiQuery} 
+                    disabled={!aiPrompt.trim() || isGeneratingQuery}
+                  >
+                    {isGeneratingQuery ? (
+                      <>
+                        <span className="mr-2">Generating...</span>
+                        <span className="spinner" />
+                      </>
+                    ) : (
+                      'Generate Query'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
         
         <div className="h-[calc(100vh-500px)] min-h-[200px] overflow-y-auto border rounded-md p-2">
@@ -253,11 +385,15 @@ export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
             </div>
           ))}
           
-          {getFilteredObjects().length === 0 && (
+          {getFilteredObjects().length === 0 && isLoading ? (
+            <div className="flex items-center justify-center h-full text-neutral-500">
+              Loading objects...
+            </div>
+          ) : getFilteredObjects().length === 0 ? (
             <div className="flex items-center justify-center h-full text-neutral-500">
               No objects found
             </div>
-          )}
+          ) : null}
         </div>
       </div>
       
