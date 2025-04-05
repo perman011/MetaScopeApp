@@ -543,6 +543,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`API Usage request received for org ID: ${req.params.id}`);
       console.log(`Request user ID: ${req.user?.id}, Request params: ${JSON.stringify(req.params)}`);
       
+      // Check if demo mode is requested
+      const demoMode = req.query.demo === 'true';
+      
+      if (demoMode) {
+        console.log("Demo mode requested, returning sample API usage data");
+        // Return sample data for demo purposes
+        return res.json({
+          dailyApiRequests: [
+            { date: '2025-03-29', count: 12450 },
+            { date: '2025-03-30', count: 18720 },
+            { date: '2025-03-31', count: 15680 },
+            { date: '2025-04-01', count: 22340 },
+            { date: '2025-04-02', count: 19870 },
+            { date: '2025-04-03', count: 21450 },
+            { date: '2025-04-04', count: 23120 }
+          ],
+          concurrentApiRequests: [
+            { hour: '00:00', count: 45 },
+            { hour: '02:00', count: 21 },
+            { hour: '04:00', count: 18 },
+            { hour: '06:00', count: 53 },
+            { hour: '08:00', count: 102 },
+            { hour: '10:00', count: 187 },
+            { hour: '12:00', count: 230 },
+            { hour: '14:00', count: 281 },
+            { hour: '16:00', count: 223 },
+            { hour: '18:00', count: 186 },
+            { hour: '20:00', count: 91 },
+            { hour: '22:00', count: 58 }
+          ],
+          requestsByType: [
+            { type: 'REST API', count: 35790, percentage: 46 },
+            { type: 'SOAP API', count: 12450, percentage: 16 },
+            { type: 'Bulk API', count: 18720, percentage: 24 },
+            { type: 'Streaming API', count: 7820, percentage: 10 },
+            { type: 'Metadata API', count: 3120, percentage: 4 }
+          ],
+          requestsByMethod: [
+            { method: 'GET', count: 38450, percentage: 49 },
+            { method: 'POST', count: 23400, percentage: 30 },
+            { method: 'PUT', count: 7820, percentage: 10 },
+            { method: 'PATCH', count: 4680, percentage: 6 },
+            { method: 'DELETE', count: 3900, percentage: 5 }
+          ],
+          limitConsumption: [
+            { name: 'Daily API Requests', used: 77900, total: 100000, percentage: 77.9 },
+            { name: 'Data Storage', used: 782, total: 1000, percentage: 78.2 },
+            { name: 'File Storage', used: 5.8, total: 10, percentage: 58 },
+            { name: 'Streaming API Concurrent Clients', used: 28, total: 50, percentage: 56 },
+            { name: 'Bulk API Batch Requests', used: 345, total: 1000, percentage: 34.5 }
+          ],
+          errorRates: {
+            overall: 2.4,
+            trends: [
+              { date: '2025-03-29', rate: 1.8 },
+              { date: '2025-03-30', rate: 2.1 },
+              { date: '2025-03-31', rate: 2.5 },
+              { date: '2025-04-01', rate: 3.2 },
+              { date: '2025-04-02', rate: 2.7 },
+              { date: '2025-04-03', rate: 2.3 },
+              { date: '2025-04-04', rate: 2.0 }
+            ]
+          },
+          topErrors: [
+            { code: 'API_LIMIT_EXCEEDED', count: 128, percentage: 25 },
+            { code: 'INVALID_SESSION_ID', count: 112, percentage: 22 },
+            { code: 'MALFORMED_QUERY', count: 97, percentage: 19 },
+            { code: 'INVALID_FIELD', count: 89, percentage: 18 },
+            { code: 'CANNOT_INSERT_UPDATE_ACTIVATE_ENTITY', count: 82, percentage: 16 }
+          ],
+          topEndpoints: [
+            { endpoint: '/services/data/v57.0/query', count: 18720, percentage: 24 },
+            { endpoint: '/services/data/v57.0/sobjects/Account', count: 15680, percentage: 20 },
+            { endpoint: '/services/data/v57.0/sobjects/Contact', count: 12450, percentage: 16 },
+            { endpoint: '/services/data/v57.0/sobjects/Opportunity', count: 10920, percentage: 14 },
+            { endpoint: '/services/data/v57.0/composite/batch', count: 9360, percentage: 12 },
+            { endpoint: '/services/data/v57.0/sobjects/Case', count: 7820, percentage: 10 },
+            { endpoint: '/services/data/v57.0/sobjects/Task', count: 3120, percentage: 4 }
+          ],
+          userAgents: [
+            { name: 'Integration Middleware', count: 31200, percentage: 40 },
+            { name: 'Custom Mobile App', count: 23400, percentage: 30 },
+            { name: 'Data Sync Tool', count: 15600, percentage: 20 },
+            { name: 'Analytics Dashboard', count: 7800, percentage: 10 }
+          ],
+          responseTimeMs: {
+            average: 428,
+            trends: [
+              { date: '2025-03-29', time: 412 },
+              { date: '2025-03-30', time: 405 },
+              { date: '2025-03-31', time: 418 },
+              { date: '2025-04-01', time: 442 },
+              { date: '2025-04-02', time: 435 },
+              { date: '2025-04-03', time: 430 },
+              { date: '2025-04-04', time: 422 }
+            ]
+          },
+          recommendations: [
+            {
+              id: 'REC001',
+              title: 'Implement API request batching',
+              description: 'Combine multiple record operations into single API calls using the Composite API.',
+              impact: 'Could reduce your daily API requests by approximately 30%.',
+              difficulty: 'Medium'
+            },
+            {
+              id: 'REC002',
+              title: 'Optimize SOQL queries',
+              description: 'Several queries are requesting more fields than needed. Implement field selection to reduce response sizes.',
+              impact: 'Improves response times and reduces bandwidth usage.',
+              difficulty: 'Low'
+            },
+            {
+              id: 'REC003',
+              title: 'Implement proper token refresh',
+              description: 'Session timeouts are causing INVALID_SESSION_ID errors. Implement proactive token refresh.',
+              impact: 'Could eliminate up to 22% of your current API errors.',
+              difficulty: 'Low'
+            },
+            {
+              id: 'REC004',
+              title: 'Schedule bulk operations during off-hours',
+              description: 'Large data operations are concentrated during business hours. Schedule them for off-peak times.',
+              impact: 'Better performance and lower concurrent request counts during business hours.',
+              difficulty: 'Medium'
+            },
+            {
+              id: 'REC005',
+              title: 'Implement rate limiting logic',
+              description: 'Your integrations aren\'t respecting Salesforce API limits. Add client-side rate limiting.',
+              impact: 'Prevents API_LIMIT_EXCEEDED errors which account for 25% of your errors.',
+              difficulty: 'High'
+            }
+          ],
+          success: true,
+          message: "Demo data loaded successfully"
+        });
+      }
+      
       // First validate the org and ownership
       const org = await storage.getOrg(parseInt(req.params.id));
       if (!org) {
@@ -580,10 +719,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Return a more helpful error response with debugging info
-        res.status(502).json({
+        return res.status(502).json({
           error: "Failed to retrieve API usage data",
           message: apiError.message || "There was an error communicating with Salesforce API",
           errorCode: "SALESFORCE_API_ERROR",
+          // Include info about demo mode option
+          demo: "To view demo data, add ?demo=true to your request"
         });
       }
     } catch (error: any) {
@@ -597,7 +738,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         error: "Internal server error",
         message: "An unexpected error occurred while processing your request.",
-        details: error.message
+        details: error.message,
+        // Include info about demo mode option
+        demo: "To view demo data, add ?demo=true to your request"
       });
     }
   });

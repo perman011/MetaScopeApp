@@ -205,7 +205,13 @@ export default function ApiUsagePage() {
   // Add detailed logging for debugging
   console.log("API Usage Page - ActiveOrg:", activeOrg);
   
-  const apiEndpoint = activeOrg ? `/api/orgs/${activeOrg.id}/api-usage` : null;
+  // Create API endpoint with demo parameter if mock data is requested
+  const apiEndpoint = activeOrg 
+    ? (useMockData || useTimeoutMockData)
+      ? `/api/orgs/${activeOrg.id}/api-usage?demo=true` 
+      : `/api/orgs/${activeOrg.id}/api-usage`
+    : null;
+  
   console.log("API Endpoint URL:", apiEndpoint);
   
   const { 
@@ -214,7 +220,9 @@ export default function ApiUsagePage() {
     refetch, 
     error 
   } = useQuery<ApiUsageData>({
-    queryKey: activeOrg ? ['/api/orgs', activeOrg.id, 'api-usage'] : [],
+    queryKey: activeOrg 
+      ? ['/api/orgs', activeOrg.id, 'api-usage', (useMockData || useTimeoutMockData) ? 'demo' : 'real'] 
+      : [],
     enabled: !!activeOrg,
     retry: 2,
     retryDelay: 1000
@@ -293,7 +301,11 @@ export default function ApiUsagePage() {
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => setUseMockData(true)}
+                onClick={() => {
+                  setUseMockData(true);
+                  // Force refetch with new query parameters after state update
+                  setTimeout(() => refetch(), 0);
+                }}
               >
                 View Demo Data
               </Button>
@@ -327,7 +339,11 @@ export default function ApiUsagePage() {
             </p>
             <Button 
               variant="outline" 
-              onClick={() => setUseMockData(true)}
+              onClick={() => {
+                setUseMockData(true);
+                // Force refetch with new query parameters after state update
+                setTimeout(() => refetch(), 0);
+              }}
               className="mx-auto"
             >
               View Demo Data Instead
@@ -359,10 +375,11 @@ export default function ApiUsagePage() {
                           className="ml-2" 
                           onClick={() => {
                             setUseTimeoutMockData(false);
-                            refetch();
+                            // Need to wait for state update to take effect before refetching
+                            setTimeout(() => refetch(), 0);
                           }}
                         >
-                          Try Again
+                          Try Real Data
                         </Button>
                       </>
                     )}
