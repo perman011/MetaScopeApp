@@ -16,7 +16,8 @@ import {
   Lock,
   Terminal,
   Table,
-  FileSearch
+  FileSearch,
+  Zap
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,10 @@ export default function SideNavigation() {
         
         <NavItem href="/dashboard/field-intelligence" icon={FileSearch} active={location === "/dashboard/field-intelligence"}>
           Field Intelligence
+        </NavItem>
+        
+        <NavItem href="/dashboard/api-usage" icon={Zap} active={location === "/dashboard/api-usage"}>
+          API Usage Analytics
         </NavItem>
         
         <div className="pt-4 mt-4 border-t border-neutral-200">

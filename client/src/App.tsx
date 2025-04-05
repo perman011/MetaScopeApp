@@ -18,6 +18,7 @@ import FieldIntelligence from "@/pages/field-intelligence";
 import MetadataAnalytics from "@/pages/metadata-analytics";
 import MetadataAnalyticsPanel from "@/pages/dashboard/MetadataAnalyticsPanel";
 import FieldIntelligencePage from "@/pages/dashboard/FieldIntelligencePage";
+import ApiUsagePage from "@/pages/dashboard/ApiUsagePage";
 import SettingsPage from "@/pages/settings-page";
 import Support from "@/pages/support";
 import Subscription from "@/pages/subscription";
@@ -85,6 +86,7 @@ function AuthenticatedRoutes() {
                 </div>
               } />
               <Route path="/dashboard/field-intelligence" component={FieldIntelligencePage} />
+              <Route path="/dashboard/api-usage" component={ApiUsagePage} />
               <Route path="/settings" component={SettingsPage} />
               <Route path="/support" component={Support} />
               <Route path="/subscription" component={Subscription} />

@@ -536,6 +536,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // API Usage Endpoint
+  app.get("/api/orgs/:id/api-usage", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      console.log(`Fetching API usage data for org ${org.id}`);
+      
+      try {
+        // Get API usage data from Salesforce
+        const apiUsageData = await salesforceService.getApiUsageData(org);
+        res.json(apiUsageData);
+      } catch (apiError) {
+        console.error("Error retrieving API usage data:", apiError);
+        res.status(500).json({
+          error: "Failed to retrieve API usage data",
+          message: apiError.message,
+          // Provide fallback data structure for the client
+          dailyApiRequests: { used: 0, total: 0 },
+          concurrentApiRequests: { used: 0, total: 0 },
+          requestsByType: [],
+          requestsByMethod: [],
+          topConsumers: [],
+          errorRates: [],
+          usageTrend: [],
+          responseTime: { average: 0, percentile95: 0, percentile99: 0 },
+          batchEfficiency: { batchOperations: 0, singleOperations: 0, potentialBatchSavings: 0 },
+          rateLimitEvents: [],
+          optimizationRecommendations: []
+        });
+      }
+    } catch (error) {
+      console.error("Error processing API usage request:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
   // Get list of all objects for filtering
   app.get("/api/orgs/:id/metadata/objects", ensureAuthenticated, async (req, res) => {
     try {
