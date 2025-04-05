@@ -4,6 +4,7 @@ import HealthScoreOverview from "@/components/dashboard/health-score-overview";
 import ActionableInsightsCard from "@/components/dashboard/actionable-insights-card";
 import OrgHealthCard from "@/components/dashboard/org-health-card";
 import IssueDetailsCard from "@/components/dashboard/issue-details-card";
+import SimplifiedOrgHealth from "@/components/dashboard/simplified-org-health";
 import ConfigurationRadarChart from "@/components/visualization/configuration-radar-chart";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,7 @@ export default function OrgHealth() {
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-4">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="simplified">Simplified View</TabsTrigger>
           <TabsTrigger value="issues">Issues & Recommendations</TabsTrigger>
           <TabsTrigger value="metrics">Health Metrics</TabsTrigger>
         </TabsList>
@@ -132,6 +134,24 @@ export default function OrgHealth() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+        
+        <TabsContent value="simplified" className="space-y-6">
+          {/* Simplified Organization Health View */}
+          <div className="max-w-4xl mx-auto">
+            <SimplifiedOrgHealth 
+              healthScore={healthScore} 
+              isLoading={isHealthScoreLoading}
+              onIssueClick={(issueId) => {
+                setActiveTab("issues");
+                // Could add more logic here to scroll to the specific issue
+                toast({
+                  title: "Issue Selected",
+                  description: `Viewing details for issue ${issueId}`,
+                });
+              }}
+            />
+          </div>
         </TabsContent>
         
         <TabsContent value="issues">

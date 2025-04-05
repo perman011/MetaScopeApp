@@ -1,0 +1,131 @@
+import React, { useState } from 'react';
+import { CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+
+const SimplifiedOrgHealth = () => {
+  const [expandedCategory, setExpandedCategory] = useState(null);
+  
+  // Mock data
+  const healthData = {
+    overallScore: 87,
+    changeSinceLastCheck: 3,
+    categories: [
+      { name: 'Security & Access', score: 72, maxScore: 100 },
+      { name: 'Data Model', score: 91, maxScore: 100 },
+      { name: 'Automation Logic', score: 88, maxScore: 100 },
+      { name: 'Apex Code', score: 85, maxScore: 100 },
+      { name: 'UI Components', score: 64, maxScore: 100 }
+    ],
+    issues: {
+      'Security & Access': [
+        { id: 'SEC-001', title: 'Excessive Profile Permissions', severity: 'critical' },
+        { id: 'SEC-002', title: 'Insecure Field-Level Security', severity: 'critical' }
+      ],
+      'Data Model': [
+        { id: 'DM-001', title: 'Missing Field Description', severity: 'warning' }
+      ],
+      'Automation Logic': [
+        { id: 'AUTO-001', title: 'Inefficient Process Builder', severity: 'warning' },
+        { id: 'AUTO-002', title: 'Workflow Rule Conflicts', severity: 'warning' }
+      ],
+      'Apex Code': [
+        { id: 'APEX-001', title: 'SOQL in Loop', severity: 'info' }
+      ],
+      'UI Components': []
+    }
+  };
+  
+  const toggleCategory = (categoryName) => {
+    if (expandedCategory === categoryName) {
+      setExpandedCategory(null);
+    } else {
+      setExpandedCategory(categoryName);
+    }
+  };
+  
+  const getSeverityIcon = (severity) => {
+    switch (severity) {
+      case 'critical':
+        return <div className="h-4 w-4 text-red-500 rounded-full bg-red-100 flex items-center justify-center">!</div>;
+      case 'warning':
+        return <div className="h-4 w-4 text-amber-500 rounded-full bg-amber-100 flex items-center justify-center">!</div>;
+      default:
+        return <div className="h-4 w-4 text-blue-500 rounded-full bg-blue-100 flex items-center justify-center">i</div>;
+    }
+  };
+  
+  return (
+    <div className="p-4 max-w-2xl mx-auto">
+      {/* Overall Health Card */}
+      <div className="mb-6 bg-white rounded-lg shadow p-4">
+        <div className="flex items-center">
+          <CheckCircle className="h-12 w-12 text-green-500 mr-4" />
+          <div>
+            <h2 className="text-xl font-bold">Overall Health</h2>
+            <div className="flex items-baseline">
+              <span className="text-4xl font-bold">{healthData.overallScore}/100</span>
+              <span className="ml-2 text-sm text-green-500">
+                +{healthData.changeSinceLastCheck} since last check
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Score Breakdown */}
+      <h3 className="text-lg font-semibold mb-4">Score Breakdown</h3>
+      <div className="space-y-4">
+        {healthData.categories.map((category) => (
+          <div key={category.name} className="bg-white rounded-lg shadow overflow-hidden">
+            <div 
+              className="p-4 cursor-pointer hover:bg-gray-50"
+              onClick={() => toggleCategory(category.name)}
+            >
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  {expandedCategory === category.name ? 
+                    <ChevronUp className="h-5 w-5 text-gray-500 mr-2" /> : 
+                    <ChevronDown className="h-5 w-5 text-gray-500 mr-2" />
+                  }
+                  <span className="font-medium">{category.name}</span>
+                </div>
+                <span className="font-semibold">{category.score}/{category.maxScore}</span>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-blue-500 rounded-full"
+                  style={{ width: `${(category.score / category.maxScore) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            
+            {/* Expanded section with issues */}
+            {expandedCategory === category.name && (
+              <div className="bg-gray-50 p-4 border-t">
+                <h4 className="text-sm font-semibold mb-2">Issues Found</h4>
+                {healthData.issues[category.name].length > 0 ? (
+                  <ul className="space-y-2">
+                    {healthData.issues[category.name].map((issue) => (
+                      <li 
+                        key={issue.id} 
+                        className="flex items-center p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer"
+                      >
+                        {getSeverityIcon(issue.severity)}
+                        <span className="ml-2">{issue.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">No issues found in this category.</p>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default SimplifiedOrgHealth;
