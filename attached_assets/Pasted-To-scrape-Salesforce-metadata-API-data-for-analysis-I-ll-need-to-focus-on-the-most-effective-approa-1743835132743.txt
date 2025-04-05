@@ -1,0 +1,70 @@
+To scrape Salesforce metadata API data for analysis, I'll need to focus on the most effective approach for your project.
+
+Here's how to implement it properly:
+
+1. Use JSForce's metadata API methods:
+```javascript
+async getMetadataDetailsFromOrg(org: SalesforceOrg) {
+  try {
+    const conn = this.createConnection(org);
+    // Retrieve metadata types first
+    const metadataTypes = await conn.metadata.describe();
+    
+    // Then get actual components for each type
+    const metadataComponents = [];
+    for (const type of metadataTypes.metadataObjects) {
+      const components = await conn.metadata.list([{type: type.xmlName}]);
+      metadataComponents.push(...components);
+    }
+    
+    return this.processMetadataForAnalysis(metadataComponents);
+  } catch (error) {
+    console.error('Error fetching metadata:', error);
+    throw error;
+  }
+}
+```
+
+2. Process the metadata for analysis:
+```javascript
+private processMetadataForAnalysis(components: any[]) {
+  // Group components by type
+  const byType = components.reduce((acc, component) => {
+    const type = component.type || 'Unknown';
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(component);
+    return acc;
+  }, {});
+  
+  // Calculate metrics for visualization
+  return {
+    totalComponents: components.length,
+    componentsByType: Object.entries(byType).map(([type, items]) => ({
+      type,
+      count: items.length,
+      percentage: (items.length / components.length * 100).toFixed(1)
+    })),
+    // Other metrics as needed
+  };
+}
+```
+
+3. Create a dedicated endpoint in routes.ts:
+```javascript
+app.get('/api/orgs/:id/metadata-analytics', async (req, res) => {
+  try {
+    const orgId = parseInt(req.params.id);
+    const org = await storage.getOrg(orgId);
+    
+    if (!org) return res.status(404).json({ error: 'Organization not found' });
+    
+    const metadataAnalytics = await salesforceService.getMetadataDetailsFromOrg(org);
+    return res.json(metadataAnalytics);
+  } catch (error) {
+    console.error('Failed to fetch metadata analytics:', error);
+    return res.status(500).json({ error: 'Failed to fetch metadata analytics' });
+  }
+});
+```
+
+This approach will properly scrape Salesforce metadata for analysis and visualization in your dashboard.

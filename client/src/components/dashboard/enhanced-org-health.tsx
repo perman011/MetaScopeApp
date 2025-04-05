@@ -204,6 +204,7 @@ export default function EnhancedOrgHealth({
     );
   }
   
+  // Provide default values but maintain original data structure
   const data = healthScore || {
     overallScore: 0,
     securityScore: 0,
@@ -285,8 +286,8 @@ export default function EnhancedOrgHealth({
                   <p className="text-neutral-500">Based on Salesforce best practices</p>
                 </div>
                 <div className="flex items-center justify-center rounded-full w-24 h-24 bg-neutral-100">
-                  <span className={`text-3xl font-bold ${getScoreColor(data.overallScore)}`}>
-                    {data.overallScore}
+                  <span className={`text-3xl font-bold ${getScoreColor(data?.overallScore || 0)}`}>
+                    {data?.overallScore || 0}
                   </span>
                 </div>
               </div>
@@ -295,54 +296,54 @@ export default function EnhancedOrgHealth({
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Security</span>
-                    <span className={getScoreColor(data.securityScore)}>{data.securityScore}/100</span>
+                    <span className={getScoreColor(data?.securityScore || 0)}>{data?.securityScore || 0}/100</span>
                   </div>
-                  <CustomProgress value={data.securityScore} className="h-2" indicatorClassName={getScoreBackgroundColor(data.securityScore)} />
+                  <CustomProgress value={data?.securityScore || 0} className="h-2" indicatorClassName={getScoreBackgroundColor(data?.securityScore || 0)} />
                 </div>
                 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Data Model</span>
-                    <span className={getScoreColor(data.dataModelScore)}>{data.dataModelScore}/100</span>
+                    <span className={getScoreColor(data?.dataModelScore || 0)}>{data?.dataModelScore || 0}/100</span>
                   </div>
-                  <CustomProgress value={data.dataModelScore} className="h-2" indicatorClassName={getScoreBackgroundColor(data.dataModelScore)} />
+                  <CustomProgress value={data?.dataModelScore || 0} className="h-2" indicatorClassName={getScoreBackgroundColor(data?.dataModelScore || 0)} />
                 </div>
                 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Automation</span>
-                    <span className={getScoreColor(data.automationScore)}>{data.automationScore}/100</span>
+                    <span className={getScoreColor(data?.automationScore || 0)}>{data?.automationScore || 0}/100</span>
                   </div>
-                  <CustomProgress value={data.automationScore} className="h-2" indicatorClassName={getScoreBackgroundColor(data.automationScore)} />
+                  <CustomProgress value={data?.automationScore || 0} className="h-2" indicatorClassName={getScoreBackgroundColor(data?.automationScore || 0)} />
                 </div>
                 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Apex Code</span>
-                    <span className={getScoreColor(data.apexScore)}>{data.apexScore}/100</span>
+                    <span className={getScoreColor(data?.apexScore || 0)}>{data?.apexScore || 0}/100</span>
                   </div>
-                  <CustomProgress value={data.apexScore} className="h-2" indicatorClassName={getScoreBackgroundColor(data.apexScore)} />
+                  <CustomProgress value={data?.apexScore || 0} className="h-2" indicatorClassName={getScoreBackgroundColor(data?.apexScore || 0)} />
                 </div>
                 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Lightning Adoption</span>
-                    <span className={getScoreColor(extendedMetrics.lightningAdoptionRate)}>{extendedMetrics.lightningAdoptionRate}%</span>
+                    <span className={getScoreColor(extendedMetrics?.lightningAdoptionRate || 0)}>{extendedMetrics?.lightningAdoptionRate || 0}%</span>
                   </div>
-                  <CustomProgress value={extendedMetrics.lightningAdoptionRate} className="h-2" indicatorClassName={getScoreBackgroundColor(extendedMetrics.lightningAdoptionRate)} />
+                  <CustomProgress value={extendedMetrics?.lightningAdoptionRate || 0} className="h-2" indicatorClassName={getScoreBackgroundColor(extendedMetrics?.lightningAdoptionRate || 0)} />
                 </div>
                 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Storage Utilization</span>
-                    <span className={getScoreColor(100 - (extendedMetrics.dataStorageUsed / extendedMetrics.dataStorageLimit * 100))}>
-                      {Math.round(extendedMetrics.dataStorageUsed / extendedMetrics.dataStorageLimit * 100)}%
+                    <span className={getScoreColor(100 - ((extendedMetrics?.dataStorageUsed || 0) / (extendedMetrics?.dataStorageLimit || 1) * 100))}>
+                      {Math.round((extendedMetrics?.dataStorageUsed || 0) / (extendedMetrics?.dataStorageLimit || 1) * 100)}%
                     </span>
                   </div>
                   <CustomProgress 
-                    value={Math.round(extendedMetrics.dataStorageUsed / extendedMetrics.dataStorageLimit * 100)} 
+                    value={Math.round((extendedMetrics?.dataStorageUsed || 0) / (extendedMetrics?.dataStorageLimit || 1) * 100)} 
                     className="h-2" 
-                    indicatorClassName={getScoreBackgroundColor(100 - (extendedMetrics.dataStorageUsed / extendedMetrics.dataStorageLimit * 100))} 
+                    indicatorClassName={getScoreBackgroundColor(100 - ((extendedMetrics?.dataStorageUsed || 0) / (extendedMetrics?.dataStorageLimit || 1) * 100))} 
                   />
                 </div>
               </div>
@@ -391,8 +392,8 @@ export default function EnhancedOrgHealth({
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="border rounded p-3">
                   <div className="text-sm text-neutral-500">Profiles</div>
-                  <div className="text-lg font-semibold">{extendedMetrics.profilesCount}</div>
-                  {extendedMetrics.profilesCount > 20 && (
+                  <div className="text-lg font-semibold">{extendedMetrics?.profilesCount || 0}</div>
+                  {(extendedMetrics?.profilesCount || 0) > 20 && (
                     <div className="text-xs text-amber-600 flex items-center mt-1">
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       Consider consolidating profiles
@@ -402,23 +403,23 @@ export default function EnhancedOrgHealth({
                 
                 <div className="border rounded p-3">
                   <div className="text-sm text-neutral-500">Permission Sets</div>
-                  <div className="text-lg font-semibold">{extendedMetrics.permissionSetsCount}</div>
-                  {extendedMetrics.unassignedPermissionSets > 0 && (
+                  <div className="text-lg font-semibold">{extendedMetrics?.permissionSetsCount || 0}</div>
+                  {(extendedMetrics?.unassignedPermissionSets || 0) > 0 && (
                     <div className="text-xs text-amber-600 flex items-center mt-1">
                       <AlertTriangle className="h-3 w-3 mr-1" />
-                      {extendedMetrics.unassignedPermissionSets} unassigned
+                      {extendedMetrics?.unassignedPermissionSets || 0} unassigned
                     </div>
                   )}
                 </div>
                 
                 <div className="border rounded p-3">
                   <div className="text-sm text-neutral-500">Validation Rules</div>
-                  <div className="text-lg font-semibold">{extendedMetrics.validationRulesCount}</div>
+                  <div className="text-lg font-semibold">{extendedMetrics?.validationRulesCount || 0}</div>
                 </div>
                 
                 <div className="border rounded p-3">
                   <div className="text-sm text-neutral-500">Duplicate Rules</div>
-                  <div className="text-lg font-semibold">{extendedMetrics.duplicateRulesCount}</div>
+                  <div className="text-lg font-semibold">{extendedMetrics?.duplicateRulesCount || 0}</div>
                 </div>
               </div>
               
@@ -445,15 +446,15 @@ export default function EnhancedOrgHealth({
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-neutral-600">API Daily Request Limits</span>
-                    <span className="font-medium">{extendedMetrics.apiDailyRequestsUsage}%</span>
+                    <span className="font-medium">{extendedMetrics?.apiDailyRequestsUsage || 0}%</span>
                   </div>
                   <CustomProgress 
-                    value={extendedMetrics.apiDailyRequestsUsage} 
+                    value={extendedMetrics?.apiDailyRequestsUsage || 0} 
                     className="h-2"
                     indicatorClassName={cn({
-                      "bg-green-500": extendedMetrics.apiDailyRequestsUsage < 50,
-                      "bg-amber-500": extendedMetrics.apiDailyRequestsUsage >= 50 && extendedMetrics.apiDailyRequestsUsage < 80,
-                      "bg-red-500": extendedMetrics.apiDailyRequestsUsage >= 80
+                      "bg-green-500": (extendedMetrics?.apiDailyRequestsUsage || 0) < 50,
+                      "bg-amber-500": (extendedMetrics?.apiDailyRequestsUsage || 0) >= 50 && (extendedMetrics?.apiDailyRequestsUsage || 0) < 80,
+                      "bg-red-500": (extendedMetrics?.apiDailyRequestsUsage || 0) >= 80
                     })}
                   />
                 </div>
@@ -461,15 +462,15 @@ export default function EnhancedOrgHealth({
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-neutral-600">Apex Heap Usage</span>
-                    <span className="font-medium">{extendedMetrics.apexHeapUsage}%</span>
+                    <span className="font-medium">{extendedMetrics?.apexHeapUsage || 0}%</span>
                   </div>
                   <CustomProgress 
-                    value={extendedMetrics.apexHeapUsage} 
+                    value={extendedMetrics?.apexHeapUsage || 0} 
                     className="h-2"
                     indicatorClassName={cn({
-                      "bg-green-500": extendedMetrics.apexHeapUsage < 50,
-                      "bg-amber-500": extendedMetrics.apexHeapUsage >= 50 && extendedMetrics.apexHeapUsage < 80,
-                      "bg-red-500": extendedMetrics.apexHeapUsage >= 80
+                      "bg-green-500": (extendedMetrics?.apexHeapUsage || 0) < 50,
+                      "bg-amber-500": (extendedMetrics?.apexHeapUsage || 0) >= 50 && (extendedMetrics?.apexHeapUsage || 0) < 80,
+                      "bg-red-500": (extendedMetrics?.apexHeapUsage || 0) >= 80
                     })}
                   />
                 </div>
@@ -477,11 +478,11 @@ export default function EnhancedOrgHealth({
                 <div className="flex items-center justify-between text-sm p-2 border rounded">
                   <div>
                     <span className="block text-neutral-500">SOQL Query Average</span>
-                    <span className="font-medium">{extendedMetrics.soqlQueriesAvgTime} ms</span>
+                    <span className="font-medium">{extendedMetrics?.soqlQueriesAvgTime || 0} ms</span>
                   </div>
                   <div>
                     <span className="block text-neutral-500">DML Statements (Daily)</span>
-                    <span className="font-medium">{extendedMetrics.dmlStatementsCount.toLocaleString()}</span>
+                    <span className="font-medium">{(extendedMetrics?.dmlStatementsCount || 0).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -759,18 +760,18 @@ export default function EnhancedOrgHealth({
                               <div className="flex items-center justify-between mb-1">
                                 <div>
                                   <span className="text-xs font-semibold inline-block text-blue-600">
-                                    {Math.round(extendedMetrics.dataStorageUsed / extendedMetrics.dataStorageLimit * 100)}%
+                                    {Math.round((extendedMetrics?.dataStorageUsed || 0) / (extendedMetrics?.dataStorageLimit || 1) * 100)}%
                                   </span>
                                 </div>
                                 <div className="text-right">
                                   <span className="text-xs font-semibold inline-block text-neutral-600">
-                                    {extendedMetrics.dataStorageUsed} GB / {extendedMetrics.dataStorageLimit} GB
+                                    {extendedMetrics?.dataStorageUsed || 0} GB / {extendedMetrics?.dataStorageLimit || 0} GB
                                   </span>
                                 </div>
                               </div>
                               <div className="overflow-hidden h-2 text-xs flex rounded bg-blue-200">
                                 <div 
-                                  style={{ width: `${(extendedMetrics.dataStorageUsed / extendedMetrics.dataStorageLimit) * 100}%` }} 
+                                  style={{ width: `${((extendedMetrics?.dataStorageUsed || 0) / (extendedMetrics?.dataStorageLimit || 1)) * 100}%` }} 
                                   className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
                                 ></div>
                               </div>
@@ -785,18 +786,18 @@ export default function EnhancedOrgHealth({
                               <div className="flex items-center justify-between mb-1">
                                 <div>
                                   <span className="text-xs font-semibold inline-block text-green-600">
-                                    {Math.round(extendedMetrics.fileStorageUsed / extendedMetrics.fileStorageLimit * 100)}%
+                                    {Math.round((extendedMetrics?.fileStorageUsed || 0) / (extendedMetrics?.fileStorageLimit || 1) * 100)}%
                                   </span>
                                 </div>
                                 <div className="text-right">
                                   <span className="text-xs font-semibold inline-block text-neutral-600">
-                                    {extendedMetrics.fileStorageUsed} GB / {extendedMetrics.fileStorageLimit} GB
+                                    {extendedMetrics?.fileStorageUsed || 0} GB / {extendedMetrics?.fileStorageLimit || 0} GB
                                   </span>
                                 </div>
                               </div>
                               <div className="overflow-hidden h-2 text-xs flex rounded bg-green-200">
                                 <div 
-                                  style={{ width: `${(extendedMetrics.fileStorageUsed / extendedMetrics.fileStorageLimit) * 100}%` }} 
+                                  style={{ width: `${((extendedMetrics?.fileStorageUsed || 0) / (extendedMetrics?.fileStorageLimit || 1)) * 100}%` }} 
                                   className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"
                                 ></div>
                               </div>
@@ -808,7 +809,7 @@ export default function EnhancedOrgHealth({
                       <div>
                         <h3 className="font-medium text-sm mb-2">Largest Objects by Storage</h3>
                         <div className="space-y-2">
-                          {extendedMetrics.largestObjects.map((obj, i) => (
+                          {(extendedMetrics?.largestObjects || []).map((obj, i) => (
                             <div key={i} className="flex items-center justify-between text-sm p-2 border rounded">
                               <span>{obj.name}</span>
                               <span className="font-medium">{obj.size} GB</span>
@@ -831,20 +832,20 @@ export default function EnhancedOrgHealth({
                     <div className="space-y-4 p-2">
                       <div className="flex items-center space-x-4">
                         <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center">
-                          <span className="text-xl font-bold text-blue-700">{extendedMetrics.lightningAdoptionRate}%</span>
+                          <span className="text-xl font-bold text-blue-700">{extendedMetrics?.lightningAdoptionRate || 0}%</span>
                         </div>
                         <div>
                           <h3 className="font-medium">Adoption Rate</h3>
                           <p className="text-sm text-neutral-500">
-                            {extendedMetrics.classicUsersCount} users still on Salesforce Classic
+                            {extendedMetrics?.classicUsersCount || 0} users still on Salesforce Classic
                           </p>
                         </div>
                       </div>
                       
                       <div className="space-y-1">
                         <div className="text-sm text-neutral-500">Lightning Compatibility</div>
-                        <CustomProgress value={extendedMetrics.lightningCompatibilityScore} className="h-2" />
-                        <div className="text-xs">{extendedMetrics.lightningCompatibilityScore}/100</div>
+                        <CustomProgress value={extendedMetrics?.lightningCompatibilityScore || 0} className="h-2" />
+                        <div className="text-xs">{extendedMetrics?.lightningCompatibilityScore || 0}/100</div>
                       </div>
                       
                       <Alert className="bg-blue-50 text-blue-800 border-blue-200">
