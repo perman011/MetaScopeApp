@@ -17,6 +17,7 @@ import ApexDebugAnalyzer from "@/pages/apex-debug-analyzer";
 import FieldIntelligence from "@/pages/field-intelligence";
 import MetadataAnalytics from "@/pages/metadata-analytics";
 import MetadataAnalyticsPanel from "@/pages/dashboard/MetadataAnalyticsPanel";
+import FieldIntelligencePage from "@/pages/dashboard/FieldIntelligencePage";
 import SettingsPage from "@/pages/settings-page";
 import Support from "@/pages/support";
 import Subscription from "@/pages/subscription";
@@ -83,6 +84,7 @@ function AuthenticatedRoutes() {
                   <MetadataAnalyticsPanel />
                 </div>
               } />
+              <Route path="/dashboard/field-intelligence" component={FieldIntelligencePage} />
               <Route path="/settings" component={SettingsPage} />
               <Route path="/support" component={Support} />
               <Route path="/subscription" component={Subscription} />

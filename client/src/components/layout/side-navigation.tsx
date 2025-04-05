@@ -15,7 +15,8 @@ import {
   Link2,
   Lock,
   Terminal,
-  Table
+  Table,
+  FileSearch
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -100,6 +101,10 @@ export default function SideNavigation() {
         
         <NavItem href="/apex-debug-analyzer" icon={Terminal} active={location === "/apex-debug-analyzer"}>
           Apex Debug Analyzer
+        </NavItem>
+        
+        <NavItem href="/dashboard/field-intelligence" icon={FileSearch} active={location === "/dashboard/field-intelligence"}>
+          Field Intelligence
         </NavItem>
         
         <div className="pt-4 mt-4 border-t border-neutral-200">
