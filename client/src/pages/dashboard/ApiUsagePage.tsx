@@ -6,7 +6,12 @@ import { toast } from '@/hooks/use-toast';
 import ConnectSalesforceOrgDialog from '@/components/connect-salesforce-org-dialog';
 import { useOrgContext } from '@/hooks/use-org';
 import ApiUsage from '@/components/dashboard/api-usage';
-import { Database } from 'lucide-react';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
+import { AlertTriangle, Database } from 'lucide-react';
 
 // Define the API Usage data interface
 interface ApiUsageData {
@@ -193,18 +198,46 @@ const mockApiUsageData: ApiUsageData = {
 export default function ApiUsagePage() {
   const [openConnectDialog, setOpenConnectDialog] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
+  const [useTimeoutMockData, setUseTimeoutMockData] = useState(false);
   const { activeOrg } = useOrgContext();
   
   // Fetch API usage data
   const { data: apiUsageData, isLoading: isApiUsageLoading, refetch, error } = useQuery<ApiUsageData>({
     queryKey: activeOrg ? ['/api/orgs', activeOrg.id, 'api-usage'] : [],
     enabled: !!activeOrg,
+    retry: 2,
+    retryDelay: 1000, 
   });
+  
+  // Set a timeout to fall back to mock data if the API request takes too long
+  React.useEffect(() => {
+    // Only run the timeout when we're actively loading and have an org
+    if (isApiUsageLoading && activeOrg && !useMockData) {
+      console.log("Starting timeout for API usage data fetch");
+      const timeoutId = setTimeout(() => {
+        console.log("API usage data fetch timeout triggered, using mock data");
+        setUseTimeoutMockData(true);
+        toast({
+          title: "Using demo data",
+          description: "The API request is taking longer than expected. Showing sample data for now.",
+          variant: "default",
+        });
+      }, 5000); // 5 second timeout
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isApiUsageLoading, activeOrg, useMockData]);
   
   // Log any API errors for debugging
   React.useEffect(() => {
     if (error) {
       console.error("Error fetching API usage data:", error);
+      toast({
+        title: "API data fetch error",
+        description: "Error fetching API usage data. Showing demo data instead.",
+        variant: "destructive",
+      });
+      setUseTimeoutMockData(true);
     }
   }, [error]);
   
@@ -267,16 +300,43 @@ export default function ApiUsagePage() {
     );
   }
   
-  // Make sure we explicitly use the mock data if useMockData is true
-  const dataToUse = useMockData ? mockApiUsageData : apiUsageData;
+  // Make sure we explicitly use the mock data if useMockData is true or timeout triggered
+  const dataToUse = useMockData || useTimeoutMockData ? mockApiUsageData : apiUsageData;
   
   return (
     <div className="p-4 space-y-6">
       <div className="w-full max-w-7xl mx-auto">
+        {useTimeoutMockData && !useMockData && (
+          <div className="mb-4 w-full">
+            <div className="bg-amber-50 border border-amber-300 text-amber-800 p-4 rounded-md mb-4">
+              <div className="flex items-start">
+                <AlertTriangle className="h-5 w-5 mr-2 text-amber-600 mt-0.5" />
+                <div>
+                  <h3 className="font-medium">Using demo data</h3>
+                  <p className="text-sm mt-1">
+                    Unable to fetch real-time API usage data. Showing sample data instead.
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="ml-2" 
+                      onClick={() => {
+                        setUseTimeoutMockData(false);
+                        refetch();
+                      }}
+                    >
+                      Try Again
+                    </Button>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <ApiUsage 
           orgId={activeOrg?.id || 0}
           apiUsageData={dataToUse || mockApiUsageData} 
-          isLoading={isApiUsageLoading && !useMockData}
+          isLoading={isApiUsageLoading && !useMockData && !useTimeoutMockData}
           onRefresh={handleRefresh}
           onActionClick={handleActionClick}
         />
