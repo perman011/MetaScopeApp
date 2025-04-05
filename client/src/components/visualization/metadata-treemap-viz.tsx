@@ -192,7 +192,7 @@ export default function MetadataTreemapViz({
               <Treemap
                 data={displayData}
                 dataKey="size"
-                ratio={4/3}
+                // Removed ratio property as it's not supported
                 stroke="#fff"
                 content={<CustomTreemapContent />}
                 animationDuration={500}

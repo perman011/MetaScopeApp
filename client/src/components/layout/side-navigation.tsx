@@ -104,6 +104,10 @@ export default function SideNavigation() {
           Apex Debug Analyzer
         </NavItem>
         
+        <NavItem href="/metadata-analytics" icon={BarChart3} active={location === "/metadata-analytics"}>
+          Metadata Analytics
+        </NavItem>
+        
         <NavItem href="/dashboard/field-intelligence" icon={FileSearch} active={location === "/dashboard/field-intelligence"}>
           Field Intelligence
         </NavItem>
