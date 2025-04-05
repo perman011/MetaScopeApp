@@ -112,7 +112,9 @@ export type InsertMetadata = z.infer<typeof insertMetadataSchema>;
 export type Metadata = typeof metadata.$inferSelect;
 
 export type InsertHealthScore = z.infer<typeof insertHealthScoreSchema>;
-export type HealthScore = typeof healthScores.$inferSelect;
+export type HealthScore = typeof healthScores.$inferSelect & {
+  issues?: HealthScoreIssue[];
+};
 
 // Health score issue types
 export interface HealthScoreIssue {

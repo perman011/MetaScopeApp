@@ -1,0 +1,60 @@
+## Implementation Plan for MetaScope's Org Health Component
+
+Based on your requirements, here's a comprehensive plan for implementing the Salesforce org health analytics functionality:
+
+### 1. Org Health Definition & Metrics
+
+The Org Health component evaluates your Salesforce organization using five key categories:
+- Security & Access (72/100)
+- Data Model (91/100)
+- Automation Logic (88/100) 
+- Apex Code (85/100)
+- UI Components (64/100)
+
+These combine to form an Overall Health score (87/100).
+
+### 2. Dashboard Organization
+
+The implementation follows a three-tier approach:
+- Top-level metrics (overall score, trend indicators)
+- Category breakdown with visual progress bars
+- Detailed issue analysis with actionable recommendations
+
+### 3. Key Features Implemented
+
+1. **Main Dashboard Tab** - Shows the high-level metrics with tabs for Organization Health, Field Intelligence, and API Usage
+   
+2. **Org Health Component** - Displays:
+   - Overall health score with trend indicator
+   - Issues summary (critical/warnings/info)
+   - Category breakdown scores with interactive expansion
+   
+3. **Detailed Analytics** - Provides:
+   - Issue details with severity indicators
+   - Code examples for fixing issues
+   - Auto-fix capabilities for supported issues
+   
+4. **Action Items** - Enables users to:
+   - View detailed recommendations
+   - Apply automatic fixes
+   - Export or email reports
+
+### 4. User Flow
+
+1. User views Dashboard → clicks "Org Health" tab
+2. Views overall health score and category breakdown
+3. Expands categories to see specific issues
+4. Clicks on issues to see detailed analysis and solution options
+5. Takes action to resolve issues through provided recommendations
+
+### 5. Technical Components Created
+
+I've implemented the following components:
+
+1. **OrgHealthComponent** - Main component showing the health dashboard
+2. **SalesforceMetadataService** - Service for fetching metadata and health metrics
+3. **OrgHealthLogic** - Business logic for calculating health scores
+4. **OrgHealthDashboardTab** - Parent container for the dashboard
+5. **IssueDetailsModal** - Modal displaying detailed issue information
+
+These components follow React/TypeScript best practices and maintain the existing code structure and architecture as instructed.

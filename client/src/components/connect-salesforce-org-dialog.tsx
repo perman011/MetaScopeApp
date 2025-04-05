@@ -1,47 +1,31 @@
-import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useOrgContext } from "@/hooks/use-org";
+import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
+import { useOrgContext } from "@/hooks/use-org";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
   DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose
+  DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, KeyRound, Key, CheckCircle, AlertCircle } from "lucide-react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import {
-  Progress
-} from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { SalesforceConnectionError } from "@/components/salesforce-connection-error";
+import { Progress } from "@/components/ui/progress";
+import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+
+type ConnectionStatus = 'idle' | 'connecting' | 'validating' | 'fetching_metadata' | 'success' | 'error';
 
 interface ConnectSalesforceOrgDialogProps {
   children: React.ReactNode;
   onSuccess?: () => void;
 }
-
-type ConnectionStatus = 'idle' | 'connecting' | 'validating' | 'fetching_metadata' | 'success' | 'error';
 
 export default function ConnectSalesforceOrgDialog({ 
   children, 
@@ -81,138 +65,96 @@ export default function ConnectSalesforceOrgDialog({
       setConnectionProgress(80);
     } else if (connectionStatus === 'success') {
       setConnectionProgress(100);
-    } else if (connectionStatus === 'error') {
-      setConnectionProgress(100);
-    } else {
-      setConnectionProgress(0);
     }
     
     return () => {
-      if (timer) clearTimeout(timer);
+      if (timer) {
+        clearTimeout(timer);
+      }
     };
   }, [connectionStatus]);
-
+  
+  // Connect mutation
   const connectMutation = useMutation({
-    mutationFn: async (orgData: any) => {
-      // Set initial connection status
+    mutationFn: async (data: any) => {
       setConnectionStatus('connecting');
       setConnectionError(null);
       
       try {
-        console.log("Connecting org with data:", orgData);
+        const res = await apiRequest("POST", "/api/orgs", data);
+        const newOrg = await res.json();
         
-        // Simulate connection phases with real API call
-        const response = await apiRequest("POST", "/api/orgs", orgData);
-        
-        // Update to validating phase
+        // Simulate metadata fetching (would happen on the server in production)
         setConnectionStatus('validating');
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        const result = await response.json();
-        console.log("Connection success, received:", result);
-        
-        // Update to fetching metadata phase
         setConnectionStatus('fetching_metadata');
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Allow UI to show fetching metadata phase for a moment
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Set to success
         setConnectionStatus('success');
-        
-        return result;
-      } catch (error) {
-        // Set error status
+        return newOrg;
+      } catch (error: any) {
+        console.error('Connection error:', error);
         setConnectionStatus('error');
-        if (error instanceof Error) {
-          setConnectionError(error.message);
-        } else {
-          setConnectionError('An unknown error occurred');
-        }
+        setConnectionError(error.message || "Failed to connect to Salesforce org");
         throw error;
       }
     },
-    onSuccess: async (data) => {
-      console.log("Invalidating queries and refreshing org data");
-      
-      // Keep success state visible for a moment before closing
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      await queryClient.invalidateQueries({ queryKey: ["/api/orgs"] });
-      // Use our manual refetch to ensure UI is updated
-      await refetchOrgs();
-      
-      toast({
-        title: "Org connected successfully",
-        description: `Your Salesforce org has been connected to your account.`,
-      });
-      
-      // Reset connection state and close dialog
-      setConnectionStatus('idle');
-      setIsOpen(false);
-      resetForm();
-      if (onSuccess) onSuccess();
+    onSuccess: () => {
+      // Only close after a short delay to show success state
+      setTimeout(() => {
+        setIsOpen(false);
+        refetchOrgs();
+        
+        toast({
+          title: "Connection successful",
+          description: `${orgName} has been connected to your account`,
+        });
+        
+        // Reset form
+        resetForm();
+        
+        // Call onSuccess if provided
+        if (onSuccess) {
+          onSuccess();
+        }
+      }, 1500);
     },
-    onError: (error: Error) => {
-      // Toast error message
+    onError: () => {
       toast({
-        title: "Failed to connect org",
-        description: error.message,
         variant: "destructive",
+        title: "Connection failed",
+        description: connectionError || "Failed to connect to Salesforce org. Please try again.",
       });
-      
-      // Error state is already set in mutationFn
-      // Keep the dialog open so user can see error and try again
     },
   });
-
+  
   const resetForm = () => {
-    // Token-based auth
     setOrgName("");
     setInstanceUrl("https://");
     setAccessToken("");
     setRefreshToken("");
-    
-    // Credential-based auth
     setEmail("");
     setPassword("");
     setSecurityToken("");
     setEnvironment("production");
-    
-    // Reset connection status
+    setAuthMethod("credentials");
     setConnectionStatus('idle');
-    setConnectionError(null);
     setConnectionProgress(0);
+    setConnectionError(null);
   };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  
+  const handleConnect = () => {
     if (authMethod === "token") {
-      // Validate token-based auth form
-      if (!orgName.trim()) {
-        return toast({
-          title: "Validation error",
-          description: "Please enter an org name",
+      if (!orgName || !instanceUrl || !accessToken) {
+        toast({
           variant: "destructive",
+          title: "Missing information",
+          description: "Please provide org name, instance URL, and access token.",
         });
+        return;
       }
       
-      if (!instanceUrl.trim() || !instanceUrl.startsWith("https://")) {
-        return toast({
-          title: "Validation error",
-          description: "Please enter a valid instance URL",
-          variant: "destructive",
-        });
-      }
-      
-      if (!accessToken.trim()) {
-        return toast({
-          title: "Validation error",
-          description: "Please enter an access token",
-          variant: "destructive",
-        });
-      }
-
       connectMutation.mutate({
         name: orgName,
         instanceUrl: instanceUrl,
@@ -221,31 +163,15 @@ export default function ConnectSalesforceOrgDialog({
         authMethod: "token"
       });
     } else {
-      // Validate credential-based auth form
-      if (!orgName.trim()) {
-        return toast({
-          title: "Validation error",
-          description: "Please enter an org name",
+      if (!orgName || !email || !password) {
+        toast({
           variant: "destructive",
+          title: "Missing information",
+          description: "Please provide org name, email, and password.",
         });
+        return;
       }
       
-      if (!email.trim() || !email.includes('@')) {
-        return toast({
-          title: "Validation error",
-          description: "Please enter a valid email address",
-          variant: "destructive",
-        });
-      }
-      
-      if (!password.trim()) {
-        return toast({
-          title: "Validation error",
-          description: "Please enter your password",
-          variant: "destructive",
-        });
-      }
-
       connectMutation.mutate({
         name: orgName,
         email: email,
@@ -256,197 +182,154 @@ export default function ConnectSalesforceOrgDialog({
       });
     }
   };
-
-  const handleDialogOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    if (!open) {
-      // Reset form and connection status when dialog is closed
-      resetForm();
-    }
-  };
-
+  
+  const isSubmitDisabled = 
+    connectionStatus === 'connecting' || 
+    connectionStatus === 'validating' || 
+    connectionStatus === 'fetching_metadata';
+  
   return (
-    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
-      <DialogTrigger asChild>
+    <>
+      <div onClick={() => setIsOpen(true)}>
         {children}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
+      </div>
+      
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Connect Salesforce Org</DialogTitle>
             <DialogDescription>
-              Enter your Salesforce org credentials to connect
+              Connect your Salesforce org to analyze metadata and health.
             </DialogDescription>
           </DialogHeader>
           
-          <Tabs value={authMethod} onValueChange={setAuthMethod} className="mt-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="credentials">
-                <KeyRound className="h-4 w-4 mr-2" />
-                Username/Password
-              </TabsTrigger>
-              <TabsTrigger value="token">
-                <Key className="h-4 w-4 mr-2" />
-                Token-based
-              </TabsTrigger>
-            </TabsList>
-            
-            {/* Username/Password Authentication */}
-            <TabsContent value="credentials" className="mt-4">
-              <div className="grid gap-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="credOrgName" className="text-right">
-                    Org Name
-                  </Label>
+          {connectionStatus === 'idle' ? (
+            <>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="orgName">Org Name</Label>
                   <Input
-                    id="credOrgName"
-                    className="col-span-3"
-                    placeholder="Production Org"
+                    id="orgName"
+                    placeholder="Production, Sandbox, Dev Org, etc."
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="environment" className="text-right">
-                    Environment
-                  </Label>
-                  <Select
-                    value={environment}
-                    onValueChange={setEnvironment}
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select environment" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="production">Production</SelectItem>
-                      <SelectItem value="sandbox">Sandbox</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="email" className="text-right">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    className="col-span-3"
-                    placeholder="your.email@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="password" className="text-right">
-                    Password
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    className="col-span-3"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="securityToken" className="text-right">
-                    Security Token
-                  </Label>
-                  <Input
-                    id="securityToken"
-                    type="password"
-                    className="col-span-3"
-                    value={securityToken}
-                    onChange={(e) => setSecurityToken(e.target.value)}
-                  />
-                </div>
+                
+                <Tabs value={authMethod} onValueChange={setAuthMethod}>
+                  <TabsList className="grid grid-cols-2 mb-2">
+                    <TabsTrigger value="credentials">Username & Password</TabsTrigger>
+                    <TabsTrigger value="token">Access Token</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="credentials" className="space-y-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="securityToken">Security Token (if required)</Label>
+                      <Input
+                        id="securityToken"
+                        value={securityToken}
+                        onChange={(e) => setSecurityToken(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label>Environment</Label>
+                      <RadioGroup value={environment} onValueChange={setEnvironment}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="production" id="production" />
+                          <Label htmlFor="production">Production</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="sandbox" id="sandbox" />
+                          <Label htmlFor="sandbox">Sandbox</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="token" className="space-y-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="instanceUrl">Instance URL</Label>
+                      <Input
+                        id="instanceUrl"
+                        placeholder="https://yourorg.my.salesforce.com"
+                        value={instanceUrl}
+                        onChange={(e) => setInstanceUrl(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="accessToken">Access Token</Label>
+                      <Input
+                        id="accessToken"
+                        type="password"
+                        value={accessToken}
+                        onChange={(e) => setAccessToken(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="refreshToken">Refresh Token (optional)</Label>
+                      <Input
+                        id="refreshToken"
+                        type="password"
+                        value={refreshToken}
+                        onChange={(e) => setRefreshToken(e.target.value)}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
-            </TabsContent>
-            
-            {/* Token-based Authentication */}
-            <TabsContent value="token" className="mt-4">
-              <div className="grid gap-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="tokenOrgName" className="text-right">
-                    Org Name
-                  </Label>
-                  <Input
-                    id="tokenOrgName"
-                    className="col-span-3"
-                    placeholder="Production Org"
-                    value={orgName}
-                    onChange={(e) => setOrgName(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="instanceUrl" className="text-right">
-                    Instance URL
-                  </Label>
-                  <Input
-                    id="instanceUrl"
-                    className="col-span-3"
-                    placeholder="https://myinstance.salesforce.com"
-                    value={instanceUrl}
-                    onChange={(e) => setInstanceUrl(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="accessToken" className="text-right">
-                    Access Token
-                  </Label>
-                  <Input
-                    id="accessToken"
-                    type="password"
-                    className="col-span-3"
-                    value={accessToken}
-                    onChange={(e) => setAccessToken(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="refreshToken" className="text-right">
-                    Refresh Token
-                  </Label>
-                  <Input
-                    id="refreshToken"
-                    type="password"
-                    className="col-span-3"
-                    value={refreshToken}
-                    onChange={(e) => setRefreshToken(e.target.value)}
-                  />
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-          
-          {/* Connection Status UI */}
-          {connectionStatus !== 'idle' && (
-            <div className="mt-6">
-              <Progress value={connectionProgress} className="h-2 mb-2" />
               
-              {connectionStatus === 'connecting' && (
-                <div className="flex items-center text-sm text-neutral-600">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span>Connecting to Salesforce...</span>
-                </div>
-              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleConnect}>
+                  Connect
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <div className="py-6">
+              <Progress value={connectionProgress} className="mb-4" />
               
-              {connectionStatus === 'validating' && (
-                <div className="flex items-center text-sm text-neutral-600">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span>Validating credentials...</span>
-                </div>
-              )}
-              
-              {connectionStatus === 'fetching_metadata' && (
-                <div className="flex items-center text-sm text-neutral-600">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span>Fetching metadata...</span>
+              {connectionStatus !== 'error' && (
+                <div className="flex items-center gap-2 text-sm text-neutral-600 mb-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>
+                    {connectionStatus === 'connecting' && "Connecting to Salesforce..."}
+                    {connectionStatus === 'validating' && "Validating credentials..."}
+                    {connectionStatus === 'fetching_metadata' && "Fetching metadata..."}
+                    {connectionStatus === 'success' && "Connection complete!"}
+                  </span>
                 </div>
               )}
               
               {connectionStatus === 'success' && (
                 <Alert className="bg-green-50 border-green-200">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
                   <AlertTitle className="text-green-800">Connection successful!</AlertTitle>
                   <AlertDescription className="text-green-700">
                     Your Salesforce org is now ready to use.
@@ -483,42 +366,59 @@ export default function ConnectSalesforceOrgDialog({
           )}
           
           <DialogFooter className="mt-6">
-            <DialogClose asChild>
+            <Button 
+              type="button"
+              variant="outline" 
+              onClick={() => {
+                // Only allow closing in idle or error states
+                if (connectionStatus === 'idle' || connectionStatus === 'error') {
+                  setIsOpen(false);
+                  resetForm();
+                }
+              }}
+              disabled={isSubmitDisabled}
+            >
+              Cancel
+            </Button>
+            
+            {connectionStatus === 'error' && (
               <Button 
-                type="button" 
-                variant="outline"
                 onClick={() => {
-                  if (connectionStatus === 'error' || connectionStatus === 'success') {
-                    resetForm();
-                  }
+                  // Reset to form state
+                  setConnectionStatus('idle');
+                  setConnectionProgress(0);
                 }}
               >
-                {connectionStatus === 'success' ? "Close" : "Cancel"}
+                Back
               </Button>
-            </DialogClose>
-            <Button 
-              type="submit" 
-              disabled={connectMutation.isPending || connectionStatus === 'success'}
-            >
-              {connectMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connecting...
-                </>
-              ) : connectionStatus === 'error' ? (
-                "Try Again"
-              ) : connectionStatus === 'success' ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Connected
-                </>
-              ) : (
-                "Connect"
-              )}
-            </Button>
+            )}
+            
+            {connectionStatus === 'idle' && (
+              <Button onClick={handleConnect}>
+                Connect
+              </Button>
+            )}
           </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// Error component
+function SalesforceConnectionError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Alert variant="destructive">
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>Connection failed</AlertTitle>
+      <AlertDescription className="mt-2">
+        <p className="mb-4">
+          We couldn't connect to your Salesforce org. Please check your credentials and try again.
+        </p>
+        <Button onClick={onRetry} size="sm">
+          Retry Connection
+        </Button>
+      </AlertDescription>
+    </Alert>
   );
 }
