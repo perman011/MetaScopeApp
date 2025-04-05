@@ -58,6 +58,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import DataLineageSankeyViz from "@/components/visualization/data-lineage-sankey-viz";
+import MetadataSankeyViz from "@/components/visualization/metadata-sankey-viz";
 
 // Interface for the dependency reference types
 interface DependencyReference {
@@ -403,7 +404,7 @@ export default function MetadataDependencyAnalyzer() {
                     <TabsContent value="dependencies" className="mt-0">
                       {/* Sankey Diagram for Dependencies */}
                       <div className="mb-6">
-                        <DataLineageSankeyViz 
+                        <MetadataSankeyViz 
                           data={prepareSankeyData()}
                           loading={false}
                           title="Component Dependencies Visualization"
@@ -459,7 +460,7 @@ export default function MetadataDependencyAnalyzer() {
                     <TabsContent value="reverseDependencies" className="mt-0">
                       {/* Sankey Diagram for Reverse Dependencies */}
                       <div className="mb-6">
-                        <DataLineageSankeyViz 
+                        <MetadataSankeyViz 
                           data={prepareSankeyData()}
                           loading={isReverseDependenciesLoading}
                           title="Component Dependencies Visualization"

@@ -381,8 +381,8 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
         padding: 30,
         // We cast to any here because the TypeScript definitions for Cytoscape aren't complete
         // Additional properties like animate and fit are commonly used but not in the type definitions
-      } as any,
-      wheelSensitivity: 0.3,
+      } as any
+      // Not setting wheelSensitivity to use default values
     });
 
     // Add nodes (objects) with uniform size
@@ -674,7 +674,7 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
       </div>
       
       {/* Center Panel - Graph Visualization */}
-      <div className="flex-1 h-full relative">
+      <div className="flex-1 h-full relative overflow-hidden">
         {/* Zoom Controls */}
         <div className="absolute bottom-4 right-4 z-10 flex flex-col space-y-2">
           <Button 
@@ -706,7 +706,7 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
         {/* Graph Container */}
         <div 
           ref={cyRef} 
-          className="w-full h-full" 
+          className="w-full h-full overflow-hidden" 
           id="cy"
         />
       </div>
