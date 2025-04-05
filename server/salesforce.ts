@@ -1181,9 +1181,25 @@ export class SalesforceService {
         accessToken: org.accessToken
       });
       
+      // First check if the connection is valid
+      try {
+        // Simple identity check to verify the connection works
+        const identity = await conn.identity();
+        console.log(`Connected to Salesforce as: ${identity.username}`);
+      } catch (authError) {
+        console.error("Authentication error with Salesforce:", authError);
+        throw new Error(`Failed to authenticate with Salesforce: ${authError.message}`);
+      }
+      
       // Fetch organization limits
-      const limits = await conn.limits();
-      console.log("Retrieved API limits:", limits);
+      let limits;
+      try {
+        limits = await conn.limits();
+        console.log("Retrieved API limits:", limits);
+      } catch (limitsError) {
+        console.error("Error fetching Salesforce API limits:", limitsError);
+        throw new Error(`Failed to fetch API limits: ${limitsError.message}`);
+      }
       
       // Fetch recent API usage info from API Usage app and EventLogFile
       // Note: We would run SOQL queries here to get real API usage data
@@ -1193,27 +1209,28 @@ export class SalesforceService {
         WHERE LogFile = 'API' 
         AND LogDate = LAST_N_DAYS:7
         ORDER BY LogDate DESC
+        LIMIT 100
       `;
       
-      // This would be actual data in a real implementation
-      // For now we're just using the structure for our mock data
+      // Try to get actual EventLogFile data, but it's okay if this fails
+      // as many orgs don't have API monitoring enabled
+      let apiRequests = { records: [], totalSize: 0 };
       try {
-        const apiRequests = await conn.query(apiRequestsQuery);
+        apiRequests = await conn.query(apiRequestsQuery);
         console.log(`Retrieved ${apiRequests.totalSize} API usage records`);
-        
-        if (apiRequests && apiRequests.records && apiRequests.records.length > 0) {
-          // Process the actual API usage data from Salesforce
-          // This would calculate actual usage metrics, error rates, etc.
-          // Instead, we'll return mock data that matches our interface
-          return this.processApiUsageData(limits, apiRequests.records);
-        }
       } catch (queryError) {
-        console.error("Error querying API usage data:", queryError);
-        // If EventLogFile query fails (common if API monitoring isn't enabled)
-        // we'll fall back to just the limits data
+        console.log("EventLogFile query failed - this is common if API monitoring isn't enabled:", queryError.message);
+        // Will fall back to just using limits data
       }
       
-      // Process available limit data and return analytics
+      // If we have API usage records, process them along with the limits
+      if (apiRequests && apiRequests.records && apiRequests.records.length > 0) {
+        console.log("Processing API usage data with EventLogFile records");
+        return this.processApiUsageData(limits, apiRequests.records);
+      }
+      
+      // Otherwise just use the limits data
+      console.log("Creating API analytics using only limit data");
       return this.createApiUsageAnalytics(limits);
       
     } catch (error) {

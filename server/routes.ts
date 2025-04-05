@@ -539,42 +539,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API Usage Endpoint
   app.get("/api/orgs/:id/api-usage", ensureAuthenticated, async (req, res) => {
     try {
+      // First validate the org and ownership
       const org = await storage.getOrg(parseInt(req.params.id));
       if (!org) {
-        return res.status(404).send("Org not found");
+        return res.status(404).json({
+          error: "Org not found",
+          message: `The requested Salesforce organization with ID ${req.params.id} does not exist.`
+        });
       }
+      
       if (org.userId !== req.user.id) {
-        return res.status(403).send("Forbidden");
+        return res.status(403).json({
+          error: "Access denied",
+          message: "You do not have permission to access this organization's data."
+        });
       }
       
       console.log(`Fetching API usage data for org ${org.id}`);
       
       try {
-        // Get API usage data from Salesforce
+        // Attempt to get API usage data from Salesforce
         const apiUsageData = await salesforceService.getApiUsageData(org);
         res.json(apiUsageData);
       } catch (apiError) {
         console.error("Error retrieving API usage data:", apiError);
-        res.status(500).json({
+        
+        // Return a more helpful error response
+        res.status(502).json({
           error: "Failed to retrieve API usage data",
-          message: apiError.message,
-          // Provide fallback data structure for the client
-          dailyApiRequests: { used: 0, total: 0 },
-          concurrentApiRequests: { used: 0, total: 0 },
-          requestsByType: [],
-          requestsByMethod: [],
-          topConsumers: [],
-          errorRates: [],
-          usageTrend: [],
-          responseTime: { average: 0, percentile95: 0, percentile99: 0 },
-          batchEfficiency: { batchOperations: 0, singleOperations: 0, potentialBatchSavings: 0 },
-          rateLimitEvents: [],
-          optimizationRecommendations: []
+          message: apiError.message || "There was an error communicating with Salesforce API",
+          errorCode: "SALESFORCE_API_ERROR",
+          // We don't provide fallback data in the error response - the client will handle this
         });
       }
     } catch (error) {
       console.error("Error processing API usage request:", error);
-      res.status(500).send("Internal Server Error");
+      res.status(500).json({
+        error: "Internal server error",
+        message: "An unexpected error occurred while processing your request.",
+      });
     }
   });
   

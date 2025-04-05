@@ -303,10 +303,34 @@ export default function ApiUsagePage() {
   // Make sure we explicitly use the mock data if useMockData is true or timeout triggered
   const dataToUse = useMockData || useTimeoutMockData ? mockApiUsageData : apiUsageData;
   
+  // If we're still loading, show a loading indicator with an option to view demo data
+  if (isApiUsageLoading && !useMockData && !useTimeoutMockData) {
+    return (
+      <div className="p-4 space-y-6">
+        <div className="w-full max-w-7xl mx-auto">
+          <div className="p-8 text-center">
+            <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent mx-auto mb-4"></div>
+            <h3 className="text-xl font-medium mb-2">Loading API Usage Data</h3>
+            <p className="text-neutral-500 mb-6">
+              This may take a few moments. If it continues to load, you can view sample data instead.
+            </p>
+            <Button 
+              variant="outline" 
+              onClick={() => setUseMockData(true)}
+              className="mx-auto"
+            >
+              View Demo Data Instead
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="p-4 space-y-6">
       <div className="w-full max-w-7xl mx-auto">
-        {useTimeoutMockData && !useMockData && (
+        {(useTimeoutMockData || useMockData) && (
           <div className="mb-4 w-full">
             <div className="bg-amber-50 border border-amber-300 text-amber-800 p-4 rounded-md mb-4">
               <div className="flex items-start">
@@ -314,18 +338,23 @@ export default function ApiUsagePage() {
                 <div>
                   <h3 className="font-medium">Using demo data</h3>
                   <p className="text-sm mt-1">
-                    Unable to fetch real-time API usage data. Showing sample data instead.
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="ml-2" 
-                      onClick={() => {
-                        setUseTimeoutMockData(false);
-                        refetch();
-                      }}
-                    >
-                      Try Again
-                    </Button>
+                    Showing sample API usage data. 
+                    {useTimeoutMockData && (
+                      <>
+                        Failed to fetch real-time data.
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="ml-2" 
+                          onClick={() => {
+                            setUseTimeoutMockData(false);
+                            refetch();
+                          }}
+                        >
+                          Try Again
+                        </Button>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -336,7 +365,7 @@ export default function ApiUsagePage() {
         <ApiUsage 
           orgId={activeOrg?.id || 0}
           apiUsageData={dataToUse || mockApiUsageData} 
-          isLoading={isApiUsageLoading && !useMockData && !useTimeoutMockData}
+          isLoading={false} // Set to false because we'll show our own loading UI above
           onRefresh={handleRefresh}
           onActionClick={handleActionClick}
         />
