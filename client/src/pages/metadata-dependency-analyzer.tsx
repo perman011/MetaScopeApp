@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import DataLineageSankeyViz from "@/components/visualization/data-lineage-sankey-viz";
 
 // Interface for the dependency reference types
 interface DependencyReference {
@@ -166,6 +167,64 @@ export default function MetadataDependencyAnalyzer() {
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+  
+  // Process metadata for Sankey visualization
+  const prepareSankeyData = () => {
+    if (!selectedMetadataItem) return { nodes: [], links: [] };
+    
+    const nodes: { name: string; category: string; }[] = [
+      // Add the central node (selected item)
+      { name: selectedMetadataItem.name, category: selectedMetadataItem.type }
+    ];
+    
+    const links: { source: number; target: number; value: number; metadata?: any; }[] = [];
+    let nodeIndex = 1; // Start from 1 as the selected item is index 0
+    
+    // Process based on view mode
+    if (viewMode === "dependencies") {
+      // Add reference nodes
+      selectedMetadataItem.references.forEach(ref => {
+        nodes.push({
+          name: ref.name,
+          category: ref.type
+        });
+        
+        // Add link from reference to selected item
+        links.push({
+          source: nodeIndex,
+          target: 0, // Selected item is always at index 0
+          value: 1,
+          metadata: {
+            referenceType: ref.referenceType
+          }
+        });
+        
+        nodeIndex++;
+      });
+    } else if (viewMode === "reverseDependencies" && reverseDependencies && Array.isArray(reverseDependencies)) {
+      // Add reverse dependency nodes
+      reverseDependencies.forEach(ref => {
+        nodes.push({
+          name: ref.name,
+          category: ref.type
+        });
+        
+        // Add link from selected item to dependencies
+        links.push({
+          source: 0, // Selected item is always at index 0
+          target: nodeIndex,
+          value: 1,
+          metadata: {
+            referenceType: ref.referenceType
+          }
+        });
+        
+        nodeIndex++;
+      });
+    }
+    
+    return { nodes, links };
   };
 
   return (
@@ -342,6 +401,18 @@ export default function MetadataDependencyAnalyzer() {
                     </TabsList>
                     
                     <TabsContent value="dependencies" className="mt-0">
+                      {/* Sankey Diagram for Dependencies */}
+                      <div className="mb-6">
+                        <DataLineageSankeyViz 
+                          data={prepareSankeyData()}
+                          loading={false}
+                          title="Component Dependencies Visualization"
+                          description="Visualizing the relationship between the selected component and its dependencies"
+                        />
+                      </div>
+                    
+                      {/* Tabular View */}
+                      <h3 className="font-medium mb-2">Tabular View</h3>
                       <div className="rounded-md border">
                         <Table>
                           <TableHeader>
@@ -386,6 +457,18 @@ export default function MetadataDependencyAnalyzer() {
                     </TabsContent>
                     
                     <TabsContent value="reverseDependencies" className="mt-0">
+                      {/* Sankey Diagram for Reverse Dependencies */}
+                      <div className="mb-6">
+                        <DataLineageSankeyViz 
+                          data={prepareSankeyData()}
+                          loading={isReverseDependenciesLoading}
+                          title="Component Dependencies Visualization"
+                          description="Visualizing the relationship between the selected component and components it references"
+                        />
+                      </div>
+                    
+                      {/* Tabular View */}
+                      <h3 className="font-medium mb-2">Tabular View</h3>
                       <div className="rounded-md border">
                         <Table>
                           <TableHeader>

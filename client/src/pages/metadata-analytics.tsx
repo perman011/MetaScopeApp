@@ -43,6 +43,7 @@ import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import { formatDistanceToNow } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import MetadataTreemapViz from "@/components/visualization/metadata-treemap-viz";
 
 // Interfaces for our data structures
 interface DonutChartData {
@@ -79,11 +80,19 @@ interface MetadataItem {
   isCustom?: boolean;
 }
 
+interface TreemapItem {
+  name: string;
+  size?: number;
+  children?: TreemapItem[];
+  fill?: string;
+}
+
 interface ProcessedMetadata {
   customVsStandard: DonutChartData[];
   componentsByType: BarChartData[];
   referencedComponents: ReferencedComponent[];
   staleComponents: StaleComponent[];
+  treemapData: TreemapItem;
 }
 
 export default function MetadataAnalytics() {
@@ -162,6 +171,48 @@ export default function MetadataAnalytics() {
       { type: 'Trigger', name: 'DeprecatedCaseTrigger', lastUsed: new Date(2021, 9, 8).toISOString() },
       { type: 'Layout', name: 'Old_Contact_Layout', lastUsed: new Date(2021, 7, 12).toISOString() },
     ];
+    
+    // Default treemap data
+    let treemapData: TreemapItem = {
+      name: "Metadata",
+      children: [
+        {
+          name: "Objects",
+          children: [
+            { name: "Custom Objects", size: 45, fill: "#4f46e5" },
+            { name: "Standard Objects", size: 32, fill: "#3b82f6" }
+          ]
+        },
+        {
+          name: "Apex",
+          children: [
+            { name: "Classes", size: 124, fill: "#ef4444" },
+            { name: "Triggers", size: 38, fill: "#f97316" }
+          ]
+        },
+        {
+          name: "Automation",
+          children: [
+            { name: "Flows", size: 56, fill: "#10b981" },
+            { name: "Process Builders", size: 28, fill: "#22c55e" }
+          ]
+        },
+        {
+          name: "UI",
+          children: [
+            { name: "Lightning Components", size: 72, fill: "#8b5cf6" },
+            { name: "Visualforce Pages", size: 43, fill: "#a855f7" }
+          ]
+        },
+        {
+          name: "Layout",
+          children: [
+            { name: "Page Layouts", size: 65, fill: "#ec4899" },
+            { name: "Record Types", size: 27, fill: "#f43f5e" }
+          ]
+        }
+      ]
+    };
 
     // If we have real metadata, process it
     if (metadataItems && Array.isArray(metadataItems) && metadataItems.length > 0) {
@@ -224,6 +275,76 @@ export default function MetadataAnalytics() {
         if (staleComponents.length === 0) {
           console.log("No stale components found in real data, using sample data");
         }
+        
+        // Process data for treemap - group by high-level categories
+        const categoryMap = new Map<string, Map<string, number>>();
+        
+        // Define category mappings
+        const typeToCategory: Record<string, string> = {
+          'ApexClass': 'Apex',
+          'ApexTrigger': 'Apex',
+          'CustomObject': 'Objects',
+          'CustomField': 'Fields',
+          'Flow': 'Automation',
+          'WorkflowRule': 'Automation',
+          'LightningComponentBundle': 'UI',
+          'VisualforcePage': 'UI',
+          'Layout': 'Layout',
+          'RecordType': 'Layout'
+        };
+        
+        // Define colors for categories
+        const categoryColors: Record<string, string> = {
+          'Apex': '#ef4444',
+          'Objects': '#3b82f6',
+          'Fields': '#10b981',
+          'Automation': '#f59e0b',
+          'UI': '#8b5cf6',
+          'Layout': '#ec4899',
+          'Other': '#64748b'
+        };
+        
+        // Process metadata items into categories and subcategories
+        metadataItems.forEach(item => {
+          const type = item.type || 'Unknown';
+          const category = typeToCategory[type] || 'Other';
+          
+          if (!categoryMap.has(category)) {
+            categoryMap.set(category, new Map<string, number>());
+          }
+          
+          const subcategoryMap = categoryMap.get(category)!;
+          const count = subcategoryMap.get(type) || 0;
+          subcategoryMap.set(type, count + 1);
+        });
+        
+        // Build treemap data structure
+        const treemapChildren: TreemapItem[] = [];
+        
+        categoryMap.forEach((subcategories, category) => {
+          const subcategoryItems: TreemapItem[] = [];
+          
+          subcategories.forEach((count, type) => {
+            subcategoryItems.push({
+              name: type,
+              size: count,
+              fill: categoryColors[category] || '#64748b'
+            });
+          });
+          
+          treemapChildren.push({
+            name: category,
+            children: subcategoryItems
+          });
+        });
+        
+        // Only update treemap data if we have actual categories
+        if (treemapChildren.length > 0) {
+          treemapData = {
+            name: "Metadata",
+            children: treemapChildren
+          };
+        }
       } catch (error) {
         console.error("Error processing metadata:", error);
         // Keep the mock data if there's an error
@@ -234,11 +355,12 @@ export default function MetadataAnalytics() {
       customVsStandard,
       componentsByType,
       referencedComponents,
-      staleComponents
+      staleComponents,
+      treemapData
     };
   };
   
-  const { customVsStandard, componentsByType, referencedComponents, staleComponents } = processMetadata();
+  const { customVsStandard, componentsByType, referencedComponents, staleComponents, treemapData } = processMetadata();
   const paginatedReferences = referencedComponents.slice((page - 1) * itemsPerPage, page * itemsPerPage);
   const totalPages = Math.ceil(referencedComponents.length / itemsPerPage);
   
@@ -292,6 +414,16 @@ export default function MetadataAnalytics() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Metadata Analytics</h1>
+      
+      {/* Treemap Visualization */}
+      <div className="mb-6">
+        <MetadataTreemapViz 
+          data={treemapData} 
+          loading={isMetadataLoading}
+          title="Metadata Hierarchy Visualization"
+          description="Distribution of metadata components by category and type"
+        />
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* Chart 1: Custom vs Standard Components */}
