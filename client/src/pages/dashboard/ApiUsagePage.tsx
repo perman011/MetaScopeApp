@@ -260,12 +260,15 @@ export default function ApiUsagePage() {
     );
   }
   
+  // Make sure we explicitly use the mock data if useMockData is true
+  const dataToUse = useMockData ? mockApiUsageData : apiUsageData;
+  
   return (
     <div className="p-4 space-y-6">
       <div className="w-full max-w-7xl mx-auto">
         <ApiUsage 
           orgId={activeOrg?.id || 0}
-          apiUsageData={apiUsageData || mockApiUsageData} 
+          apiUsageData={dataToUse || mockApiUsageData} 
           isLoading={isApiUsageLoading && !useMockData}
           onRefresh={handleRefresh}
           onActionClick={handleActionClick}

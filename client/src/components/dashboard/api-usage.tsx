@@ -209,8 +209,8 @@ export function ApiUsage({
 }: ApiUsageProps) {
   const [timeframe, setTimeframe] = useState('7d');
   
-  // Simulating loading state
-  if (isLoading) {
+  // Simulating loading state or handling missing data
+  if (isLoading || !apiUsageData) {
     return (
       <div className="w-full p-8 flex justify-center">
         <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent"></div>
