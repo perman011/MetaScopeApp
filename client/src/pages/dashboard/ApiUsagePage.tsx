@@ -196,10 +196,17 @@ export default function ApiUsagePage() {
   const { activeOrg } = useOrgContext();
   
   // Fetch API usage data
-  const { data: apiUsageData, isLoading: isApiUsageLoading, refetch } = useQuery<ApiUsageData>({
+  const { data: apiUsageData, isLoading: isApiUsageLoading, refetch, error } = useQuery<ApiUsageData>({
     queryKey: activeOrg ? ['/api/orgs', activeOrg.id, 'api-usage'] : [],
     enabled: !!activeOrg,
   });
+  
+  // Log any API errors for debugging
+  React.useEffect(() => {
+    if (error) {
+      console.error("Error fetching API usage data:", error);
+    }
+  }, [error]);
   
   // Handle action button clicks
   const handleActionClick = (actionId: string) => {

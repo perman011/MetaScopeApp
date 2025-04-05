@@ -1005,28 +1005,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // API Usage Analytics route
-  app.get("/api/orgs/:id/api-usage", ensureAuthenticated, async (req, res) => {
-    try {
-      if (!req.user) {
-        return res.status(401).send("Unauthorized");
-      }
-      
-      const orgId = parseInt(req.params.id);
-      const org = await storage.getOrg(orgId);
-      
-      if (!org) {
-        return res.status(404).send("Salesforce org not found");
-      }
-      
-      // Fetch API usage data from Salesforce
-      const apiUsageData = await salesforceService.getApiUsageData(org);
-      res.json(apiUsageData);
-    } catch (error) {
-      console.error("Error fetching API usage data:", error);
-      res.status(500).send("Internal Server Error");
-    }
-  });
+  // Reserved for future routes
   
   // Admin Routes - Protected by admin middleware
   app.get("/api/admin/users", ensureAdmin, async (req, res) => {
