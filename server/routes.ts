@@ -1263,6 +1263,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Metadata Analytics Endpoint
+  app.get("/api/orgs/:id/metadata-analytics", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const metadataAnalytics = await salesforceService.getMetadataDetailsFromOrg(org);
+      return res.json(metadataAnalytics);
+    } catch (error) {
+      console.error('Failed to fetch metadata analytics:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch metadata analytics',
+        message: error.message
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

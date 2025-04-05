@@ -1390,6 +1390,118 @@ export class SalesforceService {
       ],
     };
   }
+
+  /**
+   * Retrieves detailed metadata information from a Salesforce org
+   * This method is used for deeper analytics and visualization of the org's metadata
+   */
+  async getMetadataDetailsFromOrg(org: SalesforceOrg) {
+    try {
+      console.log(`Fetching detailed metadata from org ${org.id}`);
+      
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
+      
+      // Retrieve metadata types first
+      const metadataTypes = await conn.metadata.describe();
+      
+      // Then get actual components for each type (limit to a subset for performance)
+      const metadataComponents = [];
+      const priorityTypes = ['CustomObject', 'ApexClass', 'ApexTrigger', 'Flow', 'Layout', 'CustomField'];
+      
+      // Process priority types first
+      for (const typeName of priorityTypes) {
+        const type = metadataTypes.metadataObjects.find(t => t.xmlName === typeName);
+        if (type) {
+          try {
+            const components = await conn.metadata.list([{type: type.xmlName}]);
+            if (Array.isArray(components)) {
+              metadataComponents.push(...components.map(c => ({...c, type: type.xmlName})));
+            }
+          } catch (e) {
+            console.error(`Error fetching metadata type ${typeName}:`, e);
+          }
+        }
+      }
+      
+      // Process remaining types (limited set for performance)
+      const remainingTypes = metadataTypes.metadataObjects
+        .filter(t => !priorityTypes.includes(t.xmlName))
+        .slice(0, 10); // Limit to 10 additional types to avoid timeouts
+        
+      for (const type of remainingTypes) {
+        try {
+          const components = await conn.metadata.list([{type: type.xmlName}]);
+          if (Array.isArray(components)) {
+            metadataComponents.push(...components.map(c => ({...c, type: type.xmlName})));
+          }
+        } catch (e) {
+          console.error(`Error fetching metadata type ${type.xmlName}:`, e);
+        }
+      }
+      
+      return this.processMetadataForAnalysis(metadataComponents);
+    } catch (error) {
+      console.error('Error fetching detailed metadata:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Process raw metadata components into structured analytics data
+   * This transforms the data into a format ready for visualization
+   */
+  private processMetadataForAnalysis(components: any[]) {
+    // Group components by type
+    const byType = components.reduce((acc, component) => {
+      const type = component.type || 'Unknown';
+      if (!acc[type]) acc[type] = [];
+      acc[type].push(component);
+      return acc;
+    }, {});
+    
+    // Calculate metrics for visualization
+    const typeStats = Object.entries(byType).map(([type, items]) => ({
+      type,
+      count: (items as any[]).length,
+      percentage: ((items as any[]).length / components.length * 100).toFixed(1)
+    }));
+    
+    // Sort by count descending
+    typeStats.sort((a, b) => b.count - a.count);
+    
+    // Generate additional metrics
+    const totalComponents = components.length;
+    const customObjectCount = (byType['CustomObject'] || []).length;
+    const customFieldCount = (byType['CustomField'] || []).length;
+    const apexClassCount = (byType['ApexClass'] || []).length;
+    const apexTriggerCount = (byType['ApexTrigger'] || []).length;
+    const flowCount = (byType['Flow'] || []).length;
+    
+    // Calculate fieldsPerObject ratio if both exist
+    const fieldsPerObject = customObjectCount > 0 ? (customFieldCount / customObjectCount).toFixed(1) : 0;
+    
+    // Calculate code complexity metrics
+    const codeComplexity = {
+      apexClassesToTriggersRatio: apexTriggerCount > 0 ? (apexClassCount / apexTriggerCount).toFixed(1) : 0,
+      automationComplexity: (apexTriggerCount + flowCount) / Math.max(1, customObjectCount)
+    };
+    
+    return {
+      totalComponents,
+      componentsByType: typeStats,
+      customObjects: customObjectCount,
+      customFields: customFieldCount,
+      fieldsPerObject,
+      apexClasses: apexClassCount,
+      apexTriggers: apexTriggerCount,
+      flows: flowCount,
+      codeComplexity
+    };
+  }
 }
 
 export const salesforceService = new SalesforceService();
