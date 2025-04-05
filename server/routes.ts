@@ -550,7 +550,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Demo mode requested, returning sample API usage data");
         // Return sample data for demo purposes
         return res.json({
-          dailyApiRequests: [
+          dailyApiRequests: {
+            used: 77900,
+            total: 100000
+          },
+          // Previous daily API requests data saved as trend data
+          dailyApiRequestsTrend: [
             { date: '2025-03-29', count: 12450 },
             { date: '2025-03-30', count: 18720 },
             { date: '2025-03-31', count: 15680 },
@@ -559,7 +564,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             { date: '2025-04-03', count: 21450 },
             { date: '2025-04-04', count: 23120 }
           ],
-          concurrentApiRequests: [
+          concurrentApiRequests: {
+            used: 281,
+            total: 500
+          },
+          // Previous concurrent data saved as hourly data
+          concurrentApiRequestsByHour: [
             { hour: '00:00', count: 45 },
             { hour: '02:00', count: 21 },
             { hour: '04:00', count: 18 },
@@ -574,18 +584,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             { hour: '22:00', count: 58 }
           ],
           requestsByType: [
-            { type: 'REST API', count: 35790, percentage: 46 },
-            { type: 'SOAP API', count: 12450, percentage: 16 },
-            { type: 'Bulk API', count: 18720, percentage: 24 },
-            { type: 'Streaming API', count: 7820, percentage: 10 },
-            { type: 'Metadata API', count: 3120, percentage: 4 }
+            { type: 'REST API', count: 35790, percentage: 46, color: '#3B82F6' },
+            { type: 'SOAP API', count: 12450, percentage: 16, color: '#10B981' },
+            { type: 'Bulk API', count: 18720, percentage: 24, color: '#F59E0B' },
+            { type: 'Streaming API', count: 7820, percentage: 10, color: '#8B5CF6' },
+            { type: 'Metadata API', count: 3120, percentage: 4, color: '#EC4899' }
           ],
           requestsByMethod: [
-            { method: 'GET', count: 38450, percentage: 49 },
-            { method: 'POST', count: 23400, percentage: 30 },
-            { method: 'PUT', count: 7820, percentage: 10 },
-            { method: 'PATCH', count: 4680, percentage: 6 },
-            { method: 'DELETE', count: 3900, percentage: 5 }
+            { method: 'GET', count: 38450, percentage: 49, color: '#3B82F6' },
+            { method: 'POST', count: 23400, percentage: 30, color: '#10B981' },
+            { method: 'PUT', count: 7820, percentage: 10, color: '#F59E0B' },
+            { method: 'PATCH', count: 4680, percentage: 6, color: '#8B5CF6' },
+            { method: 'DELETE', count: 3900, percentage: 5, color: '#EC4899' }
           ],
           limitConsumption: [
             { name: 'Daily API Requests', used: 77900, total: 100000, percentage: 77.9 },
@@ -595,6 +605,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
             { name: 'Bulk API Batch Requests', used: 345, total: 1000, percentage: 34.5 }
           ],
           errorRates: {
+            overall: 2.4,
+            trends: [
+              { date: '2025-03-29', rate: 1.8 },
+              { date: '2025-03-30', rate: 2.1 },
+              { date: '2025-03-31', rate: 2.5 },
+              { date: '2025-04-01', rate: 3.2 },
+              { date: '2025-04-02', rate: 2.7 },
+              { date: '2025-04-03', rate: 2.3 },
+              { date: '2025-04-04', rate: 2.0 }
+            ]
+          },
+          // Add top consumers list required by the component
+          topConsumers: [
+            { name: 'Data Integration Service', requests: 5432, percentage: 37 },
+            { name: 'Admin User', requests: 3789, percentage: 26 },
+            { name: 'Marketing Automation', requests: 2143, percentage: 14 },
+            { name: 'Sales Dashboard', requests: 1987, percentage: 13 },
+            { name: 'Customer Portal', requests: 1431, percentage: 10 },
+          ],
+          // Convert the error rates to match the component's interface
+          errorRates: [
+            { type: 'Rate Limit', count: 128, percentage: 1.3, color: '#EF4444' },
+            { type: 'Authentication', count: 112, percentage: 0.6, color: '#F59E0B' },
+            { type: 'Validation', count: 213, percentage: 1.4, color: '#3B82F6' },
+            { type: 'Server', count: 32, percentage: 0.2, color: '#8B5CF6' },
+          ],
+          // Keep original error data for reference
+          errorDetail: {
             overall: 2.4,
             trends: [
               { date: '2025-03-29', rate: 1.8 },
