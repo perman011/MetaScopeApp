@@ -298,29 +298,29 @@ export function ApiUsage({
                 <div className="flex flex-col">
                   <div className="flex justify-between items-baseline mb-2">
                     <span className="text-2xl font-bold">
-                      {formatNumber(data.dailyApiRequests.used)}
+                      {formatNumber(data?.dailyApiRequests?.used || 0)}
                     </span>
                     <span className="text-neutral-500 text-sm">
-                      of {formatNumber(data.dailyApiRequests.total)}
+                      of {formatNumber(data?.dailyApiRequests?.total || 0)}
                     </span>
                   </div>
                   
                   <CustomProgress
-                    value={data.dailyApiRequests.used}
-                    max={data.dailyApiRequests.total}
+                    value={data?.dailyApiRequests?.used || 0}
+                    max={data?.dailyApiRequests?.total || 100}
                     className="h-2 mb-2"
                   />
                   
                   <div className="flex justify-between items-center text-sm mt-2">
                     <span className="text-neutral-600">
-                      {Math.round((data.dailyApiRequests.used / data.dailyApiRequests.total) * 100)}% used
+                      {Math.round(((data?.dailyApiRequests?.used || 0) / (data?.dailyApiRequests?.total || 1)) * 100)}% used
                     </span>
                     <span className="text-neutral-600">
-                      {formatNumber(data.dailyApiRequests.total - data.dailyApiRequests.used)} remaining
+                      {formatNumber((data?.dailyApiRequests?.total || 0) - (data?.dailyApiRequests?.used || 0))} remaining
                     </span>
                   </div>
                   
-                  {data.dailyApiRequests.used / data.dailyApiRequests.total > 0.8 && (
+                  {(data?.dailyApiRequests?.used || 0) / (data?.dailyApiRequests?.total || 1) > 0.8 && (
                     <Alert className="mt-4 bg-amber-50 border-amber-200 text-amber-800">
                       <AlertTriangle className="h-4 w-4 text-amber-600" />
                       <AlertTitle className="text-amber-800 text-sm font-medium">High usage detected</AlertTitle>
@@ -356,7 +356,7 @@ export function ApiUsage({
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={data.requestsByType}
+                        data={data?.requestsByType || []}
                         cx="50%"
                         cy="50%"
                         innerRadius={40}
@@ -364,8 +364,8 @@ export function ApiUsage({
                         paddingAngle={2}
                         dataKey="count"
                       >
-                        {data.requestsByType.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        {(data?.requestsByType || []).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color || '#cbd5e1'} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: number) => [formatNumber(value), 'Requests']} />
@@ -374,7 +374,7 @@ export function ApiUsage({
                 </div>
                 
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  {data.requestsByType.map((type, i) => (
+                  {(data?.requestsByType || []).map((type, i) => (
                     <div key={i} className="flex items-center gap-1">
                       <div 
                         className="w-3 h-3 rounded-full" 
@@ -401,39 +401,57 @@ export function ApiUsage({
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm text-neutral-600">Average</span>
-                      <span className="font-medium">{data.responseTime.average} ms</span>
+                      <span className="font-medium">{data?.responseTime?.average || 0} ms</span>
                     </div>
                     <CustomProgress
-                      value={data.responseTime.average}
+                      value={data?.responseTime?.average || 0}
                       max={2000} // Assuming 2 seconds is the benchmark
                       className="h-1.5"
-                      indicatorClassName={data.responseTime.average < 500 ? 'bg-green-500' : data.responseTime.average < 1000 ? 'bg-amber-500' : 'bg-red-500'}
+                      indicatorClassName={
+                        (data?.responseTime?.average || 0) < 500 
+                        ? 'bg-green-500' 
+                        : (data?.responseTime?.average || 0) < 1000 
+                        ? 'bg-amber-500' 
+                        : 'bg-red-500'
+                      }
                     />
                   </div>
                   
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm text-neutral-600">95th Percentile</span>
-                      <span className="font-medium">{data.responseTime.percentile95} ms</span>
+                      <span className="font-medium">{data?.responseTime?.percentile95 || 0} ms</span>
                     </div>
                     <CustomProgress
-                      value={data.responseTime.percentile95}
+                      value={data?.responseTime?.percentile95 || 0}
                       max={3000} // Assuming 3 seconds is the benchmark
                       className="h-1.5"
-                      indicatorClassName={data.responseTime.percentile95 < 1000 ? 'bg-green-500' : data.responseTime.percentile95 < 2000 ? 'bg-amber-500' : 'bg-red-500'}
+                      indicatorClassName={
+                        (data?.responseTime?.percentile95 || 0) < 1000 
+                        ? 'bg-green-500' 
+                        : (data?.responseTime?.percentile95 || 0) < 2000 
+                        ? 'bg-amber-500' 
+                        : 'bg-red-500'
+                      }
                     />
                   </div>
                   
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm text-neutral-600">99th Percentile</span>
-                      <span className="font-medium">{data.responseTime.percentile99} ms</span>
+                      <span className="font-medium">{data?.responseTime?.percentile99 || 0} ms</span>
                     </div>
                     <CustomProgress
-                      value={data.responseTime.percentile99}
+                      value={data?.responseTime?.percentile99 || 0}
                       max={5000} // Assuming 5 seconds is the benchmark
                       className="h-1.5"
-                      indicatorClassName={data.responseTime.percentile99 < 1500 ? 'bg-green-500' : data.responseTime.percentile99 < 3000 ? 'bg-amber-500' : 'bg-red-500'}
+                      indicatorClassName={
+                        (data?.responseTime?.percentile99 || 0) < 1500 
+                        ? 'bg-green-500' 
+                        : (data?.responseTime?.percentile99 || 0) < 3000 
+                        ? 'bg-amber-500' 
+                        : 'bg-red-500'
+                      }
                     />
                   </div>
                 </div>
@@ -463,7 +481,7 @@ export function ApiUsage({
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
-                    data={data.usageTrend}
+                    data={data?.usageTrend || []}
                     margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                   >
                     <defs>
@@ -515,7 +533,7 @@ export function ApiUsage({
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={data.errorRates}
+                      data={data?.errorRates || []}
                       margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.4} />
@@ -525,20 +543,20 @@ export function ApiUsage({
                         formatter={(value: number) => [formatNumber(value), 'Errors']}
                       />
                       <Bar dataKey="count" name="Error Count">
-                        {data.errorRates.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        {(data?.errorRates || []).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color || '#ef4444'} />
                         ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 
-                {data.errorRates.some(error => error.percentage > 5) && (
+                {(data?.errorRates || []).some(error => error.percentage > 5) && (
                   <Alert className="mt-2 bg-red-50 border-red-200 text-red-800">
                     <AlertTriangle className="h-4 w-4 text-red-600" />
                     <AlertTitle className="text-red-800 text-sm font-medium">High error rate detected</AlertTitle>
                     <AlertDescription className="text-red-700 text-xs">
-                      Investigate {data.errorRates.find(error => error.percentage > 5)?.type} errors to improve reliability.
+                      Investigate {(data?.errorRates || []).find(error => error.percentage > 5)?.type} errors to improve reliability.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -555,7 +573,7 @@ export function ApiUsage({
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {data.topConsumers.slice(0, 5).map((consumer, i) => (
+                  {(data?.topConsumers || []).slice(0, 5).map((consumer, i) => (
                     <div key={i} className="flex items-center space-x-2">
                       <div className="w-1/3 text-sm truncate" title={consumer.name}>{consumer.name}</div>
                       <div className="w-2/3 relative pt-1">
@@ -604,7 +622,7 @@ export function ApiUsage({
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={data.requestsByMethod}
+                        data={data?.requestsByMethod || []}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -613,8 +631,8 @@ export function ApiUsage({
                         dataKey="count"
                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                       >
-                        {data.requestsByMethod.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        {(data?.requestsByMethod || []).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color || '#4f46e5'} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: number) => [formatNumber(value), 'Requests']} />
@@ -630,7 +648,7 @@ export function ApiUsage({
                       </AccordionTrigger>
                       <AccordionContent>
                         <div className="space-y-2">
-                          {data.requestsByMethod.map((method, i) => (
+                          {(data?.requestsByMethod || []).map((method, i) => (
                             <div key={i} className="grid grid-cols-3 text-xs">
                               <div className="flex items-center">
                                 <div 
@@ -663,11 +681,11 @@ export function ApiUsage({
                 <div className="mb-4">
                   <div className="flex justify-between mb-1">
                     <span className="text-sm">Batch Operations</span>
-                    <span className="text-sm font-medium">{formatNumber(data.batchEfficiency.batchOperations)}</span>
+                    <span className="text-sm font-medium">{formatNumber(data?.batchEfficiency?.batchOperations || 0)}</span>
                   </div>
                   <CustomProgress
-                    value={data.batchEfficiency.batchOperations}
-                    max={data.batchEfficiency.batchOperations + data.batchEfficiency.singleOperations}
+                    value={data?.batchEfficiency?.batchOperations || 0}
+                    max={(data?.batchEfficiency?.batchOperations || 0) + (data?.batchEfficiency?.singleOperations || 0) || 1}
                     className="h-2"
                     indicatorClassName="bg-green-500"
                   />
@@ -676,11 +694,11 @@ export function ApiUsage({
                 <div className="mb-4">
                   <div className="flex justify-between mb-1">
                     <span className="text-sm">Single Record Operations</span>
-                    <span className="text-sm font-medium">{formatNumber(data.batchEfficiency.singleOperations)}</span>
+                    <span className="text-sm font-medium">{formatNumber(data?.batchEfficiency?.singleOperations || 0)}</span>
                   </div>
                   <CustomProgress
-                    value={data.batchEfficiency.singleOperations}
-                    max={data.batchEfficiency.batchOperations + data.batchEfficiency.singleOperations}
+                    value={data?.batchEfficiency?.singleOperations || 0}
+                    max={(data?.batchEfficiency?.batchOperations || 0) + (data?.batchEfficiency?.singleOperations || 0) || 1}
                     className="h-2"
                     indicatorClassName="bg-amber-500"
                   />
@@ -690,7 +708,7 @@ export function ApiUsage({
                   <Check className="h-4 w-4 text-green-600" />
                   <AlertTitle className="text-green-800 text-sm font-medium">Batch Optimization Opportunity</AlertTitle>
                   <AlertDescription className="text-green-700 text-xs">
-                    Converting single operations to batch could save approximately {formatNumber(data.batchEfficiency.potentialBatchSavings)} API requests.
+                    Converting single operations to batch could save approximately {formatNumber(data?.batchEfficiency?.potentialBatchSavings || 0)} API requests.
                   </AlertDescription>
                 </Alert>
                 
@@ -718,9 +736,9 @@ export function ApiUsage({
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {data.rateLimitEvents.length > 0 ? (
+              {(data?.rateLimitEvents || []).length > 0 ? (
                 <div className="space-y-2">
-                  {data.rateLimitEvents.map((event, i) => (
+                  {(data?.rateLimitEvents || []).map((event, i) => (
                     <div key={i} className="border-b border-neutral-200 pb-2 last:border-b-0 last:pb-0">
                       <div className="flex justify-between items-center">
                         <div className="flex items-center">
@@ -758,25 +776,25 @@ export function ApiUsage({
               <div className="flex flex-col">
                 <div className="flex justify-between items-baseline mb-2">
                   <span className="text-2xl font-bold">
-                    {data.concurrentApiRequests.used}
+                    {data?.concurrentApiRequests?.used || 0}
                   </span>
                   <span className="text-neutral-500 text-sm">
-                    of {data.concurrentApiRequests.total}
+                    of {data?.concurrentApiRequests?.total || 0}
                   </span>
                 </div>
                 
                 <CustomProgress
-                  value={data.concurrentApiRequests.used}
-                  max={data.concurrentApiRequests.total}
+                  value={data?.concurrentApiRequests?.used || 0}
+                  max={data?.concurrentApiRequests?.total || 1}
                   className="h-2 mb-2"
                 />
                 
                 <div className="flex justify-between items-center text-sm mt-2">
                   <span className="text-neutral-600">
-                    {Math.round((data.concurrentApiRequests.used / data.concurrentApiRequests.total) * 100)}% used
+                    {Math.round(((data?.concurrentApiRequests?.used || 0) / (data?.concurrentApiRequests?.total || 1)) * 100)}% used
                   </span>
                   <span className="text-neutral-600">
-                    {data.concurrentApiRequests.total - data.concurrentApiRequests.used} available
+                    {(data?.concurrentApiRequests?.total || 0) - (data?.concurrentApiRequests?.used || 0)} available
                   </span>
                 </div>
                 
@@ -803,7 +821,7 @@ export function ApiUsage({
             </Alert>
             
             <div className="space-y-4">
-              {data.optimizationRecommendations.map((rec, i) => (
+              {(data?.optimizationRecommendations || []).map((rec, i) => (
                 <Card key={i}>
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
