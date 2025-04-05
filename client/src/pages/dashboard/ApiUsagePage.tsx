@@ -202,11 +202,22 @@ export default function ApiUsagePage() {
   const { activeOrg } = useOrgContext();
   
   // Fetch API usage data
-  const { data: apiUsageData, isLoading: isApiUsageLoading, refetch, error } = useQuery<ApiUsageData>({
+  // Add detailed logging for debugging
+  console.log("API Usage Page - ActiveOrg:", activeOrg);
+  
+  const apiEndpoint = activeOrg ? `/api/orgs/${activeOrg.id}/api-usage` : null;
+  console.log("API Endpoint URL:", apiEndpoint);
+  
+  const { 
+    data: apiUsageData, 
+    isLoading: isApiUsageLoading, 
+    refetch, 
+    error 
+  } = useQuery<ApiUsageData>({
     queryKey: activeOrg ? ['/api/orgs', activeOrg.id, 'api-usage'] : [],
     enabled: !!activeOrg,
     retry: 2,
-    retryDelay: 1000, 
+    retryDelay: 1000
   });
   
   // Set a timeout to fall back to mock data if the API request takes too long
@@ -364,7 +375,7 @@ export default function ApiUsagePage() {
         
         <ApiUsage 
           orgId={activeOrg?.id || 0}
-          apiUsageData={dataToUse || mockApiUsageData} 
+          apiUsageData={(dataToUse as ApiUsageData) || mockApiUsageData} 
           isLoading={false} // Set to false because we'll show our own loading UI above
           onRefresh={handleRefresh}
           onActionClick={handleActionClick}

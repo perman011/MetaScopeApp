@@ -539,44 +539,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API Usage Endpoint
   app.get("/api/orgs/:id/api-usage", ensureAuthenticated, async (req, res) => {
     try {
+      // Log the request for debugging
+      console.log(`API Usage request received for org ID: ${req.params.id}`);
+      console.log(`Request user ID: ${req.user?.id}, Request params: ${JSON.stringify(req.params)}`);
+      
       // First validate the org and ownership
       const org = await storage.getOrg(parseInt(req.params.id));
       if (!org) {
+        console.log(`Org not found with ID: ${req.params.id}`);
         return res.status(404).json({
           error: "Org not found",
           message: `The requested Salesforce organization with ID ${req.params.id} does not exist.`
         });
       }
       
-      if (org.userId !== req.user.id) {
+      console.log(`Found org: ${org.name}, userId: ${org.userId}, requestUserId: ${req.user?.id}`);
+      
+      if (org.userId !== req.user?.id) {
+        console.log(`Access denied - org.userId: ${org.userId}, req.user.id: ${req.user?.id}`);
         return res.status(403).json({
           error: "Access denied",
           message: "You do not have permission to access this organization's data."
         });
       }
       
-      console.log(`Fetching API usage data for org ${org.id}`);
+      console.log(`Fetching API usage data for org ${org.id} (${org.name})`);
       
       try {
         // Attempt to get API usage data from Salesforce
         const apiUsageData = await salesforceService.getApiUsageData(org);
+        console.log(`API usage data retrieved successfully for ${org.name}`);
         res.json(apiUsageData);
-      } catch (apiError) {
+      } catch (apiError: any) {
         console.error("Error retrieving API usage data:", apiError);
+        console.error("Error message:", apiError.message);
         
-        // Return a more helpful error response
+        // Log the stack trace for debugging
+        if (apiError.stack) {
+          console.error("Error stack:", apiError.stack);
+        }
+        
+        // Return a more helpful error response with debugging info
         res.status(502).json({
           error: "Failed to retrieve API usage data",
           message: apiError.message || "There was an error communicating with Salesforce API",
           errorCode: "SALESFORCE_API_ERROR",
-          // We don't provide fallback data in the error response - the client will handle this
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error processing API usage request:", error);
+      console.error("Error message:", error.message);
+      
+      if (error.stack) {
+        console.error("Error stack:", error.stack);
+      }
+      
       res.status(500).json({
         error: "Internal server error",
         message: "An unexpected error occurred while processing your request.",
+        details: error.message
       });
     }
   });
