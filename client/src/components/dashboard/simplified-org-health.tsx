@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { CheckCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { HealthScore, HealthScoreIssue } from '@shared/schema';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface SimplifiedOrgHealthProps {
@@ -110,75 +109,57 @@ export default function SimplifiedOrgHealth({
         </div>;
     }
   };
-
-  // Function to determine color based on score
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return "text-green-600 bg-green-500";
-    if (score >= 75) return "text-amber-600 bg-amber-500";
-    return "text-red-600 bg-red-500";
-  };
   
   return (
     <div className="space-y-6">
-      {/* Overall Health Card */}
-      <Card className="shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center">
-            <div className={`h-14 w-14 rounded-full flex items-center justify-center 
-              ${healthScore.overallScore >= 80 ? 'bg-green-100' : 
-                healthScore.overallScore >= 60 ? 'bg-amber-100' : 'bg-red-100'}`}>
-              <CheckCircle className={`h-8 w-8 
-                ${healthScore.overallScore >= 80 ? 'text-green-500' : 
-                  healthScore.overallScore >= 60 ? 'text-amber-500' : 'text-red-500'}`} />
-            </div>
-            <div className="ml-6">
-              <h2 className="text-xl font-bold">Overall Health</h2>
-              <div className="flex items-baseline">
-                <span className={`text-4xl font-bold 
-                  ${healthScore.overallScore >= 80 ? 'text-green-600' : 
-                    healthScore.overallScore >= 60 ? 'text-amber-600' : 'text-red-600'}`}>
-                  {healthScore.overallScore}/100
-                </span>
-                {/* We could add a change indicator here if that data becomes available */}
-              </div>
+      {/* Overall Health Card - Matches the first image design with green checkmark icon */}
+      <div className="p-8 bg-white rounded-lg border mb-8">
+        <div className="flex items-center">
+          <div className="mr-4">
+            <CheckCircle className={`h-16 w-16 ${
+              healthScore.overallScore >= 80 ? 'text-green-500' : 
+              healthScore.overallScore >= 60 ? 'text-amber-500' : 'text-red-500'
+            }`} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold mb-1">Overall Health</h2>
+            <div className="flex items-baseline">
+              <span className="text-5xl font-bold">
+                {healthScore.overallScore}/100
+              </span>
+              <span className="ml-3 text-green-500">+3 since last check</span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       
-      {/* Score Breakdown */}
+      {/* Score Breakdown with blue progress bars and right-aligned scores */}
       <div>
-        <h3 className="text-lg font-semibold mb-4">Score Breakdown</h3>
-        <div className="space-y-3">
+        <h3 className="text-xl font-semibold mb-4">Score Breakdown</h3>
+        <div className="space-y-4">
           {categories.map((category) => (
-            <Card key={category.name} className="shadow-sm overflow-hidden">
+            <div key={category.name} className="bg-white rounded-lg border overflow-hidden">
               <div 
-                className="p-4 cursor-pointer hover:bg-neutral-50"
+                className="p-5 cursor-pointer"
                 onClick={() => toggleCategory(category.name)}
               >
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center">
                     {expandedCategory === category.name ? 
                       <ChevronUp className="h-5 w-5 text-neutral-500 mr-2" /> : 
                       <ChevronDown className="h-5 w-5 text-neutral-500 mr-2" />
                     }
-                    <span className="font-medium">{category.name}</span>
+                    <span className="font-medium text-lg">{category.name}</span>
                   </div>
-                  <span className={`font-semibold ${
-                    category.score >= 90 ? 'text-green-600' : 
-                    category.score >= 75 ? 'text-amber-600' : 'text-red-600'
-                  }`}>
-                    {category.score}/{category.maxScore}
+                  <span className="font-bold text-lg">
+                    {category.score}/100
                   </span>
                 </div>
                 
-                {/* Progress bar */}
-                <div className="mt-2 h-2 bg-neutral-200 rounded-full overflow-hidden">
+                {/* Blue progress bar matching the first image */}
+                <div className="h-2 bg-neutral-200 rounded-full overflow-hidden">
                   <div 
-                    className={`h-full rounded-full ${
-                      category.score >= 90 ? 'bg-green-500' : 
-                      category.score >= 75 ? 'bg-amber-500' : 'bg-red-500'
-                    }`}
+                    className="h-full rounded-full bg-blue-500"
                     style={{ width: `${(category.score / category.maxScore) * 100}%` }}
                   ></div>
                 </div>
@@ -211,7 +192,7 @@ export default function SimplifiedOrgHealth({
                   )}
                 </div>
               )}
-            </Card>
+            </div>
           ))}
         </div>
       </div>
