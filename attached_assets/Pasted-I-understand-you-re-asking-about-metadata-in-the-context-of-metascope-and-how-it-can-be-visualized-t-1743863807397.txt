@@ -1,0 +1,67 @@
+I understand you're asking about metadata in the context of metascope and how it can be visualized to help users. Let me look up some information about metascope metadata visualization.​​​​​​​​​​​​​​​​
+
+Now I'll search for metadata in the context of metascope specifically:​​​​​​​​​​​​​​​​
+
+
+
+Based on my research, I can now provide you with specific recommendations for using treemap and Sankey charts to visualize metadata in a data discovery context. Let me break down the types of metadata that would benefit from these visualization types:
+
+## Metadata Types for Treemap Visualization
+
+Treemaps are excellent for visualizing hierarchical metadata structures and proportional relationships:
+
+1. **Data Asset Hierarchy**
+   - Show how data tables/views are organized within your data warehouse or lake structure [![GitHub](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6NTIzLCJtZXRhZGF0YSI6eyJmYXZpY29uVXJsIjoiaHR0cHM6XC9cL3d3dy5nb29nbGUuY29tXC9zMlwvZmF2aWNvbnM/c3o9NjQmZG9tYWluPWdpdGh1Yi5jb20iLCJzaXRlRG9tYWluIjoiZ2l0aHViLmNvbSIsInNpdGVOYW1lIjoiR2l0SHViIiwidHlwZSI6IndlYnBhZ2VfbWV0YWRhdGEifSwic3RhcnRJbmRleCI6NDM4LCJ0aXRsZSI6Ik1ldGFzY29wZSBQcmltZXIiLCJ1cmwiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvb3R0b2dyb3VwXC9zY2hlZG9zY29wZVwvd2lraVwvTWV0YXNjb3BlLVByaW1lciIsInV1aWQiOiJiOWRjNWVmOS05OTc5LTRkMTEtYjhhNC05YzVmZGNiZWU1NDcifQ%3D%3D)](https://github.com/ottogroup/schedoscope/wiki/Metascope-Primer)
+   - Visualize storage allocation across databases, schemas, and tables
+   - Display table sizes with nested categories (by department, domain, etc.)
+
+2. **Metadata Classification**
+   - Show data assets organized by business classification, tagging, or data governance categories [![Atlan](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6ODA0LCJtZXRhZGF0YSI6eyJmYXZpY29uVXJsIjoiaHR0cHM6XC9cL3d3dy5nb29nbGUuY29tXC9zMlwvZmF2aWNvbnM/c3o9NjQmZG9tYWluPWF0bGFuLmNvbSIsInNpdGVEb21haW4iOiJhdGxhbi5jb20iLCJzaXRlTmFtZSI6IkF0bGFuIiwidHlwZSI6IndlYnBhZ2VfbWV0YWRhdGEifSwic3RhcnRJbmRleCI6NzExLCJ0aXRsZSI6Ik9wZW4gU291cmNlIERhdGEgQ2F0YWxvZzogVG9wIDYgVG9vbHMgZm9yIDIwMjUiLCJ1cmwiOiJodHRwczpcL1wvYXRsYW4uY29tXC9vcGVuLXNvdXJjZS1kYXRhLWNhdGFsb2ctdG9vbHNcLyIsInV1aWQiOiI1MjdkMDM0NC02MGE3LTQ0ZDYtOWVkMC1jZjFiNWRmMTY4MmMifQ%3D%3D)](https://atlan.com/open-source-data-catalog-tools/)
+   - Visualize personal/sensitive data distribution across systems
+   - Display content by ownership or stewardship assignments
+
+3. **Data Quality Metrics**
+   - Show proportion of data assets with quality issues by category
+   - Visualize completeness, accuracy, and timeliness metrics across data domains
+   - Display quality issues across your data ecosystem with size indicating severity or frequency [![Datahubproject](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6MTIwOSwibWV0YWRhdGEiOnsiZmF2aWNvblVybCI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvczJcL2Zhdmljb25zP3N6PTY0JmRvbWFpbj1kYXRhaHVicHJvamVjdC5pbyIsInNpdGVEb21haW4iOiJkYXRhaHVicHJvamVjdC5pbyIsInNpdGVOYW1lIjoiRGF0YWh1YnByb2plY3QiLCJ0eXBlIjoid2VicGFnZV9tZXRhZGF0YSJ9LCJzdGFydEluZGV4IjoxMTE3LCJ0aXRsZSI6IlRoZSAjMSBPcGVuIFNvdXJjZSBNZXRhZGF0YSBQbGF0Zm9ybSB8IERhdGFIdWIiLCJ1cmwiOiJodHRwczpcL1wvZGF0YWh1YnByb2plY3QuaW9cLyIsInV1aWQiOiJlYTgwNzQxNS03MDViLTRkNjctODRjZC0wZTVlNGM2MDU5OTUifQ%3D%3D)](https://datahubproject.io/)
+
+## Metadata Types for Sankey Chart Visualization
+
+Sankey diagrams excel at showing flows and relationships between metadata elements:
+
+1. **Data Lineage Flows**
+   - Visualize "how traffic flows from pages to other pages on your web site" [![Google](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6MTQ0OSwibWV0YWRhdGEiOnsiZmF2aWNvblVybCI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvczJcL2Zhdmljb25zP3N6PTY0JmRvbWFpbj1nb29nbGUuY29tIiwic2l0ZURvbWFpbiI6Imdvb2dsZS5jb20iLCJzaXRlTmFtZSI6Ikdvb2dsZSIsInR5cGUiOiJ3ZWJwYWdlX21ldGFkYXRhIn0sInN0YXJ0SW5kZXgiOjEzNzcsInRpdGxlIjoiU2Fua2V5IERpYWdyYW0gfCBDaGFydHMgfCBHb29nbGUgZm9yIERldmVsb3BlcnMiLCJ1cmwiOiJodHRwczpcL1wvZGV2ZWxvcGVycy5nb29nbGUuY29tXC9jaGFydFwvaW50ZXJhY3RpdmVcL2RvY3NcL2dhbGxlcnlcL3NhbmtleSIsInV1aWQiOiJmNTllMjE0MS0xZTg2LTRkYjctOGRkNy02NTRlNmU0OGZjZjYifQ%3D%3D)](https://developers.google.com/chart/interactive/docs/gallery/sankey) or similarly how data flows through your systems
+   - Show "how data flows through multi-dimensional steps" and "which elements, called nodes, contribute to the overall flow" [![Metabase](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6MTYyNCwibWV0YWRhdGEiOnsiZmF2aWNvblVybCI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvczJcL2Zhdmljb25zP3N6PTY0JmRvbWFpbj1tZXRhYmFzZS5jb20iLCJzaXRlRG9tYWluIjoibWV0YWJhc2UuY29tIiwic2l0ZU5hbWUiOiJNZXRhYmFzZSIsInR5cGUiOiJ3ZWJwYWdlX21ldGFkYXRhIn0sInN0YXJ0SW5kZXgiOjE1MDQsInRpdGxlIjoiU2Fua2V5IGNoYXJ0cyB8IE1ldGFiYXNlIERvY3VtZW50YXRpb24iLCJ1cmwiOiJodHRwczpcL1wvd3d3Lm1ldGFiYXNlLmNvbVwvZG9jc1wvbGF0ZXN0XC9xdWVzdGlvbnNcL3Zpc3VhbGl6YXRpb25zXC9zYW5rZXkiLCJ1dWlkIjoiMTI4ODBkYjAtZGIzZi00MTI0LTkzYzYtOWQzOWNkZWMwYmQ3In0%3D)](https://www.metabase.com/docs/latest/questions/visualizations/sankey)
+   - Display transformation volume between source and target systems
+
+2. **User Journey Analysis**
+   - Show "customer journey as a chronological set of events" to understand paths users take through your data assets [![Towards Data Science](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6MTg0MSwibWV0YWRhdGEiOnsiZmF2aWNvblVybCI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvczJcL2Zhdmljb25zP3N6PTY0JmRvbWFpbj10b3dhcmRzZGF0YXNjaWVuY2UuY29tIiwic2l0ZURvbWFpbiI6InRvd2FyZHNkYXRhc2NpZW5jZS5jb20iLCJzaXRlTmFtZSI6IlRvd2FyZHMgRGF0YSBTY2llbmNlIiwidHlwZSI6IndlYnBhZ2VfbWV0YWRhdGEifSwic3RhcnRJbmRleCI6MTcyOSwidGl0bGUiOiI0IHVzZS1jYXNlcyBmb3IgU2Fua2V5IENoYXJ0cyB8IFRvd2FyZHMgRGF0YSBTY2llbmNlIiwidXJsIjoiaHR0cHM6XC9cL3Rvd2FyZHNkYXRhc2NpZW5jZS5jb21cLzQtdXNlLWNhc2VzLWZvci1zYW5rZXktY2hhcnRzLTY3OWI5NGY3YzY3MlwvIiwidXVpZCI6ImNjNDEwNzNjLWU1ZjEtNDg4Mi1hYmY0LWUzMjhlYTM5MzM1NCJ9)](https://towardsdatascience.com/4-use-cases-for-sankey-charts-679b94f7c672/)
+   - Visualize which data assets lead to others in discovery patterns
+   - Track user flow through metadata exploration paths
+
+3. **Metadata Relationship Networks**
+   - Display "evolution between two states" of metadata like data transformations [![Data-to-viz](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6MjA4OCwibWV0YWRhdGEiOnsiZmF2aWNvblVybCI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvczJcL2Zhdmljb25zP3N6PTY0JmRvbWFpbj1kYXRhLXRvLXZpei5jb20iLCJzaXRlRG9tYWluIjoiZGF0YS10by12aXouY29tIiwic2l0ZU5hbWUiOiJEYXRhLXRvLXZpeiIsInR5cGUiOiJ3ZWJwYWdlX21ldGFkYXRhIn0sInN0YXJ0SW5kZXgiOjIwMTIsInRpdGxlIjoiU2Fua2V5IGRpYWdyYW0g4oCTIGZyb20gRGF0YSB0byBWaXoiLCJ1cmwiOiJodHRwczpcL1wvd3d3LmRhdGEtdG8tdml6LmNvbVwvZ3JhcGhcL3NhbmtleS5odG1sIiwidXVpZCI6Ijg3MGVjZjI2LTdhYmUtNGJlMi04MjYzLWYzNWVlMzlmMDFjOCJ9)](https://www.data-to-viz.com/graph/sankey.html)
+   - Show how different data entities are connected through relationships
+   - Visualize cross-reference patterns between related metadata elements
+
+## Benefits for Users
+
+Implementing these visualizations provides several key benefits:
+
+1. **Improved Data Discovery**
+   - Users can "quickly identify relevant data sets and attributes" through visual exploration of metadata [![LinkedIn](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6MjQ2NCwibWV0YWRhdGEiOnsiZmF2aWNvblVybCI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvczJcL2Zhdmljb25zP3N6PTY0JmRvbWFpbj1saW5rZWRpbi5jb20iLCJzaXRlRG9tYWluIjoibGlua2VkaW4uY29tIiwic2l0ZU5hbWUiOiJMaW5rZWRJbiIsInR5cGUiOiJ3ZWJwYWdlX21ldGFkYXRhIn0sInN0YXJ0SW5kZXgiOjIzNjMsInRpdGxlIjoiSG93IGNhbiB5b3UgdXNlIG1ldGFkYXRhIHRvIHN1cHBvcnQgZGF0YSBhbmFseXRpY3MgYW5kIHJlcG9ydGluZz8iLCJ1cmwiOiJodHRwczpcL1wvd3d3LmxpbmtlZGluLmNvbVwvYWR2aWNlXC8wXC9ob3ctY2FuLXlvdS11c2UtbWV0YWRhdGEtc3VwcG9ydC1kYXRhLWFuYWx5dGljcyIsInV1aWQiOiJiMDc3YzVjYS1iZjJlLTRlM2MtYTgwMi0wNmY0ZGU2N2ZjNzUifQ%3D%3D)](https://www.linkedin.com/advice/0/how-can-you-use-metadata-support-data-analytics)
+   - Navigate complex relationships more intuitively than through text-based search alone
+
+2. **Better Understanding of Data Context**
+   - Visualize "relationship density and trends" to quickly grasp how data assets relate to each other [![Splunk](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6MjcwMiwibWV0YWRhdGEiOnsiZmF2aWNvblVybCI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvczJcL2Zhdmljb25zP3N6PTY0JmRvbWFpbj1zcGx1bmsuY29tIiwic2l0ZURvbWFpbiI6InNwbHVuay5jb20iLCJzaXRlTmFtZSI6IlNwbHVuayIsInR5cGUiOiJ3ZWJwYWdlX21ldGFkYXRhIn0sInN0YXJ0SW5kZXgiOjI2MDUsInRpdGxlIjoiVXNpbmcgU2Fua2V5IGRpYWdyYW1zIC0gU3BsdW5rIERvY3VtZW50YXRpb24iLCJ1cmwiOiJodHRwczpcL1wvZG9jcy5zcGx1bmsuY29tXC9Eb2N1bWVudGF0aW9uXC9TYW5rZXlEaWFncmFtXC8xLjYuMFwvU2Fua2V5RGlhZ3JhbVZpelwvU2Fua2V5SW50cm8iLCJ1dWlkIjoiNzJkMWRhY2UtZjJiMi00MWQ3LWE4MTMtMTkzNTllNjVkMTIwIn0%3D)](https://docs.splunk.com/Documentation/SankeyDiagram/1.6.0/SankeyDiagramViz/SankeyIntro)
+   - See the big picture of data organization and flow within your ecosystem
+
+3. **Enhanced Data Governance**
+   - Enable "seamless end-to-end insights" into data lineage, quality, and ownership [![Opendatadiscovery](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6Mjg5NywibWV0YWRhdGEiOnsiZmF2aWNvblVybCI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvczJcL2Zhdmljb25zP3N6PTY0JmRvbWFpbj1vcGVuZGF0YWRpc2NvdmVyeS5vcmciLCJzaXRlRG9tYWluIjoib3BlbmRhdGFkaXNjb3Zlcnkub3JnIiwic2l0ZU5hbWUiOiJPcGVuZGF0YWRpc2NvdmVyeSIsInR5cGUiOiJ3ZWJwYWdlX21ldGFkYXRhIn0sInN0YXJ0SW5kZXgiOjI4MTgsInRpdGxlIjoiT3BlbkRhdGFEaXNjb3ZlcnkgUGxhdGZvcm0gLSBUaGUgRmlyc3QgVG9vbCB0byBQcm92aWRlIFRydWx5IEVuZC10by1FbmQgRGF0YSBEaXNjb3ZlcnksIE9ic2VydmFiaWxpdHksIGFuZCBUcnVzdCIsInVybCI6Imh0dHBzOlwvXC9vcGVuZGF0YWRpc2NvdmVyeS5vcmdcLyIsInV1aWQiOiI1YjQ4ODkwNi1lMTk3LTQwYjYtYjA0MC00MGFhNmE2YmJlZjYifQ%3D%3D)](https://opendatadiscovery.org/)
+   - Monitor metadata completeness and identify gaps in documentation
+
+4. **Optimized Data Flow Analysis**
+   - Help users "visualise a complex process and focus on a single resource in that process" to identify bottlenecks or optimization opportunities [![insightsoftware](claude-citation:/icon.png?validation=CC256B5C-BF9E-4E9D-B7BA-F4C93F57A38A&citation=eyJlbmRJbmRleCI6MzE1MSwibWV0YWRhdGEiOnsiZmF2aWNvblVybCI6Imh0dHBzOlwvXC93d3cuZ29vZ2xlLmNvbVwvczJcL2Zhdmljb25zP3N6PTY0JmRvbWFpbj1pbnNpZ2h0c29mdHdhcmUuY29tIiwic2l0ZURvbWFpbiI6Imluc2lnaHRzb2Z0d2FyZS5jb20iLCJzaXRlTmFtZSI6Imluc2lnaHRzb2Z0d2FyZSIsInR5cGUiOiJ3ZWJwYWdlX21ldGFkYXRhIn0sInN0YXJ0SW5kZXgiOjMwMTAsInRpdGxlIjoiVml6bGliIFNhbmtleSBDaGFydDogVGhlIG1vc3QgY29tbW9uIHVzZSBjYXNlcyArIGV4YW1wbGVzIGluIFFsaWsgU2Vuc2UgLSBpbnNpZ2h0c29mdHdhcmUiLCJ1cmwiOiJodHRwczpcL1wvaW5zaWdodHNvZnR3YXJlLmNvbVwvcmVzb3VyY2VzXC92aXpsaWItc2Fua2V5LWNoYXJ0LXRoZS1tb3N0LWNvbW1vbi11c2UtY2FzZXMtZXhhbXBsZXMtaW4tcWxpay1zZW5zZVwvIiwidXVpZCI6ImQ5MGI2NWRlLWVkM2YtNDRiMi1hMjBhLTc0MDNkNDAyOWY0YSJ9)](https://insightsoftware.com/resources/vizlib-sankey-chart-the-most-common-use-cases-examples-in-qlik-sense/)
+   - Track volume and quality changes through transformation processes
+
+Would you like me to create an example visualization that demonstrates one of these use cases with sample metadata? I can focus on a specific aspect that would be most valuable for your application.
