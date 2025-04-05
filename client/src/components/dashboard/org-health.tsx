@@ -1,6 +1,7 @@
 import { useOrgContext } from "@/hooks/use-org";
 import { useQuery } from "@tanstack/react-query";
 import SimplifiedOrgHealth from "@/components/dashboard/simplified-org-health";
+import EnhancedOrgHealth from "@/components/dashboard/enhanced-org-health";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -166,14 +167,14 @@ export default function OrgHealth() {
         </Card>
         
         {useMockData && mockData && (
-          <div className="max-w-4xl mx-auto">
-            <SimplifiedOrgHealth 
+          <div className="w-full max-w-6xl mx-auto">
+            <EnhancedOrgHealth 
               healthScore={mockData} 
               isLoading={false}
-              onIssueClick={(issueId) => {
+              onActionClick={(actionId) => {
                 toast({
-                  title: "Issue Selected",
-                  description: `Viewing details for issue ${issueId} (test data)`,
+                  title: "Action Selected",
+                  description: `Executing action ${actionId} (test data)`,
                 });
               }}
             />
@@ -185,17 +186,20 @@ export default function OrgHealth() {
 
   return (
     <div className="p-4 space-y-6">
-      {/* Display directly the SimplifiedOrgHealth component without tabs */}
-      <div className="max-w-4xl mx-auto">
-        <SimplifiedOrgHealth 
+      {/* Switch to the EnhancedOrgHealth component for better analytics */}
+      <div className="w-full max-w-6xl mx-auto">
+        <EnhancedOrgHealth 
           healthScore={healthScore} 
           isLoading={isHealthScoreLoading}
-          onIssueClick={(issueId) => {
-            // Show toast with issue information
+          onActionClick={(actionId) => {
+            // Show toast with action information
             toast({
-              title: "Issue Selected",
-              description: `Viewing details for issue ${issueId}`,
+              title: "Action Selected",
+              description: `Executing action ${actionId}`,
             });
+            
+            // Auto-fix issues
+            handleAutoFix(actionId);
           }}
         />
       </div>
