@@ -365,40 +365,37 @@ export default function ConnectSalesforceOrgDialog({
             </div>
           )}
           
-          <DialogFooter className="mt-6">
-            <Button 
-              type="button"
-              variant="outline" 
-              onClick={() => {
-                // Only allow closing in idle or error states
-                if (connectionStatus === 'idle' || connectionStatus === 'error') {
-                  setIsOpen(false);
-                  resetForm();
-                }
-              }}
-              disabled={isSubmitDisabled}
-            >
-              Cancel
-            </Button>
-            
-            {connectionStatus === 'error' && (
+          {/* Only show footer buttons for non-idle states since idle has its own buttons */}
+          {connectionStatus !== 'idle' && (
+            <DialogFooter className="mt-6">
               <Button 
+                type="button"
+                variant="outline" 
                 onClick={() => {
-                  // Reset to form state
-                  setConnectionStatus('idle');
-                  setConnectionProgress(0);
+                  // Only allow closing in error states (idle has its own button)
+                  if (connectionStatus === 'error') {
+                    setIsOpen(false);
+                    resetForm();
+                  }
                 }}
+                disabled={isSubmitDisabled}
               >
-                Back
+                Cancel
               </Button>
-            )}
-            
-            {connectionStatus === 'idle' && (
-              <Button onClick={handleConnect}>
-                Connect
-              </Button>
-            )}
-          </DialogFooter>
+              
+              {connectionStatus === 'error' && (
+                <Button 
+                  onClick={() => {
+                    // Reset to form state
+                    setConnectionStatus('idle');
+                    setConnectionProgress(0);
+                  }}
+                >
+                  Back
+                </Button>
+              )}
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </>
