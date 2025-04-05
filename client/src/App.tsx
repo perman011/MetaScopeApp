@@ -16,6 +16,7 @@ import PermissionsAnalyzer from "@/pages/permissions-analyzer";
 import ApexDebugAnalyzer from "@/pages/apex-debug-analyzer";
 import FieldIntelligence from "@/pages/field-intelligence";
 import MetadataAnalytics from "@/pages/metadata-analytics";
+import MetadataAnalyticsPanel from "@/pages/dashboard/MetadataAnalyticsPanel";
 import SettingsPage from "@/pages/settings-page";
 import Support from "@/pages/support";
 import Subscription from "@/pages/subscription";
@@ -76,7 +77,10 @@ function AuthenticatedRoutes() {
               <Route path="/dashboard/org-health/metadata-components" component={() => 
                 <div className="p-6">
                   <h1 className="text-2xl font-bold mb-6">Metadata Components Analytics</h1>
-                  {React.createElement(require('./pages/dashboard/MetadataAnalyticsPanel').default)}
+                  <p className="text-neutral-600 mb-6">
+                    Comprehensive analysis of your Salesforce org's metadata components and their relationships.
+                  </p>
+                  <MetadataAnalyticsPanel />
                 </div>
               } />
               <Route path="/settings" component={SettingsPage} />
