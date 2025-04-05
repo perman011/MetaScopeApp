@@ -1,0 +1,36 @@
+We're implementing two powerful visualization components for the Salesforce metadata analytics platform:
+
+1. Treemap Visualization
+Purpose: The Treemap visualization displays hierarchical metadata structure in a space-efficient way showing nested rectangles.
+
+Details:
+
+Shows metadata components organized by categories (Apex, Objects, UI, Automation, etc.)
+Size of each rectangle represents the number of components in that category
+Color coding differentiates between different metadata types
+Interactive tooltips show detailed counts when hovering over sections
+Displays in the Metadata Analytics page
+Technical Implementation:
+
+Uses Recharts library's Treemap component
+Data is structured hierarchically with parent-child relationships
+Each category has a set of subcategories (e.g., Apex has Classes and Triggers)
+Custom tooltip provides contextual information for each section
+2. Sankey Diagram
+Purpose: The Sankey diagram visualizes data flow and dependencies between different metadata components.
+
+Details:
+
+Shows how data flows between different Salesforce components (objects, triggers, flows, etc.)
+Width of connections represents the volume/strength of the relationship
+Color coding identifies different component categories (sources, processes, destinations)
+Helps identify key components in the data flow chain
+Displays in the Metadata Dependency Analyzer page
+Technical Implementation:
+
+Uses Recharts library's Sankey component
+Data is structured as nodes (components) and links (relationships between components)
+Custom node renderer for better styling and readability
+Width of links indicates the "value" or strength of the connection
+Custom tooltips show details about both nodes and connections
+Both visualizations provide users with intuitive ways to understand complex metadata relationships and structures that would be difficult to comprehend from tables or text alone. The Treemap offers a high-level view of metadata composition, while the Sankey diagram reveals how these components interact with each other.
