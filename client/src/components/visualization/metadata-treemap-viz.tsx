@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
+import { Treemap, ResponsiveContainer, Tooltip, Tooltip as RechartsTooltip } from 'recharts';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Define the data structure for treemap
@@ -87,6 +87,7 @@ export default function MetadataTreemapViz({
   };
 
   const displayData = data || defaultData;
+  const hasValidData = displayData && displayData.children && displayData.children.length > 0;
 
   return (
     <Card className={className}>
@@ -103,6 +104,10 @@ export default function MetadataTreemapViz({
             <div className="h-full w-full flex items-center justify-center">
               <Skeleton className="h-[380px] w-full rounded-md" />
             </div>
+          ) : !hasValidData ? (
+            <div className="h-full w-full flex items-center justify-center text-gray-500">
+              No metadata hierarchy data available
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <Treemap
@@ -113,7 +118,7 @@ export default function MetadataTreemapViz({
                 stroke="#fff"
                 fill="#8884d8"
               >
-                <Tooltip content={<CustomTooltip />} />
+                <RechartsTooltip content={<CustomTooltip />} />
               </Treemap>
             </ResponsiveContainer>
           )}
