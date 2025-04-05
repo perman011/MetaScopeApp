@@ -674,7 +674,7 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
       </div>
       
       {/* Center Panel - Graph Visualization */}
-      <div className="flex-1 h-full relative overflow-hidden">
+      <div className="flex-1 h-full relative">
         {/* Zoom Controls */}
         <div className="absolute bottom-4 right-4 z-10 flex flex-col space-y-2">
           <Button 
@@ -703,11 +703,12 @@ export default function EnhancedSchemaVisualizer({ metadata, selectedLayout: pro
           </Button>
         </div>
         
-        {/* Graph Container */}
+        {/* Graph Container - Fixed to remove scrollbars */}
         <div 
           ref={cyRef} 
-          className="w-full h-full overflow-hidden" 
+          className="w-full h-full" 
           id="cy"
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
       </div>
       
