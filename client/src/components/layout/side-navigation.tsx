@@ -250,22 +250,41 @@ function CollapsedNavigation({
   activeCategory: string | null;
 }) {
   return (
-    <aside className="w-0 border-r border-neutral-200 flex flex-col h-full overflow-visible relative">
-      <div className="absolute left-0 h-12 top-20 flex flex-col space-y-2">
+    <aside className="w-[50px] bg-white border-r border-neutral-200 flex flex-col h-full overflow-hidden">
+      <div className="p-2 border-b border-neutral-200 flex justify-center mb-4">
+        <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-xs">
+          MS
+        </div>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto px-1 pb-4">
         {Object.entries(navigationConfig).map(([key, category]) => (
-          <button
+          <div 
             key={key}
-            className={cn(
-              "w-8 h-8 bg-white flex items-center justify-center rounded-e-md shadow-sm border border-l-0 border-neutral-200 text-[9px] font-semibold",
-              activeCategory === key 
-                ? "bg-primary-50 text-primary-700 border-primary-100" 
-                : "text-neutral-600 hover:bg-neutral-100"
-            )}
-            onClick={() => onCategoryClick(key)}
-            title={category.label}
+            className="mb-2"
           >
-            <span>{key.substring(0, 1)}</span>
-          </button>
+            <button
+              className={cn(
+                "w-full flex flex-col items-center justify-center p-2 rounded-md",
+                activeCategory === key
+                  ? "bg-primary-50 text-primary-700"
+                  : "text-neutral-600 hover:bg-neutral-100"
+              )}
+              onClick={() => onCategoryClick(key)}
+              title={category.label}
+            >
+              <div className="w-6 h-6 flex items-center justify-center rounded-md mb-1">
+                {key === "CORE" && <Home className="h-4 w-4" />}
+                {key === "BUSINESS_INSIGHTS" && <BarChart3 className="h-4 w-4" />}
+                {key === "DEVELOPMENT_TOOLS" && <Code className="h-4 w-4" />}
+                {key === "ADMINISTRATION" && <Shield className="h-4 w-4" />}
+                {key === "SETTINGS" && <Settings className="h-4 w-4" />}
+              </div>
+              <span className="text-[8px] uppercase font-semibold tracking-tight text-center">
+                {key === "BUSINESS_INSIGHTS" ? "Insights" : key.slice(0, 6)}
+              </span>
+            </button>
+          </div>
         ))}
       </div>
     </aside>
@@ -494,7 +513,7 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
       )}
       
       <button 
-        className={`absolute top-20 ${isCollapsed ? 'left-8' : '-right-3'} bg-white border border-neutral-200 rounded-full p-1 shadow-sm z-20 hover:bg-neutral-50`}
+        className={`absolute top-4 ${isCollapsed ? 'left-[38px]' : 'left-60'} bg-white border border-neutral-200 rounded-full p-1 shadow-md z-20 hover:bg-neutral-50`}
         onClick={() => setIsCollapsed(!isCollapsed)}
         aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
       >
