@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrg } from "@/hooks/use-org";
-import OrgSelectorDropdown from "@/components/org-selector-dropdown";
+import OrgSelectorDropdown from "../common/org-selector";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,8 +14,9 @@ import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
 
 export default function TopNavBar() {
-  const { user, logoutMutation } = useAuth();
+  const { user, logout } = useAuth();
   const [, navigate] = useLocation();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // Safely access org context only if we're within an OrgProvider
   let activeOrg = null;
@@ -25,8 +27,10 @@ export default function TopNavBar() {
     // OrgContext not available, activeOrg remains null
   }
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await logout();
+    setIsLoggingOut(false);
     navigate("/auth");
   };
 
@@ -77,7 +81,7 @@ export default function TopNavBar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <div className="px-2 py-1.5 text-sm font-medium text-neutral-900">
-                  {user.fullName || user.username}
+                  {user.name || user.email}
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/")}>
@@ -89,10 +93,10 @@ export default function TopNavBar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  disabled={logoutMutation.isPending}
+                  disabled={isLoggingOut}
                   className="text-red-600 focus:text-red-600"
                 >
-                  {logoutMutation.isPending ? (
+                  {isLoggingOut ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     "Logout"

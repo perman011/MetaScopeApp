@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiRequest } from '@/lib/api';
+
 
 // Define the user type
 export interface User {
@@ -35,7 +35,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const checkAuth = async () => {
       try {
         setIsLoading(true);
-        const response = await apiRequest('/api/auth/me');
+        const response = await fetch('/api/user', {
+          credentials: 'include', // Include cookies for session management
+        });
         
         if (response.ok) {
           const userData = await response.json();
@@ -54,10 +56,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Login function
   const login = async (email: string, password: string) => {
     try {
-      const response = await apiRequest('/api/auth/login', {
+      const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        credentials: 'include',
+        body: JSON.stringify({ username: email, password }),
       });
 
       if (response.ok) {
@@ -77,7 +80,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout function
   const logout = async () => {
     try {
-      await apiRequest('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
       setUser(null);
     } catch (error) {
       console.error('Logout failed:', error);

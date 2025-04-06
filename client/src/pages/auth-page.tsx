@@ -67,6 +67,7 @@ export default function AuthPage() {
     try {
       setIsLoggingIn(true);
       setLoginError(null);
+      console.log('Attempting login with:', data);
       const result = await login(data.username, data.password);
       if (!result.success) {
         setLoginError(result.error || 'Login failed');
