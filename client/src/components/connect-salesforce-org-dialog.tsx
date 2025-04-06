@@ -75,6 +75,12 @@ export default function ConnectSalesforceOrgDialog({
       setConnectionError(null);
       
       try {
+        console.log('Attempting to connect with:', {
+          name: data.name,
+          environment: data.environment,
+          authMethod: data.authMethod
+        });
+
         const res = await fetch('/api/orgs', {
           method: 'POST',
           headers: {
@@ -87,6 +93,7 @@ export default function ConnectSalesforceOrgDialog({
         
         if (!res.ok) {
           const errorData = await res.json();
+          console.error('Connection error response:', errorData);
           throw new Error(errorData.message || 'Failed to connect to Salesforce org');
         }
         
@@ -147,11 +154,18 @@ export default function ConnectSalesforceOrgDialog({
   };
   
   const handleConnect = () => {
+    // Clear any previous errors
+    setConnectionError(null);
+
     const data = {
       name: orgName,
       environment: environment,
       authMethod: authMethod,
     };
+
+    // Validate required fields
+    const errors = [];
+    if (!orgName) errors.push("Org name is required");
 
     if (authMethod === 'credentials') {
       if (!orgName || !email || !password) {
