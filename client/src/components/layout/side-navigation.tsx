@@ -250,27 +250,28 @@ function CollapsedNavigation({
   activeCategory: string | null;
 }) {
   return (
-    <aside className="w-16 bg-white border-r border-neutral-200 flex flex-col h-full overflow-y-auto">
-      <div className="p-3 border-b border-neutral-200 flex justify-center">
-        <div className="w-10 h-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold">
+    <aside className="w-10 bg-white border-r border-neutral-200 flex flex-col h-full overflow-y-auto">
+      <div className="p-2 border-b border-neutral-200 flex justify-center">
+        <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-xs">
           MS
         </div>
       </div>
       
-      <nav className="flex-1 p-2">
+      <nav className="flex-1 p-1">
         {Object.entries(navigationConfig).map(([key, category]) => (
           <button
             key={key}
             className={cn(
-              "w-full flex items-center justify-between p-2 mb-1 rounded-md text-xs font-semibold",
+              "w-full flex flex-col items-center justify-center p-1 mb-1 rounded-md text-[9px] font-semibold",
               activeCategory === key 
                 ? "bg-primary-50 text-primary-700" 
                 : "text-neutral-600 hover:bg-neutral-100"
             )}
             onClick={() => onCategoryClick(key)}
+            title={category.label}
           >
-            <span className="truncate">{category.label}</span>
-            <ChevronDown className="h-3 w-3 opacity-70" />
+            <span className="truncate max-w-full">{key.substring(0, 3)}</span>
+            <ChevronDown className="h-2 w-2 opacity-70 mt-1" />
           </button>
         ))}
       </nav>
