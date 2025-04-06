@@ -81,7 +81,21 @@ export default function ConnectSalesforceOrgDialog({
       setConnectionError(null);
       
       try {
-        const res = await apiRequest("POST", "/api/orgs", data);
+        const res = await fetch('/api/orgs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'credentials': 'include'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'Failed to connect to Salesforce org');
+        }
+        
         const newOrg = await res.json();
         
         // Simulate metadata fetching (would happen on the server in production)
