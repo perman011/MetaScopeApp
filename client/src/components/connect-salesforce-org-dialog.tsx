@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useOrg } from "@/hooks/use-org";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { 
   Dialog, 
   DialogContent, 
@@ -12,7 +11,6 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -31,26 +29,20 @@ export default function ConnectSalesforceOrgDialog({
   children, 
   onSuccess 
 }: ConnectSalesforceOrgDialogProps) {
-  // Token-based auth
   const [orgName, setOrgName] = useState("");
-  const [instanceUrl, setInstanceUrl] = useState("https://");
-  const [accessToken, setAccessToken] = useState("");
-  const [refreshToken, setRefreshToken] = useState("");
-  
-  // Credential-based auth
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [securityToken, setSecurityToken] = useState("");
   const [environment, setEnvironment] = useState("production"); // or "sandbox"
   
   const [isOpen, setIsOpen] = useState(false);
-  const [authMethod, setAuthMethod] = useState("credentials"); // or "token"
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
   const [connectionProgress, setConnectionProgress] = useState(0);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
   const { toast } = useToast();
-  const { refetchOrgs } = useOrg();
+  const org = useOrg();
+  const refreshOrgs = org.refreshOrgs;
   
   // Update progress bar based on connection status
   useEffect(() => {
@@ -86,8 +78,8 @@ export default function ConnectSalesforceOrgDialog({
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'credentials': 'include'
           },
+          credentials: 'include',
           body: JSON.stringify(data)
         });
         
@@ -118,7 +110,7 @@ export default function ConnectSalesforceOrgDialog({
       // Only close after a short delay to show success state
       setTimeout(() => {
         setIsOpen(false);
-        refetchOrgs();
+        refreshOrgs();
         
         toast({
           title: "Connection successful",
@@ -145,56 +137,33 @@ export default function ConnectSalesforceOrgDialog({
   
   const resetForm = () => {
     setOrgName("");
-    setInstanceUrl("https://");
-    setAccessToken("");
-    setRefreshToken("");
     setEmail("");
     setPassword("");
     setSecurityToken("");
     setEnvironment("production");
-    setAuthMethod("credentials");
     setConnectionStatus('idle');
     setConnectionProgress(0);
     setConnectionError(null);
   };
   
   const handleConnect = () => {
-    if (authMethod === "token") {
-      if (!orgName || !instanceUrl || !accessToken) {
-        toast({
-          variant: "destructive",
-          title: "Missing information",
-          description: "Please provide org name, instance URL, and access token.",
-        });
-        return;
-      }
-      
-      connectMutation.mutate({
-        name: orgName,
-        instanceUrl: instanceUrl,
-        accessToken: accessToken,
-        refreshToken: refreshToken || undefined,
-        authMethod: "token"
+    if (!orgName || !email || !password) {
+      toast({
+        variant: "destructive",
+        title: "Missing information",
+        description: "Please provide org name, email, and password.",
       });
-    } else {
-      if (!orgName || !email || !password) {
-        toast({
-          variant: "destructive",
-          title: "Missing information",
-          description: "Please provide org name, email, and password.",
-        });
-        return;
-      }
-      
-      connectMutation.mutate({
-        name: orgName,
-        email: email,
-        password: password,
-        securityToken: securityToken,
-        environment: environment,
-        authMethod: "credentials"
-      });
+      return;
     }
+    
+    connectMutation.mutate({
+      name: orgName,
+      email: email,
+      password: password,
+      securityToken: securityToken,
+      environment: environment,
+      authMethod: "credentials"
+    });
   };
   
   const isSubmitDisabled = 
@@ -213,7 +182,7 @@ export default function ConnectSalesforceOrgDialog({
           <DialogHeader>
             <DialogTitle>Connect Salesforce Org</DialogTitle>
             <DialogDescription>
-              Connect your Salesforce org to analyze metadata and health.
+              Enter your Salesforce org credentials to connect
             </DialogDescription>
           </DialogHeader>
           
@@ -230,90 +199,49 @@ export default function ConnectSalesforceOrgDialog({
                   />
                 </div>
                 
-                <Tabs value={authMethod} onValueChange={setAuthMethod}>
-                  <TabsList className="grid grid-cols-2 mb-2">
-                    <TabsTrigger value="credentials">Username & Password</TabsTrigger>
-                    <TabsTrigger value="token">Access Token</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="credentials" className="space-y-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="securityToken">Security Token (if required)</Label>
+                  <Input
+                    id="securityToken"
+                    value={securityToken}
+                    onChange={(e) => setSecurityToken(e.target.value)}
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label>Environment</Label>
+                  <RadioGroup value={environment} onValueChange={setEnvironment}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="production" id="production" />
+                      <Label htmlFor="production">Production</Label>
                     </div>
-                    
-                    <div className="grid gap-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="sandbox" id="sandbox" />
+                      <Label htmlFor="sandbox">Sandbox</Label>
                     </div>
-                    
-                    <div className="grid gap-2">
-                      <Label htmlFor="securityToken">Security Token (if required)</Label>
-                      <Input
-                        id="securityToken"
-                        value={securityToken}
-                        onChange={(e) => setSecurityToken(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <Label>Environment</Label>
-                      <RadioGroup value={environment} onValueChange={setEnvironment}>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="production" id="production" />
-                          <Label htmlFor="production">Production</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="sandbox" id="sandbox" />
-                          <Label htmlFor="sandbox">Sandbox</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="token" className="space-y-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="instanceUrl">Instance URL</Label>
-                      <Input
-                        id="instanceUrl"
-                        placeholder="https://yourorg.my.salesforce.com"
-                        value={instanceUrl}
-                        onChange={(e) => setInstanceUrl(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <Label htmlFor="accessToken">Access Token</Label>
-                      <Input
-                        id="accessToken"
-                        type="password"
-                        value={accessToken}
-                        onChange={(e) => setAccessToken(e.target.value)}
-                      />
-                    </div>
-                    
-                    <div className="grid gap-2">
-                      <Label htmlFor="refreshToken">Refresh Token (optional)</Label>
-                      <Input
-                        id="refreshToken"
-                        type="password"
-                        value={refreshToken}
-                        onChange={(e) => setRefreshToken(e.target.value)}
-                      />
-                    </div>
-                  </TabsContent>
-                </Tabs>
+                  </RadioGroup>
+                </div>
               </div>
               
               <DialogFooter>
@@ -355,24 +283,14 @@ export default function ConnectSalesforceOrgDialog({
                 <SalesforceConnectionError 
                   onRetry={() => {
                     // Retry the connection with the same parameters
-                    if (authMethod === "token") {
-                      connectMutation.mutate({
-                        name: orgName,
-                        instanceUrl: instanceUrl,
-                        accessToken: accessToken,
-                        refreshToken: refreshToken || undefined,
-                        authMethod: "token"
-                      });
-                    } else {
-                      connectMutation.mutate({
-                        name: orgName,
-                        email: email,
-                        password: password,
-                        securityToken: securityToken,
-                        environment: environment,
-                        authMethod: "credentials"
-                      });
-                    }
+                    connectMutation.mutate({
+                      name: orgName,
+                      email: email,
+                      password: password,
+                      securityToken: securityToken,
+                      environment: environment,
+                      authMethod: "credentials"
+                    });
                   }} 
                 />
               )}
