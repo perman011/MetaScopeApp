@@ -1520,6 +1520,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // New endpoint to support the Technical Debt Scanner page
+  app.get("/api/technical-debt/:orgId", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.orgId);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      // Get technical debt items with optional filters
+      const category = req.query.category as string | undefined;
+      const status = req.query.status as string | undefined;
+      const technicalDebtItems = await storage.getOrgTechnicalDebt(orgId, category, status);
+      
+      // Return the items
+      res.json(technicalDebtItems);
+    } catch (error) {
+      console.error('Failed to fetch technical debt items:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch technical debt items',
+        message: error.message
+      });
+    }
+  });
 
   app.post("/api/orgs/:id/technical-debt", ensureAuthenticated, async (req, res) => {
     try {

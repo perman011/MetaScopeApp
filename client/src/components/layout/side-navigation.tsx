@@ -19,7 +19,8 @@ import {
   FileSearch,
   Zap,
   GitBranch,
-  AlertTriangle
+  AlertTriangle,
+  BarChartHorizontal
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -120,6 +121,10 @@ export default function SideNavigation() {
         
         <NavItem href="/code-analysis" icon={AlertTriangle} active={location === "/code-analysis"}>
           Code Analysis
+        </NavItem>
+        
+        <NavItem href="/tech-debt-scanner" icon={BarChartHorizontal} active={location === "/tech-debt-scanner"}>
+          Technical Debt Scanner
         </NavItem>
         
         <div className="pt-4 mt-4 border-t border-neutral-200">

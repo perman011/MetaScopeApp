@@ -561,5 +561,272 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Export a singleton instance
-export const storage = new MemStorage();
+// PostgreSQL database implementation
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { neon } from '@neondatabase/serverless';
+import * as schema from "@shared/schema";
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
+
+class PostgresStorage implements IStorage {
+  private db: any;
+  sessionStore: any;
+
+  constructor() {
+    const sql = neon(process.env.DATABASE_URL!);
+    this.db = drizzle(sql, { schema });
+    
+    // Initialize session store
+    const MemoryStore = connectPgSimple(session);
+    this.sessionStore = new MemoryStore({
+      conString: process.env.DATABASE_URL,
+    });
+    
+    console.log("PostgreSQL storage initialized");
+  }
+
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await this.db.select().from(schema.users).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.select().from(schema.users).where({ username }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await this.db.insert(schema.users).values(user).returning();
+    return result[0];
+  }
+
+  // Salesforce org operations
+  async getOrg(id: number): Promise<SalesforceOrg | undefined> {
+    const result = await this.db.select().from(schema.salesforceOrgs).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getUserOrgs(userId: number): Promise<SalesforceOrg[]> {
+    return await this.db.select().from(schema.salesforceOrgs).where({ userId });
+  }
+
+  async createOrg(org: InsertSalesforceOrg): Promise<SalesforceOrg> {
+    const result = await this.db.insert(schema.salesforceOrgs).values(org).returning();
+    return result[0];
+  }
+
+  async updateOrg(id: number, updates: Partial<InsertSalesforceOrg>): Promise<SalesforceOrg | undefined> {
+    const result = await this.db.update(schema.salesforceOrgs).set(updates).where({ id }).returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteOrg(id: number): Promise<boolean> {
+    await this.db.delete(schema.salesforceOrgs).where({ id });
+    return true;
+  }
+
+  // Metadata operations
+  async getMetadata(id: number): Promise<Metadata | undefined> {
+    const result = await this.db.select().from(schema.metadata).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getOrgMetadata(orgId: number, type?: string): Promise<Metadata[]> {
+    if (type) {
+      return await this.db.select().from(schema.metadata).where({ orgId, type });
+    }
+    return await this.db.select().from(schema.metadata).where({ orgId });
+  }
+
+  async createMetadata(metadata: InsertMetadata): Promise<Metadata> {
+    const result = await this.db.insert(schema.metadata).values(metadata).returning();
+    return result[0];
+  }
+
+  async updateMetadata(id: number, updates: Partial<InsertMetadata>): Promise<Metadata | undefined> {
+    const result = await this.db.update(schema.metadata).set(updates).where({ id }).returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async deleteMetadata(id: number): Promise<boolean> {
+    await this.db.delete(schema.metadata).where({ id });
+    return true;
+  }
+
+  // Health score operations
+  async getHealthScore(id: number): Promise<HealthScore | undefined> {
+    const result = await this.db.select().from(schema.healthScores).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getLatestHealthScore(orgId: number): Promise<HealthScore | undefined> {
+    const result = await this.db.select().from(schema.healthScores)
+      .where({ orgId })
+      .orderBy({ lastAnalyzed: 'desc' })
+      .limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async createHealthScore(score: InsertHealthScore): Promise<HealthScore> {
+    const result = await this.db.insert(schema.healthScores).values(score).returning();
+    return result[0];
+  }
+
+  // Code Quality operations
+  async getCodeQuality(id: number): Promise<CodeQuality | undefined> {
+    const result = await this.db.select().from(schema.codeQuality).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getComponentCodeQuality(orgId: number, componentId: number): Promise<CodeQuality | undefined> {
+    const result = await this.db.select().from(schema.codeQuality)
+      .where({ orgId, componentId })
+      .orderBy({ lastAnalyzed: 'desc' })
+      .limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getOrgCodeQuality(orgId: number, componentType?: string): Promise<CodeQuality[]> {
+    if (componentType) {
+      return await this.db.select().from(schema.codeQuality).where({ orgId, componentType });
+    }
+    return await this.db.select().from(schema.codeQuality).where({ orgId });
+  }
+
+  async createCodeQuality(codeQuality: InsertCodeQuality): Promise<CodeQuality> {
+    const result = await this.db.insert(schema.codeQuality).values(codeQuality).returning();
+    return result[0];
+  }
+
+  async updateCodeQuality(id: number, updates: Partial<InsertCodeQuality>): Promise<CodeQuality | undefined> {
+    const result = await this.db.update(schema.codeQuality).set(updates).where({ id }).returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  // Component Dependencies operations
+  async getComponentDependency(id: number): Promise<ComponentDependency | undefined> {
+    const result = await this.db.select().from(schema.componentDependencies).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  // Implement the methods required by the interface
+  async getComponentDependencies(orgId: number, componentId: number): Promise<ComponentDependency[]> {
+    return await this.db.select().from(schema.componentDependencies)
+      .where({ orgId, sourceComponentId: componentId });
+  }
+  
+  async getReverseDependencies(orgId: number, componentId: number): Promise<ComponentDependency[]> {
+    return await this.db.select().from(schema.componentDependencies)
+      .where({ orgId, targetComponentId: componentId });
+  }
+
+  // Keep the existing implementation too
+  async getOrgComponentDependencies(orgId: number, componentId?: number): Promise<ComponentDependency[]> {
+    if (componentId) {
+      return await this.db.select().from(schema.componentDependencies)
+        .where({ orgId })
+        .where(({ or }) => or(
+          { sourceComponentId: componentId },
+          { targetComponentId: componentId }
+        ));
+    }
+    return await this.db.select().from(schema.componentDependencies).where({ orgId });
+  }
+
+  async createComponentDependency(dependency: InsertComponentDependency): Promise<ComponentDependency> {
+    const result = await this.db.insert(schema.componentDependencies).values(dependency).returning();
+    return result[0];
+  }
+
+  async updateComponentDependency(id: number, updates: Partial<InsertComponentDependency>): Promise<ComponentDependency | undefined> {
+    const result = await this.db.update(schema.componentDependencies).set(updates).where({ id }).returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  // Compliance operations
+  async getCompliance(id: number): Promise<Compliance | undefined> {
+    const result = await this.db.select().from(schema.compliance).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getOrgCompliance(orgId: number, frameworkName?: string): Promise<Compliance[]> {
+    if (frameworkName) {
+      return await this.db.select().from(schema.compliance).where({ orgId, frameworkName });
+    }
+    return await this.db.select().from(schema.compliance).where({ orgId });
+  }
+
+  async createCompliance(compliance: InsertCompliance): Promise<Compliance> {
+    const result = await this.db.insert(schema.compliance).values(compliance).returning();
+    return result[0];
+  }
+
+  async updateCompliance(id: number, updates: Partial<InsertCompliance>): Promise<Compliance | undefined> {
+    const result = await this.db.update(schema.compliance).set(updates).where({ id }).returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  // Technical Debt operations
+  async getTechnicalDebtItem(id: number): Promise<TechnicalDebtItem | undefined> {
+    const result = await this.db.select().from(schema.technicalDebtItems).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async getComponentTechnicalDebt(orgId: number, componentId: number): Promise<TechnicalDebtItem[]> {
+    return await this.db.select().from(schema.technicalDebtItems).where({ orgId, componentId });
+  }
+  
+  async getOrgTechnicalDebt(orgId: number, category?: string, status?: string): Promise<TechnicalDebtItem[]> {
+    let query = this.db.select().from(schema.technicalDebtItems).where({ orgId });
+    
+    if (category) {
+      query = query.where({ category });
+    }
+    
+    if (status) {
+      query = query.where({ status });
+    }
+    
+    return await query;
+  }
+
+  async createTechnicalDebtItem(item: InsertTechnicalDebtItem): Promise<TechnicalDebtItem> {
+    const result = await this.db.insert(schema.technicalDebtItems).values(item).returning();
+    return result[0];
+  }
+
+  async updateTechnicalDebtItem(id: number, updates: Partial<InsertTechnicalDebtItem>): Promise<TechnicalDebtItem | undefined> {
+    const result = await this.db.update(schema.technicalDebtItems).set(updates).where({ id }).returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  // Release Impact operations
+  async getReleaseImpact(id: number): Promise<ReleaseImpact | undefined> {
+    const result = await this.db.select().from(schema.releaseImpact).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+
+  async getOrgReleaseImpacts(orgId: number, status?: string): Promise<ReleaseImpact[]> {
+    if (status) {
+      return await this.db.select().from(schema.releaseImpact).where({ orgId, status });
+    }
+    return await this.db.select().from(schema.releaseImpact).where({ orgId });
+  }
+
+  async createReleaseImpact(impact: InsertReleaseImpact): Promise<ReleaseImpact> {
+    const result = await this.db.insert(schema.releaseImpact).values(impact).returning();
+    return result[0];
+  }
+
+  async updateReleaseImpact(id: number, updates: Partial<InsertReleaseImpact>): Promise<ReleaseImpact | undefined> {
+    const result = await this.db.update(schema.releaseImpact).set(updates).where({ id }).returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+}
+
+// Check if we have a DATABASE_URL environment variable and use Postgres if available, otherwise use MemStorage
+const usePostgres = !!process.env.DATABASE_URL;
+console.log(`Using ${usePostgres ? 'PostgreSQL' : 'In-Memory'} storage`);
+
+export const storage = usePostgres ? new PostgresStorage() : new MemStorage();
