@@ -1,0 +1,287 @@
+I'll create a customized document roadmap for your Metascope project, specifically focused on Salesforce metadata discovery and management. Let me revise the PRD and TDD to reflect this specialized focus.
+
+# Salesforce Metascope: Project Documentation
+
+## 1. Product Requirements Document (PRD) & User Stories
+
+### Product Overview
+
+**Title**: Salesforce Metascope - Salesforce Metadata Intelligence Platform  
+**Purpose**:  
+Provide a specialized solution that automatically discovers, catalogs, and analyzes metadata across an organization's Salesforce environments. The platform connects to multiple Salesforce orgs, extracts and enriches metadata, builds relationship maps, and offers searchable visibility into Salesforce assets through an intuitive interface.
+
+**Vision**:  
+Empower organizations with complete visibility into their Salesforce landscape, enabling better governance, compliance, and informed decision-making through automated metadata discovery and intelligent insights.
+
+**Key Objectives**:
+- Automatically connect to and scan multiple Salesforce orgs
+- Create a centralized, searchable catalog of all Salesforce metadata
+- Build and visualize dependency relationships between Salesforce components
+- Provide actionable insights on usage patterns and customization impacts
+- Support compliance and governance requirements through comprehensive metadata tracking
+
+### Features & Functional Requirements
+
+**1. Salesforce Metadata Discovery & Ingestion:**
+- **Org Connectors**:
+  - Connect securely to multiple Salesforce orgs (Production, Sandbox, Developer)
+  - Support for scheduled and on-demand scans
+  - Track changes in metadata between scans
+- **Metadata Extraction**:
+  - Capture technical metadata (objects, fields, Apex code, configurations)
+  - Extract business metadata (field descriptions, page layouts, profiles)
+  - Identify sensitive data patterns in custom fields
+- **Automated Classification**:
+  - Apply intelligence to categorize Salesforce components
+  - Tag components based on business domain and usage
+
+**2. Metadata Repository & Relationship Mapping:**
+- **Centralized Catalog**:
+  - Store all Salesforce metadata in a scalable, searchable repository
+  - Support versioning to track changes over time
+- **Dependency Mapping**:
+  - Build component dependency maps showing relationships
+  - Map impacts of potential changes
+  - Visualize cross-org differences for migration planning
+- **Knowledge Graph**:
+  - Connect related metadata in a graph structure
+  - Enable complex relationship queries across orgs
+
+**3. Search & Discovery Interface:**
+- **Unified Search**:
+  - Provide intuitive search across all Salesforce metadata
+  - Support advanced filters for component types
+- **Asset Exploration**:
+  - Display detailed metadata for each Salesforce component
+  - Show dependency visualization
+  - Present usage statistics and deployment history
+- **Collaboration Features**:
+  - Allow commenting and discussions on components
+  - Support collaborative documentation of configurations
+
+**4. Governance & Compliance:**
+- **Policy Management**:
+  - Define and enforce Salesforce governance policies
+  - Track compliance with organizational standards
+- **Change Control**:
+  - Monitor metadata changes across environments
+  - Support release management workflows
+- **Audit Trail**:
+  - Log all activities and changes to metadata
+  - Generate compliance reports for auditing
+
+**5. Insights & Recommendations:**
+- **Implementation Quality Monitoring**:
+  - Track best practice adherence
+  - Identify technical debt in configurations
+- **Usage Analytics**:
+  - Monitor how Salesforce components are used
+  - Identify unused customizations or optimization opportunities
+- **Intelligent Recommendations**:
+  - Suggest improvements to Salesforce implementations
+  - Recommend standardization opportunities
+
+### User Stories
+
+**For Salesforce Administrators**
+- **US1**: As a Salesforce Admin, I want to automatically discover and catalog all metadata components across our orgs so that I have complete visibility into our Salesforce landscape.
+  - **Acceptance Criteria**:
+    - Automated scanning of all connected Salesforce orgs
+    - Complete metadata extraction including custom objects, fields, Apex classes, and configurations
+    - Change detection between scans
+
+- **US2**: As a Salesforce Admin, I want to understand dependencies between components so that I can safely implement changes without unintended consequences.
+  - **Acceptance Criteria**:
+    - Visual representation of component dependencies
+    - Impact analysis for potential changes
+    - Cross-reference with usage statistics
+
+**For Salesforce Developers**
+- **US3**: As a Salesforce Developer, I want to search and explore available custom objects and code so that I can understand our existing implementations.
+  - **Acceptance Criteria**:
+    - Code-oriented search across all Apex classes, triggers, and configurations
+    - Detailed component profiles showing structure, references, and descriptions
+    - Ability to filter search results by component type
+
+- **US4**: As a Salesforce Developer, I want to understand implementation patterns across orgs so that I can maintain consistency in our development practices.
+  - **Acceptance Criteria**:
+    - Comparison views of similar components across orgs
+    - Best practice compliance scoring
+    - Implementation pattern identification
+
+**For Release Managers**
+- **US5**: As a Release Manager, I want to track metadata changes between environments so that I can manage deployments effectively.
+  - **Acceptance Criteria**:
+    - Diff views for components between orgs
+    - Change history tracking
+    - Deployment package recommendations
+
+**For Business Analysts**
+- **US6**: As a Business Analyst, I want to discover and understand available Salesforce data objects related to my business domain so that I can create effective reports and analytics.
+  - **Acceptance Criteria**:
+    - Business-friendly view of technical metadata
+    - Domain-specific filtering and browsing
+    - Field-level data dictionary
+
+## 2. Technical Design Document (TDD)
+
+### 1. System Architecture Overview
+
+**High-Level Components**:
+- **Salesforce Connection Layer**:
+  - OAuth-based authentication services
+  - Metadata API client services
+  - Apex REST API clients for extended capabilities
+- **Metadata Collection Layer**:
+  - Scanning engines for different metadata types
+  - Change detection and differential processing
+  - Batch processing for large orgs
+- **Processing & Enrichment Layer**:
+  - Classification services for automated tagging
+  - Dependency analyzer for relationship detection
+  - Best practice evaluation engine
+- **Metadata Storage Layer**:
+  - Graph database for storing relationship data
+  - Document store for rich metadata attributes
+  - Time-series storage for tracking changes
+- **API & Integration Layer**:
+  - RESTful APIs for third-party integration
+  - Webhook support for event-driven workflows
+  - Export capabilities for CI/CD integration
+- **Web Application Layer**:
+  - Search and discovery interface
+  - Visual dependency explorer
+  - Governance dashboard
+  - Org management portal
+- **Authentication & Authorization**:
+  - Integration with SSO providers
+  - Role-based access control
+  - Audit logging service
+
+### 2. Detailed Component Design
+
+**Salesforce Connection & Metadata Collection**
+- **Org Connector Service**:
+  - Implements OAuth 2.0 flow for secure connections
+  - Manages API rate limits and bulk operations
+  - Handles session management and refresh tokens
+- **Metadata Extraction Service**:
+  - Utilizes Salesforce Metadata API for comprehensive extraction
+  - Supplements with SOQL queries for usage data
+  - Implements parallel processing for different metadata types
+- **Change Detection Engine**:
+  - Compares metadata signatures between scans
+  - Identifies structural and configuration changes
+  - Tracks deployment history across environments
+
+**Metadata Storage & Persistence**
+- **Database Design**:
+  - Graph database (Neo4j) for storing component relationships
+  - Document database (MongoDB) for rich metadata content
+  - Time-series database for change tracking
+- **Data Models**:
+  - Core entities: SalesforceOrg, MetadataComponent, ComponentType, User
+  - Relationships: dependencies, references, ownership
+  - Versioning model to track changes over time
+
+**Application Layer**
+- **Backend Services**:
+  - Microservices architecture with domain boundaries
+  - RESTful APIs for service communication
+  - API gateway for external access control
+- **Frontend Application**:
+  - React with TypeScript for component-based UI
+  - Redux for state management
+  - Material-UI for consistent design language
+
+**Search & Analytics**
+- **Search Engine**:
+  - Elasticsearch for full-text and faceted search
+  - Custom analyzers for Salesforce-specific content
+  - Real-time indexing of metadata changes
+- **Analytics Engine**:
+  - Usage pattern analysis
+  - Best practice scoring algorithms
+  - Change impact prediction models
+
+**Security & Governance**
+- **Authentication**:
+  - Integration with OIDC/SAML providers
+  - JWT-based token management
+  - Secure credential storage for Salesforce connections
+- **Authorization**:
+  - RBAC with org-based permissions
+  - Object-level access control
+  - Separation of duties enforcement
+- **Audit & Compliance**:
+  - Comprehensive activity logging
+  - Tamper-proof audit trails
+  - Compliance reporting framework
+
+### 3. Deployment & Scalability
+
+**Infrastructure**
+- **Container-based Deployment**:
+  - Docker containers orchestrated with Kubernetes
+  - Horizontal scaling of stateless services
+  - Auto-scaling based on workload patterns
+- **Cloud Infrastructure**:
+  - Multi-AZ deployment for high availability
+  - Infrastructure as Code using Terraform
+  - Cloud-agnostic design for flexibility
+
+**Scalability Considerations**
+- **Metadata Collection**:
+  - Distributed scanning with workload partitioning
+  - Rate limiting to respect Salesforce API limits
+  - Incremental scans to minimize resource usage
+- **Data Processing**:
+  - Elastic scaling of processing nodes
+  - Priority queuing for interactive operations
+  - Caching layers for frequently accessed metadata
+
+**Monitoring & Operations**
+- **Observability Stack**:
+  - Distributed tracing across services
+  - Metrics collection and visualization
+  - Centralized logging with structured data
+- **Alert Management**:
+  - Proactive monitoring of system health
+  - Automated recovery procedures
+  - Escalation policies for critical issues
+
+### 4. Integration & API Specifications
+
+**External APIs**
+- **REST API**:
+  - Comprehensive CRUD operations on metadata
+  - Search and discovery endpoints
+  - Dependency and impact analysis
+- **GraphQL API**:
+  - Flexible querying of metadata relationships
+  - Schema-first design with strong typing
+  - Subscription support for real-time updates
+
+**Integration Patterns**
+- **CI/CD Integration**:
+  - Webhook notifications for metadata changes
+  - Exportable change sets for deployment
+  - Version control system integration
+- **DevOps Tools Integration**:
+  - SFDX CLI integration
+  - Jenkins/GitHub Actions compatible APIs
+  - Deployment validation endpoints
+
+**Developer Tools**
+- **SDK & Libraries**:
+  - Client libraries for common languages
+  - Testing utilities for integration validation
+  - Metadata comparison utilities
+
+## Final Notes
+
+This TDD outlines a specialized platform focused exclusively on Salesforce metadata discovery and management. The architecture leverages modern distributed systems principles, enabling comprehensive metadata cataloging, relationship mapping, and governance capabilities for complex Salesforce implementations.
+
+The platform balances immediate needs for Salesforce administrators with long-term governance and analytics capabilities, providing both technical and business users with valuable insights into their Salesforce ecosystem. By implementing this architecture, organizations can transform their complex Salesforce implementations into a well-understood, manageable knowledge base that drives more effective use of the platform.
+
+The solution addresses key pain points in managing multiple Salesforce orgs, including dependency tracking, impact analysis, and cross-org standardization. The metadata intelligence capabilities provide unique value by surfacing insights that would otherwise require extensive manual analysis of Salesforce configurations.​​​​​​​​​​​​​​​​
