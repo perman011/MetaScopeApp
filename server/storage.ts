@@ -2,19 +2,22 @@ import {
   User, InsertUser,
   SalesforceOrg, InsertSalesforceOrg,
   Metadata, InsertMetadata,
-  HealthScore, InsertHealthScore,
-  HealthScoreIssue,
+  HealthScore, InsertHealthScore, HealthScoreIssue,
   CodeQuality, InsertCodeQuality,
   ComponentDependency, InsertComponentDependency,
   Compliance, InsertCompliance,
   TechnicalDebtItem, InsertTechnicalDebtItem,
   ReleaseImpact, InsertReleaseImpact
 } from "@shared/schema";
-import session from "express-session";
-import createMemoryStore from "memorystore";
 import crypto from "crypto";
+import expressSession from 'express-session';
+import createMemoryStore from 'memorystore';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { neon } from '@neondatabase/serverless';
+import * as schema from "@shared/schema";
 
-const MemoryStore = createMemoryStore(session);
+// Initialize memory store for session
+const MemoryStore = createMemoryStore(expressSession);
 
 // Storage interface
 export interface IStorage {
@@ -376,11 +379,19 @@ export class MemStorage implements IStorage {
 
   async createCodeQuality(insertCodeQuality: InsertCodeQuality): Promise<CodeQuality> {
     const id = this.codeQualityIdCounter++;
+    
+    // Ensure componentId is not undefined
+    const componentId = insertCodeQuality.componentId === undefined 
+      ? null 
+      : insertCodeQuality.componentId;
+    
     const codeQuality: CodeQuality = {
       ...insertCodeQuality,
       id,
+      componentId,
       lastAnalyzed: insertCodeQuality.lastAnalyzed || new Date(),
     };
+    
     this.codeQuality.set(id, codeQuality);
     return codeQuality;
   }
@@ -416,11 +427,29 @@ export class MemStorage implements IStorage {
 
   async createComponentDependency(insertDependency: InsertComponentDependency): Promise<ComponentDependency> {
     const id = this.componentDependencyIdCounter++;
+    
+    // Ensure source and target component IDs are not undefined
+    const sourceComponentId = insertDependency.sourceComponentId === undefined 
+      ? null 
+      : insertDependency.sourceComponentId;
+    
+    const targetComponentId = insertDependency.targetComponentId === undefined 
+      ? null 
+      : insertDependency.targetComponentId;
+    
+    const notes = insertDependency.notes === undefined 
+      ? null 
+      : insertDependency.notes;
+    
     const dependency: ComponentDependency = {
       ...insertDependency,
       id,
+      sourceComponentId,
+      targetComponentId,
+      notes,
       lastUpdated: insertDependency.lastUpdated || new Date(),
     };
+    
     this.componentDependencies.set(id, dependency);
     return dependency;
   }
@@ -455,7 +484,6 @@ export class MemStorage implements IStorage {
       ...insertCompliance,
       id,
       lastScanned: insertCompliance.lastScanned || new Date(),
-      nextScanDue: insertCompliance.nextScanDue || null,
     };
     this.compliance.set(id, compliance);
     return compliance;
@@ -477,35 +505,46 @@ export class MemStorage implements IStorage {
   async getTechnicalDebtItem(id: number): Promise<TechnicalDebtItem | undefined> {
     return this.technicalDebtItems.get(id);
   }
-
+  
   async getComponentTechnicalDebt(orgId: number, componentId: number): Promise<TechnicalDebtItem[]> {
     return Array.from(this.technicalDebtItems.values()).filter(
       (item) => item.orgId === orgId && item.componentId === componentId
     );
   }
-
+  
   async getOrgTechnicalDebt(orgId: number, category?: string, status?: string): Promise<TechnicalDebtItem[]> {
     return Array.from(this.technicalDebtItems.values()).filter(
       (item) => {
-        const orgMatch = item.orgId === orgId;
-        const categoryMatch = !category || item.category === category;
-        const statusMatch = !status || item.status === status;
-        return orgMatch && categoryMatch && statusMatch;
+        return item.orgId === orgId && 
+          (!category || item.category === category) && 
+          (!status || item.status === status);
       }
     );
   }
 
   async createTechnicalDebtItem(insertItem: InsertTechnicalDebtItem): Promise<TechnicalDebtItem> {
     const id = this.technicalDebtItemIdCounter++;
-    const now = new Date();
+    
+    // Ensure componentId is not undefined
+    const componentId = insertItem.componentId === undefined 
+      ? null 
+      : insertItem.componentId;
+    
+    // Ensure tags is not undefined
+    const tags = insertItem.tags === undefined 
+      ? null 
+      : insertItem.tags;
+    
     const item: TechnicalDebtItem = {
       ...insertItem,
       id,
-      createdAt: insertItem.createdAt || now,
-      updatedAt: insertItem.updatedAt || now,
+      componentId,
+      tags,
+      createdAt: insertItem.createdAt || new Date(),
+      updatedAt: insertItem.updatedAt || new Date(),
       resolvedAt: insertItem.resolvedAt || null,
-      tags: insertItem.tags || [],
     };
+    
     this.technicalDebtItems.set(id, item);
     return item;
   }
@@ -536,13 +575,25 @@ export class MemStorage implements IStorage {
 
   async createReleaseImpact(insertImpact: InsertReleaseImpact): Promise<ReleaseImpact> {
     const id = this.releaseImpactIdCounter++;
-    const now = new Date();
+    
+    // Ensure optional fields are not undefined
+    const testCoverage = insertImpact.testCoverage === undefined 
+      ? null 
+      : insertImpact.testCoverage;
+    
+    const deploymentEstimate = insertImpact.deploymentEstimate === undefined 
+      ? null 
+      : insertImpact.deploymentEstimate;
+    
     const impact: ReleaseImpact = {
       ...insertImpact,
       id,
-      createdAt: insertImpact.createdAt || now,
-      updatedAt: insertImpact.updatedAt || now,
+      testCoverage,
+      deploymentEstimate,
+      createdAt: insertImpact.createdAt || new Date(),
+      updatedAt: insertImpact.updatedAt || new Date(),
     };
+    
     this.releaseImpacts.set(id, impact);
     return impact;
   }
@@ -561,30 +612,26 @@ export class MemStorage implements IStorage {
   }
 }
 
-// PostgreSQL database implementation
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { neon } from '@neondatabase/serverless';
-import * as schema from "@shared/schema";
-import session from 'express-session';
-import connectPgSimple from 'connect-pg-simple';
-
+// PostgreSQL Storage Implementation
 class PostgresStorage implements IStorage {
   private db: any;
   sessionStore: any;
 
   constructor() {
-    const sql = neon(process.env.DATABASE_URL!);
-    this.db = drizzle(sql, { schema });
-    
-    // Initialize session store
-    const MemoryStore = connectPgSimple(session);
-    this.sessionStore = new MemoryStore({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true,  // This will create the session table if it doesn't exist
-      tableName: 'session'         // Explicitly set the table name
-    });
-    
-    console.log("PostgreSQL storage initialized");
+    try {
+      const sql = neon(process.env.DATABASE_URL!);
+      this.db = drizzle(sql);
+      
+      // Use in-memory session store since we're having issues with PostgreSQL session store
+      this.sessionStore = new MemoryStore({
+        checkPeriod: 86400000 // prune expired entries every 24h
+      });
+      
+      console.log("PostgreSQL storage initialized with in-memory session store");
+    } catch (error) {
+      console.error("Failed to initialize PostgreSQL storage:", error);
+      throw error;
+    }
   }
 
   // User operations
@@ -697,7 +744,13 @@ class PostgresStorage implements IStorage {
   }
 
   async createCodeQuality(codeQuality: InsertCodeQuality): Promise<CodeQuality> {
-    const result = await this.db.insert(schema.codeQuality).values(codeQuality).returning();
+    // Ensure componentId is not undefined
+    const values: any = { ...codeQuality };
+    if (values.componentId === undefined) {
+      values.componentId = null;
+    }
+    
+    const result = await this.db.insert(schema.codeQuality).values(values).returning();
     return result[0];
   }
 
@@ -723,12 +776,13 @@ class PostgresStorage implements IStorage {
       .where({ orgId, targetComponentId: componentId });
   }
 
-  // Keep the existing implementation too
+  // Additional utility method for getting all dependencies related to a component
   async getOrgComponentDependencies(orgId: number, componentId?: number): Promise<ComponentDependency[]> {
     if (componentId) {
+      // TypeScript any is used here as the Drizzle type definitions are challenging
       return await this.db.select().from(schema.componentDependencies)
         .where({ orgId })
-        .where(({ or }) => or(
+        .where((eb: any) => eb.or(
           { sourceComponentId: componentId },
           { targetComponentId: componentId }
         ));
@@ -737,7 +791,19 @@ class PostgresStorage implements IStorage {
   }
 
   async createComponentDependency(dependency: InsertComponentDependency): Promise<ComponentDependency> {
-    const result = await this.db.insert(schema.componentDependencies).values(dependency).returning();
+    // Ensure source and target component IDs are not undefined
+    const values: any = { ...dependency };
+    if (values.sourceComponentId === undefined) {
+      values.sourceComponentId = null;
+    }
+    if (values.targetComponentId === undefined) {
+      values.targetComponentId = null;
+    }
+    if (values.notes === undefined) {
+      values.notes = null;
+    }
+    
+    const result = await this.db.insert(schema.componentDependencies).values(values).returning();
     return result[0];
   }
 
@@ -794,7 +860,16 @@ class PostgresStorage implements IStorage {
   }
 
   async createTechnicalDebtItem(item: InsertTechnicalDebtItem): Promise<TechnicalDebtItem> {
-    const result = await this.db.insert(schema.technicalDebtItems).values(item).returning();
+    // Ensure componentId and tags are not undefined
+    const values: any = { ...item };
+    if (values.componentId === undefined) {
+      values.componentId = null;
+    }
+    if (values.tags === undefined) {
+      values.tags = null;
+    }
+    
+    const result = await this.db.insert(schema.technicalDebtItems).values(values).returning();
     return result[0];
   }
 
@@ -817,7 +892,16 @@ class PostgresStorage implements IStorage {
   }
 
   async createReleaseImpact(impact: InsertReleaseImpact): Promise<ReleaseImpact> {
-    const result = await this.db.insert(schema.releaseImpact).values(impact).returning();
+    // Ensure optional fields are not undefined
+    const values: any = { ...impact };
+    if (values.testCoverage === undefined) {
+      values.testCoverage = null;
+    }
+    if (values.deploymentEstimate === undefined) {
+      values.deploymentEstimate = null;
+    }
+    
+    const result = await this.db.insert(schema.releaseImpact).values(values).returning();
     return result[0];
   }
 
