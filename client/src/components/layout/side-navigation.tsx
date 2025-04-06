@@ -523,14 +523,14 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
         />
       )}
       
-      {/* Single toggle button with consistent card content sizing across the platform */}
+      {/* Single toggle button matching Field Intelligence controls */}
       <button 
         onClick={handleToggle}
         aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
-        className="absolute top-4 right-0 translate-x-1/2 bg-white border border-neutral-200 rounded-md p-1.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20"
-        style={{ width: "32px", height: "32px" }}
+        className="absolute top-4 right-0 translate-x-1/2 bg-white border border-neutral-200 rounded-md p-1 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20"
+        style={{ width: "24px", height: "24px" }}
       >
-        <ChevronRight className={`h-6 w-6 text-neutral-600 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}`} />
+        <ChevronRight className={`h-4 w-4 text-neutral-600 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}`} />
       </button>
     </div>
   );
