@@ -12,6 +12,7 @@ import { SalesforceOrg } from "@shared/schema";
 import { Loader2, Plus, ChevronRight, Database, Trash2, RefreshCw, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import SalesforceCredentialConnection from "@/components/salesforce-credential-connection";
 import {
   Dialog,
   DialogContent,
@@ -142,8 +143,11 @@ export default function OrganizationsPage() {
     setLocation(`/dashboard?org=${orgId}`);
   };
 
-  const formatDate = (dateString: string | null) => {
+  const formatDate = (dateString: string | Date | null) => {
     if (!dateString) return "Never";
+    if (dateString instanceof Date) {
+      return dateString.toLocaleString();
+    }
     return new Date(dateString).toLocaleString();
   };
 
@@ -202,14 +206,14 @@ export default function OrganizationsPage() {
                     <div className="flex justify-between items-start">
                       <div className="flex items-center">
                         <div className={`w-3 h-3 rounded-full mr-2 ${
-                          org.type === 'production' ? 'bg-emerald-500' : 
-                          org.type === 'sandbox' ? 'bg-amber-500' : 
+                          (org.type || 'unknown') === 'production' ? 'bg-emerald-500' : 
+                          (org.type || 'unknown') === 'sandbox' ? 'bg-amber-500' : 
                           'bg-neutral-400'
                         }`} />
                         <CardTitle>{org.name}</CardTitle>
                       </div>
                       <div className="px-2 py-1 text-xs font-medium rounded bg-neutral-100 text-neutral-800">
-                        {org.type.charAt(0).toUpperCase() + org.type.slice(1)}
+                        {(org.type || 'unknown').charAt(0).toUpperCase() + (org.type || 'unknown').slice(1)}
                       </div>
                     </div>
                     <CardDescription className="truncate">
@@ -268,145 +272,11 @@ export default function OrganizationsPage() {
             )}
           </div>
           
-          {/* Connect Org Dialog */}
-          <Dialog open={isConnectDialogOpen} onOpenChange={setIsConnectDialogOpen}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Connect Salesforce Organization</DialogTitle>
-                <DialogDescription>
-                  Connect to your Salesforce organization to start analyzing metadata
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Tabs defaultValue="oauth" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="oauth">OAuth 2.0</TabsTrigger>
-                  <TabsTrigger value="manual">Manual Connection</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="oauth" className="py-4">
-                  <div className="text-center">
-                    <Database className="h-12 w-12 mx-auto text-primary-500 mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Connect with OAuth</h3>
-                    <p className="text-sm text-neutral-500 mb-6">
-                      Securely connect to your Salesforce organization using OAuth 2.0
-                    </p>
-                    <Button className="w-full mb-2">
-                      Connect with Production
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      Connect with Sandbox
-                    </Button>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="manual" className="py-4">
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Organization Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="My Production Org" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="domain"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Domain</FormLabel>
-                            <FormControl>
-                              <Input placeholder="example.my.salesforce.com" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="type"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Environment Type</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select environment type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="production">Production</SelectItem>
-                                <SelectItem value="sandbox">Sandbox</SelectItem>
-                                <SelectItem value="developer">Developer Edition</SelectItem>
-                                <SelectItem value="scratch">Scratch Org</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="accessToken"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Access Token</FormLabel>
-                            <FormControl>
-                              <Input type="password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="refreshToken"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Refresh Token (Optional)</FormLabel>
-                            <FormControl>
-                              <Input type="password" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="pt-4 flex justify-end space-x-2">
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => setIsConnectDialogOpen(false)}
-                        >
-                          Cancel
-                        </Button>
-                        <Button 
-                          type="submit"
-                          disabled={connectOrgMutation.isPending}
-                        >
-                          {connectOrgMutation.isPending ? "Connecting..." : "Connect"}
-                        </Button>
-                      </div>
-                    </form>
-                  </Form>
-                </TabsContent>
-              </Tabs>
-            </DialogContent>
-          </Dialog>
+          {/* Salesforce Credential Connection Dialog */}
+          <SalesforceCredentialConnection 
+            open={isConnectDialogOpen}
+            onOpenChange={setIsConnectDialogOpen}
+          />
         </main>
       </div>
       <Footer />
