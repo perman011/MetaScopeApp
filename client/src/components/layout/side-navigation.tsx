@@ -369,29 +369,12 @@ function ExpandedNavigation({
   return (
     <aside className="w-64 bg-white border-r border-neutral-200 flex flex-col h-full overflow-y-auto">
       <div className="p-4 border-b border-neutral-200">
-        <div className="flex items-center mb-3">
+        <div className="flex items-center">
           <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold mr-2">
             MS
           </div>
           <h1 className="text-lg font-semibold">MetaScope</h1>
         </div>
-        
-        <Select 
-          value={selectedRole} 
-          onValueChange={(value) => onRoleChange(value as UserRole)}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="all">All Features</SelectItem>
-              <SelectItem value="manager">Manager View</SelectItem>
-              <SelectItem value="developer">Developer View</SelectItem>
-              <SelectItem value="admin">Admin View</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
       </div>
       
       <div className="p-4">
@@ -443,6 +426,7 @@ interface NavigationContainerProps {
 
 export default function SideNavigation({ defaultCollapsed = false }: NavigationContainerProps) {
   const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+  // Always use 'all' role since we removed the dropdown
   const [selectedRole, setSelectedRole] = useState<UserRole>('all');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [location] = useLocation();
@@ -451,15 +435,13 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
   // Load user preferences from localStorage on mount
   useEffect(() => {
     const savedIsCollapsed = localStorage.getItem('navigationCollapsed');
-    const savedRole = localStorage.getItem('navigationRole');
     
     if (savedIsCollapsed !== null) {
       setIsCollapsed(savedIsCollapsed === 'true');
     }
     
-    if (savedRole) {
-      setSelectedRole(savedRole as UserRole);
-    }
+    // Always use 'all' role, ignore saved preference
+    setSelectedRole('all');
   }, []);
   
   // Save preferences to localStorage when they change
@@ -496,9 +478,9 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
     setExpandedCategory(categoryKey);
   };
 
-  // Handle role selection change
+  // Always use 'all' role since we removed the dropdown
   const handleRoleChange = (role: UserRole) => {
-    setSelectedRole(role);
+    setSelectedRole('all');
   };
 
   return (
