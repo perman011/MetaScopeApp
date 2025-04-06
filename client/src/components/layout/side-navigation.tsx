@@ -523,25 +523,14 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
         />
       )}
       
-      {/* Single toggle button that's always visible */}
+      {/* Single toggle button that's always at the right edge of the current navbar */}
       <button 
         onClick={handleToggle}
         aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
-        className="absolute top-4 bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20 transition-all"
-        style={isCollapsed ? 
-          { 
-            width: "18px", 
-            height: "18px",
-            right: "-9px"
-          } : 
-          { 
-            width: "18px", 
-            height: "18px",
-            left: "-9px"
-          }
-        }
+        className="absolute top-4 right-0 translate-x-1/2 bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20"
+        style={{ width: "18px", height: "18px" }}
       >
-        <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} />
+        <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}`} />
       </button>
     </div>
   );
