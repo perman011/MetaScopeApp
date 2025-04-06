@@ -223,7 +223,7 @@ export default function ConnectSalesforceOrgDialog({
             <>
               <Tabs defaultValue="credentials" onValueChange={(v) => setAuthMethod(v as "credentials" | "token")}>
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="credentials">Email + Password + Token</TabsTrigger>
+                  <TabsTrigger value="credentials">Username & Password</TabsTrigger>
                   <TabsTrigger value="token">Access Token</TabsTrigger>
                 </TabsList>
 
@@ -240,7 +240,7 @@ export default function ConnectSalesforceOrgDialog({
                     </div>
                     
                     <div className="grid gap-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="email">Username</Label>
                       <Input
                         id="email"
                         type="email"

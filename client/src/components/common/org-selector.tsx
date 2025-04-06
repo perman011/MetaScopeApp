@@ -232,7 +232,7 @@ export default function OrgSelector() {
               </DialogHeader>
               <Tabs defaultValue="credentials" onValueChange={onTabChange}>
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="credentials">Email + Password + Token</TabsTrigger>
+                  <TabsTrigger value="credentials">Username & Password</TabsTrigger>
                   <TabsTrigger value="token">Access Token</TabsTrigger>
                 </TabsList>
                 
@@ -259,7 +259,7 @@ export default function OrgSelector() {
                           name="email"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Email</FormLabel>
+                              <FormLabel>Username</FormLabel>
                               <FormControl>
                                 <Input 
                                   type="email" 

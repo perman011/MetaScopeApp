@@ -120,9 +120,9 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Connect Salesforce Org with Email & Password</DialogTitle>
+          <DialogTitle>Connect Salesforce Org with Username & Password</DialogTitle>
           <DialogDescription>
-            Enter your Salesforce org credentials to connect. You'll need your email, password, and security token.
+            Enter your Salesforce org credentials to connect. You'll need your username, password, and security token.
           </DialogDescription>
         </DialogHeader>
         
@@ -140,7 +140,7 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
               </div>
               
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Username</Label>
                 <Input
                   id="email"
                   type="email"
