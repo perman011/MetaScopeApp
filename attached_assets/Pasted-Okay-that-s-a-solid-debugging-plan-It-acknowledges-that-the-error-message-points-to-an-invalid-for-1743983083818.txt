@@ -1,0 +1,69 @@
+Okay, that's a solid debugging plan. It acknowledges that the error message points to an invalid format being *used* in `handleStatusChange` (or functions it calls), but the *root cause* might be that the wrong value is being supplied earlier in the data flow (either from the store or during the initial event handling).
+
+Let's refine that plan slightly into actionable steps for a developer:
+
+**Debugging Plan: Tracing the `organization.id`**
+
+**Goal:** Find where the `organization.id` value becomes incorrect or lost before/during the status update process.
+
+**Steps:**
+
+1.  **Confirm Source ID in `handleStatusChange` (Customers.tsx):**
+    * Locate the `handleStatusChange` function.
+    * Identify how it gets the specific `organization` object it's supposed to update (e.g., from component state, props, a map function's argument).
+    * **Add Log (Critical):** Right before the line that calls `updateCustomerStatus` or the store action, add:
+        ```javascript
+        console.log('[handleStatusChange] Intending to update organization with ID:', organization?.id);
+        // Example: const idToUpdate = organization?.id;
+        // console.log('[handleStatusChange] ID being passed:', idToUpdate);
+        // updateCustomerStatus(idToUpdate, newStatus); // or similar call
+        ```
+    * *Check:* Run the action. Does this log show the correct, expected UUID? Or is it already `undefined`, `null`, or something else?
+
+2.  **Trace `updateCustomerStatus` Call (api.ts / store.ts):**
+    * Follow the function call from `handleStatusChange`. Let's assume it calls a function like `updateCustomerStatus` which might live in `src/lib/api.ts` or perhaps interacts with the store in `src/lib/store.ts` first.
+    * **Add Log in Receiving Function:** Inside the `updateCustomerStatus` function (or the relevant store action):
+        ```javascript
+        async function updateCustomerStatus(orgId, newStatus) { // Use actual param names
+          console.log('[updateCustomerStatus] Received organization ID:', orgId);
+
+          // If this function calls Supabase directly:
+          console.log('[updateCustomerStatus] ID being used in Supabase query:', orgId);
+          // const { data, error } = await supabase.from('customers').update({ status: newStatus }).eq('id', orgId).select();
+          // ... rest of function
+        }
+        ```
+    * *Check:* Does this function receive the same ID that `handleStatusChange` intended to send? Is the ID still correct right before the `.eq('id', orgId)` call to Supabase?
+
+3.  **Verify ID in Store (`addCustomer` in store.ts):**
+    * Go to the `addCustomer` function in `src/lib/store.ts`.
+    * Find where the `id` property is assigned to the new customer object being added to the store's state.
+    * **Add Log:**
+        ```javascript
+        function addCustomer(customerData) { // Use actual param name
+          // Assuming organization.id should be the customer's primary ID
+          const newCustomerId = customerData?.organization?.id; // Or however the ID is accessed
+          console.log('[addCustomer Store] Assigning ID to new customer:', newCustomerId);
+          const newCustomer = {
+            ...customerData,
+            id: newCustomerId // Ensure this assignment is correct
+          };
+          // ... rest of store logic (e.g., setState, update)
+        }
+        ```
+    * *Check:* When a *new* customer is added (if the error happens shortly after adding), is the correct `organization.id` being logged and assigned here?
+
+4.  **Remove Redundant Validation (Optional):**
+    * Based on your plan, carefully remove the UUID validation check you might have added *inside* `handleStatusChange` in `Customers.tsx`.
+    * *Rationale:* Focus on fixing the *source* of the bad ID being passed, assuming validation exists closer to the database interaction (in `api.ts`) or data creation (`store.ts`).
+
+**Execution:**
+
+Perform these logging steps, then run the application and trigger the status update that causes the error. Carefully examine the console logs in order. You should be able to see:
+
+1.  What ID `handleStatusChange` *thinks* it's sending.
+2.  What ID `updateCustomerStatus` (or the store action) *actually receives*.
+3.  What ID is being used in the Supabase query.
+4.  (If relevant) What ID was assigned when the customer was initially added to the store.
+
+This will pinpoint exactly where the ID value is going wrong. Good luck!

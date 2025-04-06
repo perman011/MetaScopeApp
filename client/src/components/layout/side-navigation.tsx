@@ -523,14 +523,14 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
         />
       )}
       
-      {/* Single toggle button that's always at the right edge of the current navbar */}
+      {/* Single toggle button that matches the Field Intelligence style */}
       <button 
         onClick={handleToggle}
         aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
-        className="absolute top-4 right-0 translate-x-1/2 bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20"
-        style={{ width: "18px", height: "18px" }}
+        className="absolute top-4 right-0 translate-x-1/2 bg-white border border-neutral-200 rounded-md p-0.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20"
+        style={{ width: "20px", height: "20px" }}
       >
-        <ChevronRight className={`h-3.5 w-3.5 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}`} />
+        <ChevronRight className={`h-4 w-4 text-neutral-600 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-180'}`} />
       </button>
     </div>
   );
