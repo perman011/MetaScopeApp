@@ -38,16 +38,44 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/radio-group";
 
-// Form schema for connecting new org
-const connectOrgSchema = z.object({
+// Form schema for connecting new org with credentials (email + password)
+const connectOrgCredentialsSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().min(1, "Email is required").email("Invalid email format"),
+  password: z.string().min(1, "Password is required"),
+  securityToken: z.string().optional(),
+  environment: z.enum(["production", "sandbox"]).default("production"),
+  authMethod: z.literal("credentials")
+});
+
+// Form schema for connecting new org with token
+const connectOrgTokenSchema = z.object({
   name: z.string().min(1, "Name is required"),
   instanceUrl: z.string().min(1, "Instance URL is required")
     .url("Must be a valid URL")
     .startsWith("https://", "URL must start with https://"),
   accessToken: z.string().min(1, "Access token is required"),
   refreshToken: z.string().optional(),
+  environment: z.enum(["production", "sandbox"]).default("production"),
+  authMethod: z.literal("token")
 });
+
+// Combined schema with discriminated union
+const connectOrgSchema = z.discriminatedUnion("authMethod", [
+  connectOrgCredentialsSchema,
+  connectOrgTokenSchema
+]);
 
 type ConnectOrgFormValues = z.infer<typeof connectOrgSchema>;
 
@@ -73,16 +101,51 @@ export default function OrgSelector() {
     placeholderData: [],
   });
   
+  // State for the current auth method tab
+  const [authMethod, setAuthMethod] = useState<"credentials" | "token">("credentials");
+
   // Set up form for connecting a new org
   const form = useForm<ConnectOrgFormValues>({
     resolver: zodResolver(connectOrgSchema),
     defaultValues: {
       name: "",
-      instanceUrl: "https://",
-      accessToken: "",
-      refreshToken: "",
+      email: "",
+      password: "",
+      securityToken: "",
+      environment: "production",
+      authMethod: "credentials",
     },
   });
+  
+  // Update form values when auth method changes
+  const onTabChange = (value: string) => {
+    const newAuthMethod = value as "credentials" | "token";
+    setAuthMethod(newAuthMethod);
+    
+    const currentName = form.getValues().name || "";
+    const currentEnvironment = form.getValues().environment || "production";
+    
+    // Reset the form with new defaults based on the auth method
+    if (newAuthMethod === "credentials") {
+      form.reset({
+        name: currentName,
+        email: "",
+        password: "",
+        securityToken: "",
+        environment: currentEnvironment,
+        authMethod: "credentials"
+      } as any); // Use 'as any' to bypass TS checking - we've ensured valid values
+    } else {
+      form.reset({
+        name: currentName,
+        instanceUrl: "https://",
+        accessToken: "",
+        refreshToken: "",
+        environment: currentEnvironment,
+        authMethod: "token"
+      } as any); // Use 'as any' to bypass TS checking - we've ensured valid values
+    }
+  };
   
   // Connect org mutation
   const connectOrgMutation = useMutation({
@@ -164,80 +227,209 @@ export default function OrgSelector() {
               <DialogHeader>
                 <DialogTitle>Connect Salesforce Org</DialogTitle>
                 <DialogDescription>
-                  Enter your Salesforce org credentials to connect
+                  Choose how you want to connect to your Salesforce org
                 </DialogDescription>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Org Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Production Org" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="instanceUrl"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Instance URL</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://yourinstance.salesforce.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="accessToken"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Access Token</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="refreshToken"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Refresh Token (Optional)</FormLabel>
-                        <FormControl>
-                          <Input type="password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button
-                      type="submit"
-                      disabled={connectOrgMutation.isPending}
-                    >
-                      {connectOrgMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        "Connect"
+              <Tabs defaultValue="credentials" onValueChange={onTabChange}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="credentials">Email + Password + Token</TabsTrigger>
+                  <TabsTrigger value="token">Access Token</TabsTrigger>
+                </TabsList>
+                
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Org Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Production Org" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
+                    />
+                    
+                    <TabsContent value="credentials" className="p-0 mt-0">
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="email" 
+                                  placeholder="you@example.com" 
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Password</FormLabel>
+                              <FormControl>
+                                <Input type="password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="securityToken"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Security Token</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                              <p className="text-xs text-muted-foreground">
+                                Your security token is sent to your email when you change your password or reset your security token in Salesforce.
+                              </p>
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="environment"
+                          render={({ field }) => (
+                            <FormItem className="space-y-1">
+                              <FormLabel>Environment</FormLabel>
+                              <FormControl>
+                                <RadioGroup
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                  className="flex flex-col space-y-1"
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="production" id="production" />
+                                    <Label htmlFor="production">Production</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="sandbox" id="sandbox" />
+                                    <Label htmlFor="sandbox">Sandbox</Label>
+                                  </div>
+                                </RadioGroup>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="token" className="p-0 mt-0">
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="instanceUrl"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Instance URL</FormLabel>
+                              <FormControl>
+                                <Input placeholder="https://yourinstance.salesforce.com" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="accessToken"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Access Token</FormLabel>
+                              <FormControl>
+                                <Input type="password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="refreshToken"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Refresh Token (Optional)</FormLabel>
+                              <FormControl>
+                                <Input type="password" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="environment"
+                          render={({ field }) => (
+                            <FormItem className="space-y-1">
+                              <FormLabel>Environment</FormLabel>
+                              <FormControl>
+                                <RadioGroup
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                  className="flex flex-col space-y-1"
+                                >
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="production" id="token-production" />
+                                    <Label htmlFor="token-production">Production</Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="sandbox" id="token-sandbox" />
+                                    <Label htmlFor="token-sandbox">Sandbox</Label>
+                                  </div>
+                                </RadioGroup>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </TabsContent>
+                    
+                    {/* Hidden field for authMethod */}
+                    <input 
+                      type="hidden" 
+                      {...form.register("authMethod")}
+                      value={authMethod}
+                    />
+                    
+                    <DialogFooter>
+                      <Button
+                        type="submit"
+                        disabled={connectOrgMutation.isPending}
+                      >
+                        {connectOrgMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Connecting...
+                          </>
+                        ) : (
+                          "Connect"
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </DropdownMenuContent>
