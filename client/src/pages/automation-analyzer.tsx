@@ -1,4 +1,4 @@
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useEffect, useState } from "react";
 import { Loader2, Layers, AlertCircle, Check, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -169,7 +169,7 @@ export default function AutomationAnalyzer() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [analysisComplete, setAnalysisComplete] = useState(false);
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
 
   // Query metadata for active org
   const { data: metadata, isLoading: isMetadataLoading, refetch: refetchMetadata } = useQuery<any[]>({

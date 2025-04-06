@@ -1,82 +1,105 @@
-import {
-  createContext,
-  ReactNode,
-  useContext,
-  useState,
-  useEffect,
-} from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { SalesforceOrg } from "@shared/schema";
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { fetchData } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
-interface OrgContextType {
-  activeOrg: SalesforceOrg | null;
-  setActiveOrg: (org: SalesforceOrg | null) => void;
-  isLoading: boolean;
-  refetchOrgs: () => Promise<void>;
+// Define Salesforce org type
+export interface SalesforceOrg {
+  id: number;
+  name: string;
+  instanceUrl: string;
+  userId: number;
+  environment: 'production' | 'sandbox';
+  lastConnected?: string;
+  tokenData?: any;
 }
 
-const OrgContext = createContext<OrgContextType | null>(null);
+// Define org context state
+interface OrgContextType {
+  orgs: SalesforceOrg[];
+  activeOrg: SalesforceOrg | null;
+  setActiveOrg: (org: SalesforceOrg | null) => void;
+  loading: boolean;
+  error: string | null;
+  refreshOrgs: () => Promise<void>;
+}
 
-export function OrgProvider({ children }: { children: ReactNode }) {
+// Create the org context
+const OrgContext = createContext<OrgContextType>({
+  orgs: [],
+  activeOrg: null,
+  setActiveOrg: () => {},
+  loading: false,
+  error: null,
+  refreshOrgs: async () => {},
+});
+
+// Provider component
+export function OrgProvider({ children }: { children: React.ReactNode }) {
+  const [orgs, setOrgs] = useState<SalesforceOrg[]>([]);
   const [activeOrg, setActiveOrg] = useState<SalesforceOrg | null>(null);
-  const queryClient = useQueryClient();
-  
-  // Fetch orgs
-  const { data: orgs, isLoading, refetch } = useQuery<SalesforceOrg[]>({
-    queryKey: ["/api/orgs"],
-    enabled: true,
-    staleTime: 5000, // Consider data stale after 5 seconds
-    refetchOnWindowFocus: true,
-    onSuccess: (data: SalesforceOrg[]) => {
-      console.log("Orgs fetched successfully:", data);
-    },
-    onError: (error: Error) => {
-      console.error("Error fetching orgs:", error);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  // Load orgs on initial mount
+  const fetchOrgs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchData<SalesforceOrg[]>('/api/orgs');
+      setOrgs(data);
+      
+      // Set active org from localStorage or use first org if available
+      const savedOrgId = localStorage.getItem('activeOrgId');
+      if (savedOrgId && data.length > 0) {
+        const savedOrg = data.find(org => org.id === parseInt(savedOrgId));
+        if (savedOrg) {
+          setActiveOrg(savedOrg);
+        } else {
+          // If saved org no longer exists, use first available
+          setActiveOrg(data[0]);
+        }
+      } else if (data.length > 0) {
+        setActiveOrg(data[0]);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load Salesforce orgs';
+      setError(message);
+      toast({
+        title: 'Error loading orgs',
+        description: message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
-  });
-  
-  // Function to manually refetch orgs
-  const refetchOrgs = async () => {
-    console.log("Manually refetching orgs...");
-    await queryClient.invalidateQueries({ queryKey: ["/api/orgs"] });
-    const result = await refetch();
-    console.log("Refetch result:", result.data);
   };
-  
-  // Set the first org as active if none is selected and orgs are loaded
+
   useEffect(() => {
-    console.log("Org context effect triggered - orgs:", orgs, "activeOrg:", activeOrg);
-    if (!activeOrg && orgs && orgs.length > 0) {
-      console.log("Setting first org as active:", orgs[0]);
-      setActiveOrg(orgs[0]);
-    }
-  }, [orgs, activeOrg]);
-  
-  // Store active org in local storage
+    fetchOrgs();
+  }, []);
+
+  // Save active org to localStorage when it changes
   useEffect(() => {
     if (activeOrg) {
-      localStorage.setItem("activeOrgId", activeOrg.id.toString());
+      localStorage.setItem('activeOrgId', activeOrg.id.toString());
     }
   }, [activeOrg]);
-  
-  // Retrieve active org from local storage on initial load
-  useEffect(() => {
-    const storedOrgId = localStorage.getItem("activeOrgId");
-    if (storedOrgId && orgs) {
-      const org = orgs.find((o: SalesforceOrg) => o.id.toString() === storedOrgId);
-      if (org) {
-        setActiveOrg(org);
-      }
-    }
-  }, [orgs]);
-  
+
+  // Public method to refresh orgs list
+  const refreshOrgs = async () => {
+    await fetchOrgs();
+  };
+
   return (
     <OrgContext.Provider
       value={{
+        orgs,
         activeOrg,
         setActiveOrg,
-        isLoading,
-        refetchOrgs,
+        loading,
+        error,
+        refreshOrgs,
       }}
     >
       {children}
@@ -84,10 +107,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useOrgContext() {
-  const context = useContext(OrgContext);
-  if (!context) {
-    throw new Error("useOrgContext must be used within an OrgProvider");
-  }
-  return context;
+// Custom hook for using org context
+export function useOrg() {
+  return useContext(OrgContext);
 }

@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import FieldIntelligence from "@/components/dashboard/field-intelligence";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function FieldIntelligencePage() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
 
   // Fetch metadata for active org to ensure it's available
   const { data: metadata, isLoading: isMetadataLoading } = useQuery({

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import SecurityIssuesList from "@/components/security/security-issues-list";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react";
 import { HealthScoreIssue } from "@shared/schema"; 
 
 export default function SecurityAnalyzer() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
 
   // Fetch health score for active org
   const { data: healthScore, isLoading } = useQuery<{ issues: HealthScoreIssue[] }>({

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -58,7 +58,7 @@ export default function OrgSelector() {
   let setActiveOrg = (org: any) => {}; // Default no-op function
   
   try {
-    const orgContext = useOrgContext();
+    const orgContext = useOrg();
     activeOrg = orgContext.activeOrg;
     setActiveOrg = orgContext.setActiveOrg;
   } catch (e) {

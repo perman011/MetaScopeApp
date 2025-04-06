@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import ConnectSalesforceOrgDialog from '@/components/connect-salesforce-org-dialog';
-import { useOrgContext } from '@/hooks/use-org';
+import { useOrg } from '@/hooks/use-org';
 import { FieldIntelligence } from '@/components/dashboard/field-intelligence';
 import { HealthScore } from '@shared/schema';
 
@@ -66,7 +66,7 @@ const mockFieldData: HealthScore = {
 export default function FieldIntelligencePage() {
   const [openConnectDialog, setOpenConnectDialog] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
-  const { activeOrg, setActiveOrg } = useOrgContext();
+  const { activeOrg, setActiveOrg } = useOrg();
   
   const { data: healthScore, isLoading: isHealthScoreLoading } = useQuery<HealthScore>({
     queryKey: activeOrg ? ['/api/health-score', activeOrg.id] : [],

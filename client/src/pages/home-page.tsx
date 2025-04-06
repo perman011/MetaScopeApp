@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import SalesforceOrgManager from "@/components/salesforce-org-manager";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function HomePage() {
@@ -10,7 +10,7 @@ export default function HomePage() {
   // Try to use org context only if we're sure we're authenticated
   const orgContext = (() => {
     try {
-      return useOrgContext();
+      return useOrg();
     } catch (e) {
       return { activeOrg: null };
     }

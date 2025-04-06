@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { SalesforceOrg } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useToast } from "@/hooks/use-toast";
 import ConnectSalesforceOrgDialog from "./connect-salesforce-org-dialog";
 import {
@@ -44,7 +44,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export default function SalesforceOrgManager() {
-  const { activeOrg, setActiveOrg } = useOrgContext();
+  const { activeOrg, setActiveOrg } = useOrg();
   const [orgToDelete, setOrgToDelete] = useState<SalesforceOrg | null>(null);
   const { toast } = useToast();
 

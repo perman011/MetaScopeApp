@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { 
@@ -50,7 +50,7 @@ export default function ConnectSalesforceOrgDialog({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
   const { toast } = useToast();
-  const { refetchOrgs } = useOrgContext();
+  const { refetchOrgs } = useOrg();
   
   // Update progress bar based on connection status
   useEffect(() => {

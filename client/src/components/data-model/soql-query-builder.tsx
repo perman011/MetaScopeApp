@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { XCircle, ClipboardCopy, Play, Code, Wand2, RefreshCw, ChevronRight } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
-import { useOrgContext } from '@/hooks/use-org';
+import { useOrg } from '@/hooks/use-org';
 import { useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 
@@ -49,7 +49,7 @@ export default function SoqlQueryBuilder({
 }: SoqlQueryBuilderProps) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   
   // State for selected fields and relationships
   const [selectedFields, setSelectedFields] = useState<SelectedField[]>([]);

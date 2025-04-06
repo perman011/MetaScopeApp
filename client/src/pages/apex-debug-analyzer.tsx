@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { SalesforceOrg } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useToast } from "@/hooks/use-toast";
 import OrgContext from "@/components/org-context";
 import {
@@ -181,7 +181,7 @@ const DEFAULT_DEBUG_LEVELS = {
 };
 
 export default function ApexDebugAnalyzer() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const { toast } = useToast();
   const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1270,7 +1270,7 @@ function AIModelSelector() {
 }
 
 function LogSelector() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const [selectedLog, setSelectedLog] = useState<string | null>(null);
   
   // Reuse the logs query from parent component

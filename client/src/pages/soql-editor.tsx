@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { useOrgContext } from '@/hooks/use-org';
+import { useOrg } from '@/hooks/use-org';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -10,7 +10,7 @@ import QueryCanvas from '@/components/soql/query-canvas/QueryCanvas';
 import { mockSalesforceMetadata } from '@/lib/mock-data';
 
 export default function SoqlEditorPage() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const { toast } = useToast();
   const [mode, setMode] = useState<'editor' | 'builder'>('editor');
   const [query, setQuery] = useState('');

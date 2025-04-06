@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useOrgContext } from '@/hooks/use-org';
+import { useOrg } from '@/hooks/use-org';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -107,7 +107,7 @@ const SeverityBadge = ({ severity }: { severity: string }) => {
 };
 
 export default function TechnicalDebtScanner() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');

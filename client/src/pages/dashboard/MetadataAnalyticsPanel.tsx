@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -73,7 +73,7 @@ const isStaleComponent = (lastModifiedDate?: string) => {
 };
 
 export default function MetadataAnalyticsPanel() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   
   // Fetch metadata for the active org
   const { data: metadataItems, isLoading, error } = useQuery<MetadataComponent[]>({

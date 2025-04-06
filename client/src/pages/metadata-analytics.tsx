@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { 
@@ -96,7 +96,7 @@ interface ProcessedMetadata {
 }
 
 export default function MetadataAnalytics() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const [page, setPage] = useState(1);
   const [, navigate] = useLocation();
   const itemsPerPage = 10;

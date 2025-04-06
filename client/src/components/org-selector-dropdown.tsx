@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { SalesforceOrg } from "@shared/schema";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useToast } from "@/hooks/use-toast";
 import ConnectSalesforceOrgDialog from "./connect-salesforce-org-dialog";
 import {
@@ -17,7 +17,7 @@ import { ChevronDown, Cloud, Plus, Check, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function OrgSelectorDropdown() {
-  const { activeOrg, setActiveOrg } = useOrgContext();
+  const { activeOrg, setActiveOrg } = useOrg();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 

@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import OrgSelectorDropdown from "@/components/org-selector-dropdown";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,7 @@ export default function TopNavBar() {
   // Safely access org context only if we're within an OrgProvider
   let activeOrg = null;
   try {
-    const orgContext = useOrgContext();
+    const orgContext = useOrg();
     activeOrg = orgContext.activeOrg;
   } catch (e) {
     // OrgContext not available, activeOrg remains null

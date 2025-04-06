@@ -2,11 +2,11 @@ import { FileCode, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useState } from "react";
 
 export default function UIComponentAnalyzer() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   // Simulates analysis process

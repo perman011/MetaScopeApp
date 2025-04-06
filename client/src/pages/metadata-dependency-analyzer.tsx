@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { 
@@ -76,7 +76,7 @@ interface MetadataItem {
 }
 
 export default function MetadataDependencyAnalyzer() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMetadataType, setSelectedMetadataType] = useState<string>("apex");
   const [selectedMetadataItem, setSelectedMetadataItem] = useState<MetadataItem | null>(null);

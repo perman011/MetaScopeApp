@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import ConfigurationRadarChart from "@/components/visualization/configuration-ra
 import { HealthScore, Metadata } from "@shared/schema";
 
 export default function EnhancedDashboard() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
 
   // Fetch health score for active org
   const { data: healthScore, isLoading: isHealthScoreLoading } = useQuery<HealthScore>({

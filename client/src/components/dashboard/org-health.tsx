@@ -1,4 +1,4 @@
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { useQuery } from "@tanstack/react-query";
 import SimplifiedOrgHealth from "@/components/dashboard/simplified-org-health";
 import EnhancedOrgHealth from "@/components/dashboard/enhanced-org-health";
@@ -67,7 +67,7 @@ function generateMockHealthScore() {
 }
 
 export default function OrgHealth() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const [openConnectDialog, setOpenConnectDialog] = useState(false);
   const [mockData, setMockData] = useState<HealthScore | null>(null);
   const [useMockData, setUseMockData] = useState(false);

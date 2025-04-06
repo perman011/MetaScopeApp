@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import EnhancedSchemaVisualizer from "@/components/data-model/enhanced-schema-visualizer";
 import TableView from "@/components/data-model/table-view";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -64,7 +64,7 @@ interface ObjectMetadata {
 }
 
 export default function DataModelAnalyzer() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   // Enhanced Visualizer toggle switches between Graph View (Cytoscape.js) and Tabular View
   // Do NOT render both views simultaneously – unmount one completely on toggle
   // Layout dropdown permanently removed

@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Search, Plus, X } from 'lucide-react';
-import { useOrgContext } from '@/hooks/use-org';
+import { useOrg } from '@/hooks/use-org';
 import { mockSalesforceMetadata } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 
@@ -41,7 +41,7 @@ interface SortItem {
 }
 
 export default function QueryBuilder({ onExecuteQuery }: QueryBuilderProps) {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [showStandardObjects, setShowStandardObjects] = useState(true);

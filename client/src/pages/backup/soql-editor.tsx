@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import QueryEditor from "@/components/soql/query-editor";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,7 @@ interface QueryResult {
 }
 
 export default function SOQLEditor() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const [query, setQuery] = useState<string>("SELECT Id, Name, AccountNumber, Type, Industry, AnnualRevenue\nFROM Account\nWHERE AnnualRevenue > 1000000\nORDER BY AnnualRevenue DESC\nLIMIT 10");
   const [queryResults, setQueryResults] = useState<QueryResult | null>(null);
 

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import OrgHealth from "@/components/dashboard/org-health";
 import FieldIntelligence from "@/components/dashboard/field-intelligence";
 import { ApiUsage } from "@/components/dashboard/api-usage";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Card, 
@@ -74,7 +74,7 @@ const categoryColors = {
 const COLORS = ['#6366F1', '#22C55E', '#EC4899', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6'];
 
 export default function Dashboard() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState("count");

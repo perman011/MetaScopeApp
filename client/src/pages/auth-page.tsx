@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
@@ -40,7 +40,11 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [, navigate] = useLocation();
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user, login } = useAuth();
+  
+  // Simple state for loading state
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -59,8 +63,20 @@ export default function AuthPage() {
     },
   });
 
-  const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
+  const onLoginSubmit = async (data: LoginFormValues) => {
+    try {
+      setIsLoggingIn(true);
+      setLoginError(null);
+      const result = await login(data.username, data.password);
+      if (!result.success) {
+        setLoginError(result.error || 'Login failed');
+      }
+    } catch (error) {
+      setLoginError('An unexpected error occurred');
+      console.error('Login error:', error);
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   // Registration form
@@ -75,9 +91,28 @@ export default function AuthPage() {
     },
   });
 
-  const onRegisterSubmit = (data: RegisterFormValues) => {
-    const { passwordConfirm, ...formData } = data;
-    registerMutation.mutate(formData);
+  // Register state
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+
+  const onRegisterSubmit = async (data: RegisterFormValues) => {
+    // In a real implementation, this would call a registration API
+    // For now, we'll just simulate a registration process
+    try {
+      setIsRegistering(true);
+      setRegisterError(null);
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // For demo purposes, show an error for any registration attempt
+      setRegisterError('Registration is currently disabled. Please contact admin.');
+    } catch (error) {
+      setRegisterError('An unexpected error occurred');
+      console.error('Registration error:', error);
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   return (
@@ -150,12 +185,15 @@ export default function AuthPage() {
                   </CardContent>
                   
                   <CardFooter>
+                    {loginError && (
+                      <p className="text-sm text-red-500 mb-2">{loginError}</p>
+                    )}
                     <Button
                       type="submit"
                       className="w-full"
-                      disabled={loginMutation.isPending}
+                      disabled={isLoggingIn}
                     >
-                      {loginMutation.isPending ? (
+                      {isLoggingIn ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Logging in...
@@ -256,12 +294,15 @@ export default function AuthPage() {
                   </CardContent>
                   
                   <CardFooter>
+                    {registerError && (
+                      <p className="text-sm text-red-500 mb-2">{registerError}</p>
+                    )}
                     <Button
                       type="submit"
                       className="w-full"
-                      disabled={registerMutation.isPending}
+                      disabled={isRegistering}
                     >
-                      {registerMutation.isPending ? (
+                      {isRegistering ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Creating account...

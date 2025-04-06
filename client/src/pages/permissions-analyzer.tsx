@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useOrgContext } from "@/hooks/use-org";
+import { useOrg } from "@/hooks/use-org";
 import { Button } from "@/components/ui/button";
 import { 
   Card, 
@@ -178,7 +178,7 @@ interface PermissionCategory {
 }
 
 export default function PermissionsAnalyzer() {
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   const [searchTerm, setSearchTerm] = useState("");
   const [permissionType, setPermissionType] = useState<"profiles" | "permissionSets" | "users">("profiles");
   const [selectedItem, setSelectedItem] = useState<PermissionItem | null>(null);

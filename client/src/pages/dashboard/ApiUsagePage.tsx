@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import ConnectSalesforceOrgDialog from '@/components/connect-salesforce-org-dialog';
-import { useOrgContext } from '@/hooks/use-org';
+import { useOrg } from '@/hooks/use-org';
 import ApiUsage from '@/components/dashboard/api-usage';
 import {
   Alert,
@@ -199,7 +199,7 @@ export default function ApiUsagePage() {
   const [openConnectDialog, setOpenConnectDialog] = useState(false);
   const [useMockData, setUseMockData] = useState(false);
   const [useTimeoutMockData, setUseTimeoutMockData] = useState(false);
-  const { activeOrg } = useOrgContext();
+  const { activeOrg } = useOrg();
   
   // Fetch API usage data
   // Add detailed logging for debugging
