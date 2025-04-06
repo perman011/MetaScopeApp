@@ -480,9 +480,16 @@ export class MemStorage implements IStorage {
 
   async createCompliance(insertCompliance: InsertCompliance): Promise<Compliance> {
     const id = this.complianceIdCounter++;
+    
+    // Handle nextScanDue to prevent undefined values
+    const nextScanDue = insertCompliance.nextScanDue === undefined 
+      ? null 
+      : insertCompliance.nextScanDue;
+    
     const compliance: Compliance = {
       ...insertCompliance,
       id,
+      nextScanDue,
       lastScanned: insertCompliance.lastScanned || new Date(),
     };
     this.compliance.set(id, compliance);
@@ -535,11 +542,22 @@ export class MemStorage implements IStorage {
       ? null 
       : insertItem.tags;
     
+    // Ensure estimatedHours and estimatedCost are not undefined
+    const estimatedHours = insertItem.estimatedHours === undefined 
+      ? null 
+      : insertItem.estimatedHours;
+    
+    const estimatedCost = insertItem.estimatedCost === undefined 
+      ? null 
+      : insertItem.estimatedCost;
+    
     const item: TechnicalDebtItem = {
       ...insertItem,
       id,
       componentId,
       tags,
+      estimatedHours,
+      estimatedCost,
       createdAt: insertItem.createdAt || new Date(),
       updatedAt: insertItem.updatedAt || new Date(),
       resolvedAt: insertItem.resolvedAt || null,
@@ -619,8 +637,11 @@ class PostgresStorage implements IStorage {
 
   constructor() {
     try {
-      const sql = neon(process.env.DATABASE_URL!);
-      this.db = drizzle(sql);
+      // Create a connection to the database with the correct client configuration
+      const client = neon(process.env.DATABASE_URL!);
+      
+      // Initialize drizzle with the schema
+      this.db = drizzle(client, { schema });
       
       // Use in-memory session store since we're having issues with PostgreSQL session store
       this.sessionStore = new MemoryStore({
@@ -779,13 +800,18 @@ class PostgresStorage implements IStorage {
   // Additional utility method for getting all dependencies related to a component
   async getOrgComponentDependencies(orgId: number, componentId?: number): Promise<ComponentDependency[]> {
     if (componentId) {
-      // TypeScript any is used here as the Drizzle type definitions are challenging
-      return await this.db.select().from(schema.componentDependencies)
-        .where({ orgId })
-        .where((eb: any) => eb.or(
-          { sourceComponentId: componentId },
-          { targetComponentId: componentId }
-        ));
+      // Using the eq and or operators from drizzle
+      const { eq, or } = this.db._.schema.componentDependencies;
+      
+      return await this.db.select()
+        .from(schema.componentDependencies)
+        .where(
+          or(
+            eq(schema.componentDependencies.sourceComponentId, componentId),
+            eq(schema.componentDependencies.targetComponentId, componentId)
+          )
+        )
+        .where(eq(schema.componentDependencies.orgId, orgId));
     }
     return await this.db.select().from(schema.componentDependencies).where({ orgId });
   }
@@ -846,14 +872,19 @@ class PostgresStorage implements IStorage {
   }
   
   async getOrgTechnicalDebt(orgId: number, category?: string, status?: string): Promise<TechnicalDebtItem[]> {
-    let query = this.db.select().from(schema.technicalDebtItems).where({ orgId });
+    // Using the eq operator from drizzle
+    const { eq } = this.db._.schema.technicalDebtItems;
+    
+    let query = this.db.select()
+      .from(schema.technicalDebtItems)
+      .where(eq(schema.technicalDebtItems.orgId, orgId));
     
     if (category) {
-      query = query.where({ category });
+      query = query.where(eq(schema.technicalDebtItems.category, category));
     }
     
     if (status) {
-      query = query.where({ status });
+      query = query.where(eq(schema.technicalDebtItems.status, status));
     }
     
     return await query;
@@ -885,10 +916,18 @@ class PostgresStorage implements IStorage {
   }
 
   async getOrgReleaseImpacts(orgId: number, status?: string): Promise<ReleaseImpact[]> {
+    // Using the eq operator from drizzle
+    const { eq } = this.db._.schema.releaseImpact;
+    
+    let query = this.db.select()
+      .from(schema.releaseImpact)
+      .where(eq(schema.releaseImpact.orgId, orgId));
+    
     if (status) {
-      return await this.db.select().from(schema.releaseImpact).where({ orgId, status });
+      query = query.where(eq(schema.releaseImpact.status, status));
     }
-    return await this.db.select().from(schema.releaseImpact).where({ orgId });
+    
+    return await query;
   }
 
   async createReleaseImpact(impact: InsertReleaseImpact): Promise<ReleaseImpact> {
@@ -911,8 +950,9 @@ class PostgresStorage implements IStorage {
   }
 }
 
-// Check if we have a DATABASE_URL environment variable and use Postgres if available, otherwise use MemStorage
-const usePostgres = !!process.env.DATABASE_URL;
-console.log(`Using ${usePostgres ? 'PostgreSQL' : 'In-Memory'} storage`);
+// Check if we have a DATABASE_URL environment variable, but temporarily force in-memory storage
+// until we fully resolve the PostgreSQL issues
+const usePostgres = false; // !!process.env.DATABASE_URL;
+console.log(`Using ${usePostgres ? 'PostgreSQL' : 'In-Memory'} storage (PostgreSQL temporarily disabled)`);
 
 export const storage = usePostgres ? new PostgresStorage() : new MemStorage();
