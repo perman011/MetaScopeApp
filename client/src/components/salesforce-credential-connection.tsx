@@ -24,6 +24,13 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
 
   const connectMutation = useMutation({
     mutationFn: async () => {
+      console.log("Connecting with credentials:", { 
+        name: orgName, 
+        email, 
+        environment,
+        authMethod: "credentials"
+      });
+      
       const res = await fetch('/api/orgs', {
         method: 'POST',
         headers: {
