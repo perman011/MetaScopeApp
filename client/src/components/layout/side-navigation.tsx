@@ -244,15 +244,13 @@ function getNavigationByRole(role: UserRole): NavigationConfig {
 // Collapsed Navigation Component
 function CollapsedNavigation({ 
   onCategoryClick, 
-  activeCategory,
-  onToggle
+  activeCategory
 }: { 
   onCategoryClick: (categoryKey: string) => void; 
   activeCategory: string | null;
-  onToggle: () => void;
 }) {
   return (
-    <aside className="w-[54px] bg-white border-r border-neutral-200 flex flex-col h-full overflow-hidden relative">
+    <aside className="w-[54px] bg-white border-r border-neutral-200 flex flex-col h-full overflow-hidden">
       <div className="p-2 border-b border-neutral-200 flex justify-center mb-4">
         <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-xs">
           MS
@@ -293,16 +291,6 @@ function CollapsedNavigation({
           </div>
         ))}
       </div>
-      
-      {/* Directly attach the toggle button to this component */}
-      <button 
-        className="absolute top-4 -right-[7px] bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20"
-        onClick={onToggle}
-        aria-label="Expand navigation"
-        style={{ width: "14px", height: "14px" }}
-      >
-        <ChevronRight className="h-2.5 w-2.5" />
-      </button>
     </aside>
   );
 }
@@ -312,14 +300,12 @@ function ExpandedNavigation({
   selectedRole, 
   onRoleChange, 
   currentPath,
-  expandedCategory,
-  onToggle
+  expandedCategory
 }: { 
   selectedRole: UserRole;
   onRoleChange: (role: UserRole) => void;
   currentPath: string;
   expandedCategory?: string | null;
-  onToggle: () => void;
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(() => {
@@ -408,15 +394,7 @@ function ExpandedNavigation({
         </div>
       </div>
       
-      {/* Directly attach the toggle button to this component */}
-      <button 
-        className="absolute top-4 -left-[7px] bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20"
-        onClick={onToggle}
-        aria-label="Collapse navigation"
-        style={{ width: "14px", height: "14px" }}
-      >
-        <ChevronRight className="h-2.5 w-2.5 rotate-180" />
-      </button>
+
       
       <div className="p-4">
         <div className="relative">
@@ -535,7 +513,6 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
         <CollapsedNavigation 
           onCategoryClick={handleCategoryClick}
           activeCategory={findActiveCategory()}
-          onToggle={handleToggle}
         />
       ) : (
         <ExpandedNavigation 
@@ -543,9 +520,29 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
           onRoleChange={handleRoleChange}
           currentPath={location}
           expandedCategory={expandedCategory}
-          onToggle={handleToggle}
         />
       )}
+      
+      {/* Single toggle button that's always visible */}
+      <button 
+        onClick={handleToggle}
+        aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
+        className="absolute top-4 bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20 transition-all"
+        style={isCollapsed ? 
+          { 
+            width: "18px", 
+            height: "18px",
+            right: "-9px"
+          } : 
+          { 
+            width: "18px", 
+            height: "18px",
+            left: "-9px"
+          }
+        }
+      >
+        <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} />
+      </button>
     </div>
   );
 }
