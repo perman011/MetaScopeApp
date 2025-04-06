@@ -72,23 +72,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { 
         authMethod, 
         // Credential-based auth fields 
-        email,
+        username,
+        email, // Support both username and email for backward compatibility
         password,
         securityToken,
         environment
       } = req.body;
       
       if (authMethod === 'credentials') {
-        if (!email || !password) {
-          console.log("Missing email or password for credential auth");
-          return res.status(400).send("Email and password are required for credential authentication");
+        // Use username if provided, otherwise fall back to email
+        const userIdentifier = username || email;
+        
+        if (!userIdentifier || !password) {
+          console.log("Missing username/email or password for credential auth");
+          return res.status(400).send("Username/email and password are required for credential authentication");
         }
         
         try {
-          console.log("Attempting to authenticate with Salesforce using credentials");
+          console.log("Attempting to authenticate with Salesforce using credentials:", {
+            userIdentifier: userIdentifier,
+            environment: environment || 'production'
+          });
+          
           // Authenticate with Salesforce
           const authResult = await salesforceService.authenticateWithCredentials({
-            email,
+            email: userIdentifier, // Map to email which is what salesforceService expects
             password,
             securityToken: securityToken || '',
             environment: environment || 'production'

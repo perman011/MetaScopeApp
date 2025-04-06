@@ -50,7 +50,7 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
           credentials: 'include',
           body: JSON.stringify({
             name: orgName,
-            email,
+            username: email, // Map email to username parameter for backend compatibility
             password,
             securityToken,
             environment,
@@ -128,87 +128,142 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="orgName">Org Name</Label>
-            <Input
-              id="orgName"
-              placeholder="Production, Sandbox, Dev Org, etc."
-              value={orgName}
-              onChange={(e) => setOrgName(e.target.value)}
-            />
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="securityToken">Security Token</Label>
-            <Input
-              id="securityToken"
-              value={securityToken}
-              onChange={(e) => setSecurityToken(e.target.value)}
-            />
-          </div>
-          
-          <div className="grid gap-2">
-            <Label>Environment</Label>
-            <RadioGroup 
-              value={environment} 
-              onValueChange={(value) => setEnvironment(value as "production" | "sandbox")}
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="production" id="production" />
-                <Label htmlFor="production">Production</Label>
+        {connectionStatus === 'idle' ? (
+          <>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="orgName">Org Name</Label>
+                <Input
+                  id="orgName"
+                  placeholder="Production, Sandbox, Dev Org, etc."
+                  value={orgName}
+                  onChange={(e) => setOrgName(e.target.value)}
+                />
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="sandbox" id="sandbox" />
-                <Label htmlFor="sandbox">Sandbox</Label>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
-            </RadioGroup>
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={connectMutation.isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConnect}
-            disabled={connectMutation.isPending}
-          >
-            {connectMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              "Connect"
+              
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="securityToken">Security Token</Label>
+                <Input
+                  id="securityToken"
+                  value={securityToken}
+                  onChange={(e) => setSecurityToken(e.target.value)}
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label>Environment</Label>
+                <RadioGroup 
+                  value={environment} 
+                  onValueChange={(value) => setEnvironment(value as "production" | "sandbox")}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="production" id="production" />
+                    <Label htmlFor="production">Production</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="sandbox" id="sandbox" />
+                    <Label htmlFor="sandbox">Sandbox</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={connectMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConnect}
+                disabled={connectMutation.isPending}
+              >
+                {connectMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  "Connect"
+                )}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : (
+          <div className="py-4">
+            {connectionStatus === 'connecting' && (
+              <div className="flex items-center gap-3 mb-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <div>
+                  <h3 className="font-medium">Connecting to Salesforce</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Authenticating with your credentials...
+                  </p>
+                </div>
+              </div>
             )}
-          </Button>
-        </DialogFooter>
+            
+            {connectionStatus === 'success' && (
+              <Alert className="bg-green-50 border-green-200">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-800">Connection successful!</AlertTitle>
+                <AlertDescription className="text-green-700">
+                  Your Salesforce org is now ready to use.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {connectionStatus === 'error' && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Connection failed</AlertTitle>
+                <AlertDescription className="mt-2">
+                  <p className="mb-4">
+                    {connectionError || "We couldn't connect to your Salesforce org. Please check your credentials and try again."}
+                  </p>
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={() => setConnectionStatus('idle')} 
+                      size="sm"
+                      variant="outline"
+                    >
+                      Back to form
+                    </Button>
+                    <Button 
+                      onClick={handleConnect} 
+                      size="sm"
+                    >
+                      Retry Connection
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
