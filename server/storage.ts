@@ -71,7 +71,7 @@ export class MemStorage implements IStorage {
   
   // Create a default admin user for application administration
   private async setupAdminUser() {
-    const existingAdmin = await this.getUserByUsername('admin');
+    const existingAdmin = await this.getUserByUsername('4980005@gmail.com');
     if (!existingAdmin) {
       // Create an admin user with preset credentials using proper password hashing
       const salt = crypto.randomBytes(16).toString('hex');
@@ -80,10 +80,10 @@ export class MemStorage implements IStorage {
       
       // Create an admin user with preset credentials
       await this.createUser({
-        username: 'admin',
+        username: '4980005@gmail.com',
         password: hashedPassword,
         fullName: 'System Administrator',
-        email: 'admin@metascope.com',
+        email: '4980005@gmail.com',
         isAdmin: true
       });
       console.log('Admin user created successfully');
@@ -238,16 +238,61 @@ export class MemStorage implements IStorage {
 
   async createHealthScore(insertScore: InsertHealthScore): Promise<HealthScore> {
     const id = this.healthScoreIdCounter++;
-    // Ensure all required fields have default values if not provided
-    const score: HealthScore = { 
-      ...insertScore, 
+    
+    // Create the base database entry
+    const baseScore = {
       id,
+      orgId: insertScore.orgId,
+      overallScore: insertScore.overallScore,
+      securityScore: insertScore.securityScore,
+      dataModelScore: insertScore.dataModelScore,
+      automationScore: insertScore.automationScore,
+      apexScore: insertScore.apexScore,
+      uiComponentScore: insertScore.uiComponentScore,
       complexityScore: insertScore.complexityScore ?? 50,
       performanceRisk: insertScore.performanceRisk ?? 50,
       technicalDebt: insertScore.technicalDebt ?? 50,
       metadataVolume: insertScore.metadataVolume ?? 50,
-      customizationLevel: insertScore.customizationLevel ?? 50
+      customizationLevel: insertScore.customizationLevel ?? 50,
+      lastAnalyzed: insertScore.lastAnalyzed || new Date(),
+      issues: insertScore.issues || []
     };
+    
+    // Convert the raw data to a proper HealthScore object
+    let parsedIssues: HealthScoreIssue[] = [];
+    
+    // Only try to parse issues if they exist
+    if (baseScore.issues) {
+      try {
+        // Handle different potential formats of issues data
+        if (Array.isArray(baseScore.issues)) {
+          parsedIssues = baseScore.issues.map(issue => {
+            if (typeof issue === 'object') {
+              return {
+                id: issue.id || `issue-${Math.random().toString(36).substring(2, 9)}`,
+                severity: issue.severity || 'info',
+                category: issue.category || 'security',
+                title: issue.title || 'Unknown Issue',
+                description: issue.description || 'No description provided',
+                impact: issue.impact || 'Unknown impact',
+                recommendation: issue.recommendation || 'No recommendation provided'
+              };
+            }
+            return null;
+          }).filter((issue): issue is HealthScoreIssue => issue !== null);
+        }
+      } catch (e) {
+        console.error("Failed to parse health score issues:", e);
+        parsedIssues = [];
+      }
+    }
+    
+    // Create the HealthScore with the properly typed issues array
+    const score: HealthScore = {
+      ...baseScore,
+      issues: parsedIssues
+    };
+    
     this.healthScores.set(id, score);
     return score;
   }

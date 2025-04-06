@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import OrgHealth from "@/components/dashboard/org-health";
 import FieldIntelligence from "@/components/dashboard/field-intelligence";
-import ApiUsage from "@/components/dashboard/api-usage";
+import { ApiUsage } from "@/components/dashboard/api-usage";
 import { useOrgContext } from "@/hooks/use-org";
 import { apiRequest } from "@/lib/queryClient";
 import { 
