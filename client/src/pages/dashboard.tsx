@@ -250,7 +250,101 @@ export default function Dashboard() {
           </TabsContent>
           
           <TabsContent value="api-usage">
-            <ApiUsage />
+            {activeOrg ? (
+              <ApiUsage 
+                orgId={activeOrg.id}
+                apiUsageData={{
+                  dailyApiRequests: { used: 14782, total: 25000 },
+                  concurrentApiRequests: { used: 8, total: 25 },
+                  requestsByType: [
+                    { type: 'REST', count: 8765, percentage: 59, color: '#3B82F6' },
+                    { type: 'SOAP', count: 3546, percentage: 24, color: '#10B981' },
+                    { type: 'Bulk', count: 1890, percentage: 13, color: '#F59E0B' },
+                    { type: 'Metadata', count: 581, percentage: 4, color: '#8B5CF6' }
+                  ],
+                  requestsByMethod: [
+                    { method: 'GET', count: 7842, percentage: 53, color: '#3B82F6' },
+                    { method: 'POST', count: 4291, percentage: 29, color: '#10B981' },
+                    { method: 'PATCH', count: 1654, percentage: 11, color: '#F59E0B' },
+                    { method: 'DELETE', count: 581, percentage: 4, color: '#EC4899' },
+                    { method: 'HEAD', count: 414, percentage: 3, color: '#6B7280' }
+                  ],
+                  topConsumers: [
+                    { name: 'Data Integration Service', requests: 5432, percentage: 37 },
+                    { name: 'Admin User', requests: 3789, percentage: 26 },
+                    { name: 'Marketing Automation', requests: 2143, percentage: 14 },
+                    { name: 'Sales Dashboard', requests: 1987, percentage: 13 },
+                    { name: 'Customer Portal', requests: 1431, percentage: 10 }
+                  ],
+                  errorRates: [
+                    { type: 'Rate Limit', count: 187, percentage: 1.3, color: '#EF4444' },
+                    { type: 'Authentication', count: 89, percentage: 0.6, color: '#F59E0B' },
+                    { type: 'Invalid Request', count: 132, percentage: 0.9, color: '#8B5CF6' },
+                    { type: 'Server Error', count: 45, percentage: 0.3, color: '#EC4899' }
+                  ],
+                  usageTrend: [
+                    { date: '2025-03-29', requests: 1867, limit: 25000 },
+                    { date: '2025-03-30', requests: 2134, limit: 25000 },
+                    { date: '2025-03-31', requests: 1952, limit: 25000 },
+                    { date: '2025-04-01', requests: 2415, limit: 25000 },
+                    { date: '2025-04-02', requests: 2087, limit: 25000 },
+                    { date: '2025-04-03', requests: 1953, limit: 25000 },
+                    { date: '2025-04-04', requests: 2374, limit: 25000 }
+                  ],
+                  responseTime: {
+                    average: 387,
+                    percentile95: 876,
+                    percentile99: 1234
+                  },
+                  batchEfficiency: {
+                    batchOperations: 342,
+                    singleOperations: 876,
+                    potentialBatchSavings: 287
+                  },
+                  rateLimitEvents: [
+                    { date: '2025-04-01 09:15', count: 3, duration: 5 },
+                    { date: '2025-04-02 14:22', count: 1, duration: 2 },
+                    { date: '2025-04-03 16:45', count: 2, duration: 7 }
+                  ],
+                  optimizationRecommendations: [
+                    { 
+                      id: 'batch-ops', 
+                      title: 'Use Batch Operations',
+                      description: 'Consider combining multiple similar API calls into batch operations',
+                      impact: 'high',
+                      type: 'efficiency'
+                    },
+                    { 
+                      id: 'reduce-polling', 
+                      title: 'Reduce Polling Frequency',
+                      description: 'Some integrations are polling too frequently. Consider reducing polling intervals.',
+                      impact: 'medium',
+                      type: 'limit'
+                    },
+                    { 
+                      id: 'field-selection', 
+                      title: 'Optimize Field Selection',
+                      description: 'Select only necessary fields in API requests to reduce payload size and processing time',
+                      impact: 'medium',
+                      type: 'performance'
+                    }
+                  ]
+                }}
+                onRefresh={() => {
+                  // This would trigger a data refresh in a real implementation
+                  console.log('Refresh API usage data');
+                }}
+                onActionClick={(actionId) => {
+                  console.log('API action clicked:', actionId);
+                }}
+              />
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <p className="mb-4">Please connect a Salesforce organization to view API usage analytics.</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
         
