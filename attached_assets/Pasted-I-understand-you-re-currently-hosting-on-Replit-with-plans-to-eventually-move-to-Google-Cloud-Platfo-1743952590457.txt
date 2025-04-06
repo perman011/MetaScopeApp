@@ -1,0 +1,362 @@
+I understand you're currently hosting on Replit with plans to eventually move to Google Cloud Platform (GCP). This is an important consideration for your architecture. Let me adapt the roadmap to account for this deployment path.
+
+# Salesforce Metascope: Deployment Roadmap (Replit to GCP)
+
+## 1. Initial Deployment on Replit
+
+### Replit Architecture Considerations
+
+**Backend Setup**:
+- Node.js Express application for API services
+- PostgreSQL database for user/subscription data (using Replit Database)
+- Simple file-based storage for initial metadata (until volume increases)
+- Authentication via JWT tokens
+
+**Frontend Setup**:
+- React single-page application
+- Bundled with the backend for simplicity
+- Material UI for responsive design
+- Minimal state management with React Context
+
+**Development Workflow**:
+- Use Replit's collaborative features for team development
+- Implement basic CI checks within Replit
+- Set up environment variables for configuration
+
+### MVP Features for Replit Phase
+
+1. **Core User Management**:
+   - Basic login/signup functionality
+   - Simple user roles (Admin/User)
+   - User profile management
+
+2. **Salesforce Connection**:
+   - OAuth integration with Salesforce
+   - Basic org connection management
+   - Simple metadata retrieval from connected orgs
+
+3. **Basic Metadata Browser**:
+   - List and search Salesforce components
+   - Basic filtering capabilities
+   - Simple component detail views
+
+4. **Simplified Admin**:
+   - User management interface
+   - Connected org management
+   - Basic system monitoring
+
+## 2. Transition Planning to GCP
+
+### Architecture Evolution
+
+**Database Migration**:
+- Transition from Replit Database to Cloud SQL (PostgreSQL)
+- Implement data migration scripts
+- Set up proper backup and recovery
+
+**Service Decomposition**:
+- Break monolithic app into microservices
+- Define service boundaries (User Management, Metadata Services, etc.)
+- Implement inter-service communication
+
+**Storage Scaling**:
+- Move from file-based to Cloud Storage for raw metadata
+- Implement MongoDB or Firestore for document-based metadata
+- Consider Neo4j or similar for relationship data
+
+**Authentication Enhancement**:
+- Integrate with Firebase Auth or Cloud Identity Platform
+- Implement proper RBAC with IAM integration
+- Support SSO options for enterprise customers
+
+### GCP Resource Planning
+
+**Compute Resources**:
+- Cloud Run for stateless services
+- GKE for more complex workloads
+- App Engine for simple web services
+
+**Data Services**:
+- Cloud SQL for relational data
+- Firestore for document storage
+- Cloud Storage for large files/backups
+- Memorystore for caching
+
+**DevOps Infrastructure**:
+- Cloud Build for CI/CD pipeline
+- Container Registry for Docker images
+- Cloud Source Repositories or GitHub integration
+- Cloud Monitoring and Logging
+
+## 3. Data Model Implementation
+
+### Initial Schema (Replit Phase)
+
+**Users Table**:
+```sql
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  first_name VARCHAR(100),
+  last_name VARCHAR(100),
+  role VARCHAR(50) NOT NULL DEFAULT 'user',
+  org_id INTEGER REFERENCES organizations(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Organizations Table**:
+```sql
+CREATE TABLE organizations (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  status VARCHAR(50) DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Salesforce Orgs Table**:
+```sql
+CREATE TABLE salesforce_orgs (
+  id SERIAL PRIMARY KEY,
+  org_id INTEGER REFERENCES organizations(id),
+  name VARCHAR(255) NOT NULL,
+  instance_url VARCHAR(255) NOT NULL,
+  refresh_token TEXT,
+  org_type VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Metadata Scans Table**:
+```sql
+CREATE TABLE metadata_scans (
+  id SERIAL PRIMARY KEY,
+  sf_org_id INTEGER REFERENCES salesforce_orgs(id),
+  status VARCHAR(50) DEFAULT 'pending',
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  items_processed INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Expanded Schema (GCP Phase)
+
+Additional tables for enhanced functionality:
+
+**Subscriptions Table**:
+```sql
+CREATE TABLE subscriptions (
+  id SERIAL PRIMARY KEY,
+  org_id INTEGER REFERENCES organizations(id),
+  plan_id INTEGER REFERENCES plans(id),
+  status VARCHAR(50) DEFAULT 'active',
+  start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  end_date TIMESTAMP,
+  billing_frequency VARCHAR(50),
+  next_billing_date TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Plans Table**:
+```sql
+CREATE TABLE plans (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  price DECIMAL(10,2) NOT NULL,
+  billing_period VARCHAR(50) DEFAULT 'monthly',
+  org_limit INTEGER DEFAULT 1,
+  user_limit INTEGER DEFAULT 5,
+  features JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## 4. Implementation Roadmap
+
+### Phase 1: Replit MVP (2-3 months)
+
+**Month 1: Setup & Core Infrastructure**
+- Set up Replit development environment
+- Implement basic user authentication
+- Create organization and user management
+- Build initial database schema
+
+**Month 2: Salesforce Integration**
+- Implement Salesforce OAuth connection
+- Build basic metadata retrieval functions
+- Create simple metadata storage
+- Develop initial admin dashboard
+
+**Month 3: UI & Testing**
+- Build user-facing metadata browser
+- Implement search functionality
+- Create basic reports
+- Perform testing and bug fixes
+
+### Phase 2: Enhanced Features (2-3 months)
+
+**Month 4: Advanced Metadata Analysis**
+- Implement metadata relationship mapping
+- Build dependency visualization
+- Create change tracking between scans
+- Enhance metadata search capabilities
+
+**Month 5: User Experience Improvements**
+- Implement role-based access control
+- Enhance admin capabilities
+- Add customizable dashboards
+- Improve metadata browsing experience
+
+**Month 6: Subscription & Multi-tenant**
+- Implement subscription model
+- Build billing integration (Stripe)
+- Enhance multi-tenant isolation
+- Create usage analytics
+
+### Phase 3: GCP Migration (2-3 months)
+
+**Month 7: GCP Infrastructure Setup**
+- Set up GCP project and resources
+- Configure networking and security
+- Implement CI/CD pipeline
+- Create database migration strategy
+
+**Month 8: Service Migration**
+- Migrate core services to Cloud Run/GKE
+- Move database to Cloud SQL
+- Implement enhanced storage solutions
+- Set up monitoring and logging
+
+**Month 9: Optimization & Scaling**
+- Optimize performance and resource usage
+- Implement auto-scaling
+- Enhance security measures
+- Complete final testing and validation
+
+## 5. Technical Implementation Guidelines
+
+### Authentication Flow
+
+**User Signup Process**:
+1. User submits registration form with email, password, name
+2. System validates data and checks for existing email
+3. System creates organization record
+4. System creates user record with hashed password
+5. System assigns default role (org admin for first user)
+6. System generates welcome email with verification link
+7. User clicks verification link to activate account
+
+**Login Process**:
+1. User submits login credentials
+2. System verifies email and password hash
+3. System checks account status
+4. System generates JWT token with user role and permissions
+5. User is redirected to appropriate dashboard based on role
+
+### Salesforce Connection Flow
+
+**Connecting a Salesforce Org**:
+1. User initiates Salesforce connection from dashboard
+2. System redirects to Salesforce OAuth authorization
+3. User approves access in Salesforce
+4. Salesforce redirects back with authorization code
+5. System exchanges code for access and refresh tokens
+6. System stores connection details securely
+7. System initiates metadata scan
+8. User is shown connection status and scan progress
+
+### Metadata Scan Process
+
+**Executing a Metadata Scan**:
+1. System creates new scan record with "pending" status
+2. System uses refresh token to obtain access token
+3. System queries Salesforce metadata API for component types
+4. For each type, system retrieves component metadata
+5. System processes and stores metadata in database
+6. System analyzes for relationships between components
+7. System compares with previous scan to identify changes
+8. System updates scan status to "completed"
+9. System notifies user of scan completion
+
+## 6. Frontend Design Concepts
+
+### Admin Portal Wireframes
+
+**Dashboard**:
+- Organization statistics
+- Recent user activities
+- System health metrics
+- Quick actions menu
+
+**User Management**:
+- User listing with search and filter
+- User details view
+- Role assignment controls
+- Invitation management
+
+**Organization Management**:
+- Organization listing
+- Subscription details
+- Usage statistics
+- Billing information
+
+### Customer Portal Wireframes
+
+**Metadata Explorer**:
+- Component type navigation
+- List view with search and filters
+- Detail view with properties
+- Relationship visualization
+
+**Org Management**:
+- Connected org listing
+- Connection status indicators
+- Scan history and scheduling
+- Org comparison tools
+
+**User Profile**:
+- Personal information
+- Password management
+- Notification preferences
+- Activity history
+
+## 7. DevOps & Deployment Strategy
+
+### Replit Development Flow
+
+**Development Process**:
+- Feature branches in Replit
+- Code review using Replit multiplayer
+- Manual testing in development environment
+- Deployment to production Replit
+
+### GCP Deployment Strategy
+
+**CI/CD Pipeline**:
+- GitHub repository for source control
+- Cloud Build triggers on commits
+- Automated testing in pipeline
+- Staged deployment to testing, staging, production
+
+**Environment Strategy**:
+- Development: Cloud Run instances with development database
+- Staging: Cloud Run/GKE with staging database
+- Production: GKE cluster with high-availability database
+
+**Monitoring & Operations**:
+- Cloud Monitoring dashboards
+- Log analysis with Cloud Logging
+- Error reporting and alerting
+- Performance monitoring and optimization
+
+This roadmap provides a comprehensive plan for developing your Salesforce Metascope from an initial Replit-based MVP through to a fully-featured GCP deployment. It addresses your concerns about user management, data modeling, and subscription handling while providing a realistic timeline and technical approach.​​​​​​​​​​​​​​​​
