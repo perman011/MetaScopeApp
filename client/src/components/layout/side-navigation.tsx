@@ -516,19 +516,26 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
         />
       )}
       
-      <button 
-        className={`absolute top-4 bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center z-20`}
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
-        style={{ 
-          width: "14px", 
-          height: "14px",
-          right: isCollapsed ? "-7px" : "auto",
-          left: isCollapsed ? "auto" : "-7px"
+      <div 
+        className="absolute top-4 z-20"
+        style={{
+          left: isCollapsed ? "54px" : "64px",
+          transition: "left 0.2s ease-in-out"
         }}
       >
-        <ChevronRight className={`h-2.5 w-2.5 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} />
-      </button>
+        <button 
+          className="bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm hover:bg-neutral-50 flex items-center justify-center"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
+          style={{ 
+            width: "14px", 
+            height: "14px",
+            transform: "translateX(-50%)"
+          }}
+        >
+          <ChevronRight className={`h-2.5 w-2.5 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} />
+        </button>
+      </div>
     </div>
   );
 }
