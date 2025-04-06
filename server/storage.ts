@@ -580,6 +580,8 @@ class PostgresStorage implements IStorage {
     const MemoryStore = connectPgSimple(session);
     this.sessionStore = new MemoryStore({
       conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,  // This will create the session table if it doesn't exist
+      tableName: 'session'         // Explicitly set the table name
     });
     
     console.log("PostgreSQL storage initialized");
