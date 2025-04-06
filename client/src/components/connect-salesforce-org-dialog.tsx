@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useOrg } from "@/hooks/use-org";
@@ -17,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type ConnectionStatus = 'idle' | 'connecting' | 'validating' | 'fetching_metadata' | 'success' | 'error';
 
@@ -34,6 +36,9 @@ export default function ConnectSalesforceOrgDialog({
   const [password, setPassword] = useState("");
   const [securityToken, setSecurityToken] = useState("");
   const [environment, setEnvironment] = useState<"production" | "sandbox">("production");
+  const [accessToken, setAccessToken] = useState("");
+  const [instanceUrl, setInstanceUrl] = useState("");
+  const [authMethod, setAuthMethod] = useState<"credentials" | "token">("credentials");
   
   const [isOpen, setIsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
@@ -42,8 +47,7 @@ export default function ConnectSalesforceOrgDialog({
   
   const { toast } = useToast();
   const { refreshOrgs } = useOrg();
-  
-  // Update progress bar based on connection status
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     
@@ -64,8 +68,7 @@ export default function ConnectSalesforceOrgDialog({
       }
     };
   }, [connectionStatus]);
-  
-  // Connect mutation
+
   const connectMutation = useMutation({
     mutationFn: async (data: any) => {
       setConnectionStatus('connecting');
@@ -89,7 +92,6 @@ export default function ConnectSalesforceOrgDialog({
         
         const newOrg = await res.json();
         
-        // Simulate metadata fetching (would happen on the server in production)
         setConnectionStatus('validating');
         await new Promise(resolve => setTimeout(resolve, 1000));
         
@@ -106,7 +108,6 @@ export default function ConnectSalesforceOrgDialog({
       }
     },
     onSuccess: () => {
-      // Only close after a short delay to show success state
       setTimeout(() => {
         setIsOpen(false);
         refreshOrgs();
@@ -116,10 +117,8 @@ export default function ConnectSalesforceOrgDialog({
           description: `${orgName} has been connected to your account`,
         });
         
-        // Reset form
         resetForm();
         
-        // Call onSuccess if provided
         if (onSuccess) {
           onSuccess();
         }
@@ -140,29 +139,50 @@ export default function ConnectSalesforceOrgDialog({
     setPassword("");
     setSecurityToken("");
     setEnvironment("production");
+    setAccessToken("");
+    setInstanceUrl("");
     setConnectionStatus('idle');
     setConnectionProgress(0);
     setConnectionError(null);
   };
   
   const handleConnect = () => {
-    if (!orgName || !email || !password) {
-      toast({
-        variant: "destructive",
-        title: "Missing information",
-        description: "Please provide org name, email, and password.",
+    const data = {
+      name: orgName,
+      environment: environment,
+      authMethod: authMethod,
+    };
+
+    if (authMethod === 'credentials') {
+      if (!orgName || !email || !password) {
+        toast({
+          variant: "destructive",
+          title: "Missing information",
+          description: "Please provide org name, email, and password.",
+        });
+        return;
+      }
+      Object.assign(data, {
+        email,
+        password,
+        securityToken
       });
-      return;
+    } else {
+      if (!orgName || !accessToken || !instanceUrl) {
+        toast({
+          variant: "destructive",
+          title: "Missing information",
+          description: "Please provide org name, access token, and instance URL.",
+        });
+        return;
+      }
+      Object.assign(data, {
+        accessToken,
+        instanceUrl
+      });
     }
     
-    connectMutation.mutate({
-      name: orgName,
-      email: email,
-      password: password,
-      securityToken: securityToken,
-      environment: environment,
-      authMethod: "credentials"
-    });
+    connectMutation.mutate(data);
   };
   
   const isSubmitDisabled = 
@@ -187,64 +207,124 @@ export default function ConnectSalesforceOrgDialog({
           
           {connectionStatus === 'idle' ? (
             <>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="orgName">Org Name</Label>
-                  <Input
-                    id="orgName"
-                    placeholder="Production, Sandbox, Dev Org, etc."
-                    value={orgName}
-                    onChange={(e) => setOrgName(e.target.value)}
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="securityToken">Security Token (if required)</Label>
-                  <Input
-                    id="securityToken"
-                    value={securityToken}
-                    onChange={(e) => setSecurityToken(e.target.value)}
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label>Environment</Label>
-                  <RadioGroup 
-                    value={environment} 
-                    onValueChange={(value) => setEnvironment(value as "production" | "sandbox")}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="production" id="production" />
-                      <Label htmlFor="production">Production</Label>
+              <Tabs defaultValue="credentials" onValueChange={(v) => setAuthMethod(v as "credentials" | "token")}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="credentials">Username/Password</TabsTrigger>
+                  <TabsTrigger value="token">Access Token</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="credentials">
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="orgName">Org Name</Label>
+                      <Input
+                        id="orgName"
+                        placeholder="Production, Sandbox, Dev Org, etc."
+                        value={orgName}
+                        onChange={(e) => setOrgName(e.target.value)}
+                      />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="sandbox" id="sandbox" />
-                      <Label htmlFor="sandbox">Sandbox</Label>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
                     </div>
-                  </RadioGroup>
-                </div>
-              </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="securityToken">Security Token (if required)</Label>
+                      <Input
+                        id="securityToken"
+                        value={securityToken}
+                        onChange={(e) => setSecurityToken(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label>Environment</Label>
+                      <RadioGroup 
+                        value={environment} 
+                        onValueChange={(value) => setEnvironment(value as "production" | "sandbox")}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="production" id="production" />
+                          <Label htmlFor="production">Production</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="sandbox" id="sandbox" />
+                          <Label htmlFor="sandbox">Sandbox</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="token">
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="orgName">Org Name</Label>
+                      <Input
+                        id="orgName"
+                        placeholder="Production, Sandbox, Dev Org, etc."
+                        value={orgName}
+                        onChange={(e) => setOrgName(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="instanceUrl">Instance URL</Label>
+                      <Input
+                        id="instanceUrl"
+                        placeholder="https://your-instance.salesforce.com"
+                        value={instanceUrl}
+                        onChange={(e) => setInstanceUrl(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label htmlFor="accessToken">Access Token</Label>
+                      <Input
+                        id="accessToken"
+                        type="password"
+                        value={accessToken}
+                        onChange={(e) => setAccessToken(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      <Label>Environment</Label>
+                      <RadioGroup 
+                        value={environment} 
+                        onValueChange={(value) => setEnvironment(value as "production" | "sandbox")}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="production" id="production" />
+                          <Label htmlFor="production">Production</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="sandbox" id="sandbox" />
+                          <Label htmlFor="sandbox">Sandbox</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
               
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsOpen(false)}>
@@ -282,31 +362,28 @@ export default function ConnectSalesforceOrgDialog({
               )}
               
               {connectionStatus === 'error' && (
-                <SalesforceConnectionError 
-                  onRetry={() => {
-                    // Retry the connection with the same parameters
-                    connectMutation.mutate({
-                      name: orgName,
-                      email: email,
-                      password: password,
-                      securityToken: securityToken,
-                      environment: environment,
-                      authMethod: "credentials"
-                    });
-                  }} 
-                />
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Connection failed</AlertTitle>
+                  <AlertDescription className="mt-2">
+                    <p className="mb-4">
+                      We couldn't connect to your Salesforce org. Please check your credentials and try again.
+                    </p>
+                    <Button onClick={handleConnect} size="sm">
+                      Retry Connection
+                    </Button>
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           )}
           
-          {/* Only show footer buttons for non-idle states since idle has its own buttons */}
           {connectionStatus !== 'idle' && (
             <DialogFooter className="mt-6">
               <Button 
                 type="button"
                 variant="outline" 
                 onClick={() => {
-                  // Only allow closing in error states (idle has its own button)
                   if (connectionStatus === 'error') {
                     setIsOpen(false);
                     resetForm();
@@ -320,7 +397,6 @@ export default function ConnectSalesforceOrgDialog({
               {connectionStatus === 'error' && (
                 <Button 
                   onClick={() => {
-                    // Reset to form state
                     setConnectionStatus('idle');
                     setConnectionProgress(0);
                   }}
@@ -333,23 +409,5 @@ export default function ConnectSalesforceOrgDialog({
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-// Error component
-function SalesforceConnectionError({ onRetry }: { onRetry: () => void }) {
-  return (
-    <Alert variant="destructive">
-      <AlertCircle className="h-4 w-4" />
-      <AlertTitle>Connection failed</AlertTitle>
-      <AlertDescription className="mt-2">
-        <p className="mb-4">
-          We couldn't connect to your Salesforce org. Please check your credentials and try again.
-        </p>
-        <Button onClick={onRetry} size="sm">
-          Retry Connection
-        </Button>
-      </AlertDescription>
-    </Alert>
   );
 }
