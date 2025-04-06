@@ -120,9 +120,9 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Connect Salesforce Org</DialogTitle>
+          <DialogTitle>Connect Salesforce Org with Email & Password</DialogTitle>
           <DialogDescription>
-            Enter your Salesforce org credentials to connect
+            Enter your Salesforce org credentials to connect. You'll need your email, password, and security token.
           </DialogDescription>
         </DialogHeader>
         
@@ -167,6 +167,9 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
                   value={securityToken}
                   onChange={(e) => setSecurityToken(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Your security token is sent to your email when you change your password or reset your security token in Salesforce.
+                </p>
               </div>
               
               <div className="grid gap-2">

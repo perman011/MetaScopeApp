@@ -215,7 +215,7 @@ export default function ConnectSalesforceOrgDialog({
           <DialogHeader>
             <DialogTitle>Connect Salesforce Org</DialogTitle>
             <DialogDescription>
-              Enter your Salesforce org credentials to connect
+              Choose how you want to connect to your Salesforce org
             </DialogDescription>
           </DialogHeader>
           
@@ -223,7 +223,7 @@ export default function ConnectSalesforceOrgDialog({
             <>
               <Tabs defaultValue="credentials" onValueChange={(v) => setAuthMethod(v as "credentials" | "token")}>
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="credentials">Username/Password</TabsTrigger>
+                  <TabsTrigger value="credentials">Email + Password + Token</TabsTrigger>
                   <TabsTrigger value="token">Access Token</TabsTrigger>
                 </TabsList>
 
@@ -261,12 +261,15 @@ export default function ConnectSalesforceOrgDialog({
                     </div>
                     
                     <div className="grid gap-2">
-                      <Label htmlFor="securityToken">Security Token (if required)</Label>
+                      <Label htmlFor="securityToken">Security Token</Label>
                       <Input
                         id="securityToken"
                         value={securityToken}
                         onChange={(e) => setSecurityToken(e.target.value)}
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Your security token is sent to your email when you change your password or reset your security token in Salesforce.
+                      </p>
                     </div>
                     
                     <div className="grid gap-2">
