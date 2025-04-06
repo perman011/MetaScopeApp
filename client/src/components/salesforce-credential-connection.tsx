@@ -7,12 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface CredentialConnectionProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+type ConnectionStatus = 'idle' | 'connecting' | 'success' | 'error';
 
 export default function SalesforceCredentialConnection({ open, onOpenChange }: CredentialConnectionProps) {
   const [orgName, setOrgName] = useState("");
@@ -20,10 +23,16 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
   const [password, setPassword] = useState("");
   const [securityToken, setSecurityToken] = useState("");
   const [environment, setEnvironment] = useState<"production" | "sandbox">("production");
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  
   const { toast } = useToast();
 
   const connectMutation = useMutation({
     mutationFn: async () => {
+      setConnectionStatus('connecting');
+      setConnectionError(null);
+      
       console.log("Connecting with credentials:", { 
         name: orgName, 
         email, 
@@ -31,38 +40,51 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
         authMethod: "credentials"
       });
       
-      const res = await fetch('/api/orgs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          name: orgName,
-          email,
-          password,
-          securityToken,
-          environment,
-          authMethod: "credentials"
-        })
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to connect to Salesforce org');
+      try {
+        const res = await fetch('/api/orgs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            name: orgName,
+            email,
+            password,
+            securityToken,
+            environment,
+            authMethod: "credentials",
+            type: environment // Make sure type is also sent
+          })
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          console.error("Connection error response:", errorData);
+          throw new Error(errorData.message || 'Failed to connect to Salesforce org');
+        }
+        
+        setConnectionStatus('success');
+        return await res.json();
+      } catch (error: any) {
+        console.error("Connection error:", error);
+        setConnectionStatus('error');
+        setConnectionError(error.message || "Failed to connect to Salesforce org");
+        throw error;
       }
-      
-      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orgs"] });
-      toast({
-        title: "Connection successful",
-        description: `${orgName} has been connected to your account`,
-      });
-      resetForm();
-      onOpenChange(false);
+      // Only close after a short delay to show success state
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/orgs"] });
+        toast({
+          title: "Connection successful",
+          description: `${orgName} has been connected to your account`,
+        });
+        resetForm();
+        onOpenChange(false);
+      }, 1500);
     },
     onError: (error: Error) => {
       toast({
@@ -79,6 +101,8 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
     setPassword("");
     setSecurityToken("");
     setEnvironment("production");
+    setConnectionStatus('idle');
+    setConnectionError(null);
   };
 
   const handleConnect = () => {
