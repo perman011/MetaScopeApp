@@ -16,6 +16,7 @@ import PermissionsAnalyzer from "@/pages/permissions-analyzer";
 import ApexDebugAnalyzer from "@/pages/apex-debug-analyzer";
 import FieldIntelligence from "@/pages/field-intelligence";
 import MetadataAnalytics from "@/pages/metadata-analytics";
+import CodeAnalysisPage from "@/pages/code-analysis";
 import MetadataAnalyticsPanel from "@/pages/dashboard/MetadataAnalyticsPanel";
 import FieldIntelligencePage from "@/pages/dashboard/FieldIntelligencePage";
 import ApiUsagePage from "@/pages/dashboard/ApiUsagePage";
@@ -76,6 +77,7 @@ function AuthenticatedRoutes() {
               {/* Field Intelligence is now only accessible as a tab within Dashboard */}
               {/* <Route path="/field-intelligence" component={FieldIntelligence} /> */}
               <Route path="/metadata-analytics" component={MetadataAnalytics} />
+              <Route path="/code-analysis" component={CodeAnalysisPage} />
               <Route path="/dashboard/org-health/metadata-components" component={() => 
                 <div className="p-6">
                   <h1 className="text-2xl font-bold mb-6">Metadata Components Analytics</h1>

@@ -17,7 +17,9 @@ import {
   Terminal,
   Table,
   FileSearch,
-  Zap
+  Zap,
+  GitBranch,
+  AlertTriangle
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -114,6 +116,10 @@ export default function SideNavigation() {
         
         <NavItem href="/dashboard/api-usage" icon={Zap} active={location === "/dashboard/api-usage"}>
           API Usage Analytics
+        </NavItem>
+        
+        <NavItem href="/code-analysis" icon={AlertTriangle} active={location === "/code-analysis"}>
+          Code Analysis
         </NavItem>
         
         <div className="pt-4 mt-4 border-t border-neutral-200">

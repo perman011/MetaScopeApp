@@ -4,7 +4,14 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { salesforceService, SalesforceService } from "./salesforce";
 import { z } from "zod";
-import { insertSalesforceOrgSchema } from "@shared/schema";
+import { 
+  insertSalesforceOrgSchema, 
+  insertCodeQualitySchema,
+  insertComponentDependenciesSchema,
+  insertComplianceSchema,
+  insertTechnicalDebtItemsSchema,
+  insertReleaseImpactSchema
+} from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
@@ -1283,6 +1290,322 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Failed to fetch metadata analytics:', error);
       return res.status(500).json({ 
         error: 'Failed to fetch metadata analytics',
+        message: error.message
+      });
+    }
+  });
+
+  // Code Quality Endpoints
+  app.get("/api/orgs/:id/code-quality", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const componentType = req.query.componentType as string | undefined;
+      const codeQualityData = await storage.getOrgCodeQuality(orgId, componentType);
+      return res.json(codeQualityData);
+    } catch (error) {
+      console.error('Failed to fetch code quality data:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch code quality data',
+        message: error.message
+      });
+    }
+  });
+
+  app.post("/api/orgs/:id/code-quality", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const validatedData = insertCodeQualitySchema.parse({
+        ...req.body,
+        orgId
+      });
+      
+      const codeQuality = await storage.createCodeQuality(validatedData);
+      return res.status(201).json(codeQuality);
+    } catch (error) {
+      console.error('Failed to create code quality record:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(error.errors);
+      }
+      return res.status(500).json({ 
+        error: 'Failed to create code quality record',
+        message: error.message
+      });
+    }
+  });
+
+  // Component Dependencies Endpoints
+  app.get("/api/orgs/:id/components/:componentId/dependencies", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const componentId = parseInt(req.params.componentId);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const dependencies = await storage.getComponentDependencies(orgId, componentId);
+      return res.json(dependencies);
+    } catch (error) {
+      console.error('Failed to fetch component dependencies:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch component dependencies',
+        message: error.message
+      });
+    }
+  });
+
+  app.get("/api/orgs/:id/components/:componentId/reverse-dependencies", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const componentId = parseInt(req.params.componentId);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const reverseDependencies = await storage.getReverseDependencies(orgId, componentId);
+      return res.json(reverseDependencies);
+    } catch (error) {
+      console.error('Failed to fetch reverse dependencies:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch reverse dependencies',
+        message: error.message
+      });
+    }
+  });
+
+  app.post("/api/orgs/:id/component-dependencies", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const validatedData = insertComponentDependenciesSchema.parse({
+        ...req.body,
+        orgId
+      });
+      
+      const dependency = await storage.createComponentDependency(validatedData);
+      return res.status(201).json(dependency);
+    } catch (error) {
+      console.error('Failed to create component dependency:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(error.errors);
+      }
+      return res.status(500).json({ 
+        error: 'Failed to create component dependency',
+        message: error.message
+      });
+    }
+  });
+
+  // Compliance Endpoints
+  app.get("/api/orgs/:id/compliance", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const frameworkName = req.query.frameworkName as string | undefined;
+      const complianceData = await storage.getOrgCompliance(orgId, frameworkName);
+      return res.json(complianceData);
+    } catch (error) {
+      console.error('Failed to fetch compliance data:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch compliance data',
+        message: error.message
+      });
+    }
+  });
+
+  app.post("/api/orgs/:id/compliance", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const validatedData = insertComplianceSchema.parse({
+        ...req.body,
+        orgId
+      });
+      
+      const compliance = await storage.createCompliance(validatedData);
+      return res.status(201).json(compliance);
+    } catch (error) {
+      console.error('Failed to create compliance record:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(error.errors);
+      }
+      return res.status(500).json({ 
+        error: 'Failed to create compliance record',
+        message: error.message
+      });
+    }
+  });
+
+  // Technical Debt Endpoints
+  app.get("/api/orgs/:id/technical-debt", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const category = req.query.category as string | undefined;
+      const status = req.query.status as string | undefined;
+      const technicalDebtItems = await storage.getOrgTechnicalDebt(orgId, category, status);
+      return res.json(technicalDebtItems);
+    } catch (error) {
+      console.error('Failed to fetch technical debt items:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch technical debt items',
+        message: error.message
+      });
+    }
+  });
+
+  app.post("/api/orgs/:id/technical-debt", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const validatedData = insertTechnicalDebtItemsSchema.parse({
+        ...req.body,
+        orgId
+      });
+      
+      const technicalDebtItem = await storage.createTechnicalDebtItem(validatedData);
+      return res.status(201).json(technicalDebtItem);
+    } catch (error) {
+      console.error('Failed to create technical debt item:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(error.errors);
+      }
+      return res.status(500).json({ 
+        error: 'Failed to create technical debt item',
+        message: error.message
+      });
+    }
+  });
+
+  // Release Impact Endpoints
+  app.get("/api/orgs/:id/release-impact", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const status = req.query.status as string | undefined;
+      const releaseImpacts = await storage.getOrgReleaseImpacts(orgId, status);
+      return res.json(releaseImpacts);
+    } catch (error) {
+      console.error('Failed to fetch release impact data:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch release impact data',
+        message: error.message
+      });
+    }
+  });
+
+  app.post("/api/orgs/:id/release-impact", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const validatedData = insertReleaseImpactSchema.parse({
+        ...req.body,
+        orgId
+      });
+      
+      const releaseImpact = await storage.createReleaseImpact(validatedData);
+      return res.status(201).json(releaseImpact);
+    } catch (error) {
+      console.error('Failed to create release impact record:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json(error.errors);
+      }
+      return res.status(500).json({ 
+        error: 'Failed to create release impact record',
         message: error.message
       });
     }

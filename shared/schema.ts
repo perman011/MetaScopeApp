@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -101,6 +101,174 @@ export const insertHealthScoreSchema = createInsertSchema(healthScores).pick({
   lastAnalyzed: true,
 });
 
+// -------- NEW TABLES FOR ADVANCED FEATURES --------
+
+// Code Quality Assessment Table
+export const codeQuality = pgTable("code_quality", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id").notNull().references(() => salesforceOrgs.id),
+  componentId: integer("component_id").references(() => metadata.id),
+  componentType: text("component_type").notNull(), // Apex, Lightning, Visualforce, etc.
+  componentName: text("component_name").notNull(),
+  overallScore: integer("overall_score").notNull(),
+  maintainabilityScore: integer("maintainability_score").notNull(),
+  performanceScore: integer("performance_score").notNull(),
+  reliabilityScore: integer("reliability_score").notNull(),
+  securityScore: integer("security_score").notNull(),
+  complexityMetrics: json("complexity_metrics").notNull(), // Cyclomatic complexity, etc.
+  issues: json("issues").notNull(), // Code quality issues
+  bestPractices: json("best_practices").notNull(), // Best practices analysis
+  lastAnalyzed: timestamp("last_analyzed").notNull(),
+});
+
+export const insertCodeQualitySchema = createInsertSchema(codeQuality).pick({
+  orgId: true,
+  componentId: true,
+  componentType: true,
+  componentName: true,
+  overallScore: true,
+  maintainabilityScore: true,
+  performanceScore: true,
+  reliabilityScore: true,
+  securityScore: true,
+  complexityMetrics: true,
+  issues: true,
+  bestPractices: true,
+  lastAnalyzed: true,
+});
+
+// Component Dependencies Table
+export const componentDependencies = pgTable("component_dependencies", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id").notNull().references(() => salesforceOrgs.id),
+  sourceComponentId: integer("source_component_id").references(() => metadata.id),
+  sourceComponentType: text("source_component_type").notNull(),
+  sourceComponentName: text("source_component_name").notNull(),
+  targetComponentId: integer("target_component_id").references(() => metadata.id),
+  targetComponentType: text("target_component_type").notNull(),
+  targetComponentName: text("target_component_name").notNull(),
+  dependencyType: text("dependency_type").notNull(), // Direct, Indirect, Circular
+  dependencyStrength: integer("dependency_strength").notNull(), // 1-100 scale
+  impact: text("impact").notNull(), // High, Medium, Low
+  notes: text("notes"),
+  lastUpdated: timestamp("last_updated").notNull(),
+});
+
+export const insertComponentDependenciesSchema = createInsertSchema(componentDependencies).pick({
+  orgId: true,
+  sourceComponentId: true,
+  sourceComponentType: true,
+  sourceComponentName: true,
+  targetComponentId: true,
+  targetComponentType: true,
+  targetComponentName: true,
+  dependencyType: true,
+  dependencyStrength: true,
+  impact: true,
+  notes: true,
+  lastUpdated: true,
+});
+
+// Compliance and Governance Table
+export const compliance = pgTable("compliance", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id").notNull().references(() => salesforceOrgs.id),
+  frameworkName: text("framework_name").notNull(), // GDPR, HIPAA, SOX, etc.
+  complianceScore: integer("compliance_score").notNull(),
+  status: text("status").notNull(), // Compliant, At Risk, Non-Compliant
+  violations: json("violations").notNull(),
+  recommendations: json("recommendations").notNull(),
+  lastScanned: timestamp("last_scanned").notNull(),
+  nextScanDue: timestamp("next_scan_due"),
+});
+
+export const insertComplianceSchema = createInsertSchema(compliance).pick({
+  orgId: true,
+  frameworkName: true,
+  complianceScore: true,
+  status: true,
+  violations: true,
+  recommendations: true,
+  lastScanned: true,
+  nextScanDue: true,
+});
+
+// Technical Debt Record Table
+export const technicalDebtItems = pgTable("technical_debt_items", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id").notNull().references(() => salesforceOrgs.id),
+  componentId: integer("component_id").references(() => metadata.id),
+  componentType: text("component_type").notNull(),
+  componentName: text("component_name").notNull(),
+  category: text("category").notNull(), // Architecture, Code, Test Coverage, Documentation
+  severity: text("severity").notNull(), // Critical, High, Medium, Low
+  impact: text("impact").notNull(), // High, Medium, Low
+  effortToFix: text("effort_to_fix").notNull(), // High, Medium, Low
+  description: text("description").notNull(),
+  recommendation: text("recommendation").notNull(),
+  estimatedHours: integer("estimated_hours"),
+  estimatedCost: integer("estimated_cost"),
+  status: text("status").notNull(), // Open, In Progress, Resolved, Deferred
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  tags: text("tags").array(),
+});
+
+export const insertTechnicalDebtItemsSchema = createInsertSchema(technicalDebtItems).pick({
+  orgId: true,
+  componentId: true,
+  componentType: true,
+  componentName: true,
+  category: true,
+  severity: true,
+  impact: true,
+  effortToFix: true,
+  description: true,
+  recommendation: true,
+  estimatedHours: true,
+  estimatedCost: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+  resolvedAt: true,
+  tags: true,
+});
+
+// Release Impact Analysis Table
+export const releaseImpact = pgTable("release_impact", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id").notNull().references(() => salesforceOrgs.id),
+  releaseName: text("release_name").notNull(),
+  releaseDate: date("release_date").notNull(),
+  components: json("components").notNull(), // List of component IDs affected
+  impactScore: integer("impact_score").notNull(),
+  riskScore: integer("risk_score").notNull(),
+  testCoverage: integer("test_coverage"), // Percentage
+  deploymentEstimate: integer("deployment_estimate"), // Minutes
+  dependencies: json("dependencies").notNull(), // Dependent components
+  recommendations: json("recommendations").notNull(),
+  status: text("status").notNull(), // Planned, In Progress, Deployed, Failed
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+});
+
+export const insertReleaseImpactSchema = createInsertSchema(releaseImpact).pick({
+  orgId: true,
+  releaseName: true,
+  releaseDate: true,
+  components: true,
+  impactScore: true,
+  riskScore: true,
+  testCoverage: true,
+  deploymentEstimate: true,
+  dependencies: true,
+  recommendations: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Type definitions
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -125,4 +293,58 @@ export interface HealthScoreIssue {
   description: string;
   impact: string;
   recommendation: string;
+}
+
+// New type definitions for advanced features
+export type InsertCodeQuality = z.infer<typeof insertCodeQualitySchema>;
+export type CodeQuality = typeof codeQuality.$inferSelect;
+
+export type InsertComponentDependency = z.infer<typeof insertComponentDependenciesSchema>;
+export type ComponentDependency = typeof componentDependencies.$inferSelect;
+
+export type InsertCompliance = z.infer<typeof insertComplianceSchema>;
+export type Compliance = typeof compliance.$inferSelect;
+
+export type InsertTechnicalDebtItem = z.infer<typeof insertTechnicalDebtItemsSchema>;
+export type TechnicalDebtItem = typeof technicalDebtItems.$inferSelect;
+
+export type InsertReleaseImpact = z.infer<typeof insertReleaseImpactSchema>;
+export type ReleaseImpact = typeof releaseImpact.$inferSelect;
+
+// CodeQualityIssue interface
+export interface CodeQualityIssue {
+  id: string;
+  line: number;
+  column: number;
+  rule: string;
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
+  message: string;
+  description: string;
+  recommendation: string;
+  codeSnippet?: string;
+}
+
+// ComplianceViolation interface
+export interface ComplianceViolation {
+  id: string;
+  rule: string;
+  description: string;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  componentType: string;
+  componentName: string;
+  details: string;
+  recommendation: string;
+  impact: string;
+}
+
+// ComplexityMetrics interface
+export interface ComplexityMetrics {
+  cyclomaticComplexity: number;
+  cognitiveComplexity: number;
+  linesOfCode: number;
+  commentRatio: number;
+  methodCount: number;
+  averageMethodLength: number;
+  nestingDepth: number;
+  duplicatedCode: number;
 }

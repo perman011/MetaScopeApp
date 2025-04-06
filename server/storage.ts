@@ -3,7 +3,12 @@ import {
   SalesforceOrg, InsertSalesforceOrg,
   Metadata, InsertMetadata,
   HealthScore, InsertHealthScore,
-  HealthScoreIssue
+  HealthScoreIssue,
+  CodeQuality, InsertCodeQuality,
+  ComponentDependency, InsertComponentDependency,
+  Compliance, InsertCompliance,
+  TechnicalDebtItem, InsertTechnicalDebtItem,
+  ReleaseImpact, InsertReleaseImpact
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -37,6 +42,39 @@ export interface IStorage {
   getLatestHealthScore(orgId: number): Promise<HealthScore | undefined>;
   createHealthScore(score: InsertHealthScore): Promise<HealthScore>;
   
+  // Code Quality operations
+  getCodeQuality(id: number): Promise<CodeQuality | undefined>;
+  getComponentCodeQuality(orgId: number, componentId: number): Promise<CodeQuality | undefined>;
+  getOrgCodeQuality(orgId: number, componentType?: string): Promise<CodeQuality[]>;
+  createCodeQuality(codeQuality: InsertCodeQuality): Promise<CodeQuality>;
+  updateCodeQuality(id: number, updates: Partial<InsertCodeQuality>): Promise<CodeQuality | undefined>;
+  
+  // Component Dependencies operations
+  getComponentDependency(id: number): Promise<ComponentDependency | undefined>;
+  getComponentDependencies(orgId: number, componentId: number): Promise<ComponentDependency[]>;
+  getReverseDependencies(orgId: number, componentId: number): Promise<ComponentDependency[]>;
+  createComponentDependency(dependency: InsertComponentDependency): Promise<ComponentDependency>;
+  updateComponentDependency(id: number, updates: Partial<InsertComponentDependency>): Promise<ComponentDependency | undefined>;
+  
+  // Compliance operations
+  getCompliance(id: number): Promise<Compliance | undefined>;
+  getOrgCompliance(orgId: number, frameworkName?: string): Promise<Compliance[]>;
+  createCompliance(compliance: InsertCompliance): Promise<Compliance>;
+  updateCompliance(id: number, updates: Partial<InsertCompliance>): Promise<Compliance | undefined>;
+  
+  // Technical Debt operations
+  getTechnicalDebtItem(id: number): Promise<TechnicalDebtItem | undefined>;
+  getComponentTechnicalDebt(orgId: number, componentId: number): Promise<TechnicalDebtItem[]>;
+  getOrgTechnicalDebt(orgId: number, category?: string, status?: string): Promise<TechnicalDebtItem[]>;
+  createTechnicalDebtItem(item: InsertTechnicalDebtItem): Promise<TechnicalDebtItem>;
+  updateTechnicalDebtItem(id: number, updates: Partial<InsertTechnicalDebtItem>): Promise<TechnicalDebtItem | undefined>;
+  
+  // Release Impact operations
+  getReleaseImpact(id: number): Promise<ReleaseImpact | undefined>;
+  getOrgReleaseImpacts(orgId: number, status?: string): Promise<ReleaseImpact[]>;
+  createReleaseImpact(impact: InsertReleaseImpact): Promise<ReleaseImpact>;
+  updateReleaseImpact(id: number, updates: Partial<InsertReleaseImpact>): Promise<ReleaseImpact | undefined>;
+  
   // Session store
   sessionStore: any; // Express session store type
 }
@@ -46,10 +84,20 @@ export class MemStorage implements IStorage {
   private orgs: Map<number, SalesforceOrg>;
   private metadata: Map<number, Metadata>;
   private healthScores: Map<number, HealthScore>;
+  private codeQuality: Map<number, CodeQuality>;
+  private componentDependencies: Map<number, ComponentDependency>;
+  private compliance: Map<number, Compliance>;
+  private technicalDebtItems: Map<number, TechnicalDebtItem>;
+  private releaseImpacts: Map<number, ReleaseImpact>;
   private userIdCounter: number;
   private orgIdCounter: number;
   private metadataIdCounter: number;
   private healthScoreIdCounter: number;
+  private codeQualityIdCounter: number;
+  private componentDependencyIdCounter: number;
+  private complianceIdCounter: number;
+  private technicalDebtItemIdCounter: number;
+  private releaseImpactIdCounter: number;
   sessionStore: any; // Express session store
 
   constructor() {
@@ -57,10 +105,22 @@ export class MemStorage implements IStorage {
     this.orgs = new Map();
     this.metadata = new Map();
     this.healthScores = new Map();
+    this.codeQuality = new Map();
+    this.componentDependencies = new Map();
+    this.compliance = new Map();
+    this.technicalDebtItems = new Map();
+    this.releaseImpacts = new Map();
+    
     this.userIdCounter = 1;
     this.orgIdCounter = 1;
     this.metadataIdCounter = 1;
     this.healthScoreIdCounter = 1;
+    this.codeQualityIdCounter = 1;
+    this.componentDependencyIdCounter = 1;
+    this.complianceIdCounter = 1;
+    this.technicalDebtItemIdCounter = 1;
+    this.releaseImpactIdCounter = 1;
+    
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // 24 hours
     });
@@ -295,6 +355,209 @@ export class MemStorage implements IStorage {
     
     this.healthScores.set(id, score);
     return score;
+  }
+
+  // Code Quality operations
+  async getCodeQuality(id: number): Promise<CodeQuality | undefined> {
+    return this.codeQuality.get(id);
+  }
+
+  async getComponentCodeQuality(orgId: number, componentId: number): Promise<CodeQuality | undefined> {
+    return Array.from(this.codeQuality.values()).find(
+      (quality) => quality.orgId === orgId && quality.componentId === componentId
+    );
+  }
+
+  async getOrgCodeQuality(orgId: number, componentType?: string): Promise<CodeQuality[]> {
+    return Array.from(this.codeQuality.values()).filter(
+      (quality) => quality.orgId === orgId && (!componentType || quality.componentType === componentType)
+    );
+  }
+
+  async createCodeQuality(insertCodeQuality: InsertCodeQuality): Promise<CodeQuality> {
+    const id = this.codeQualityIdCounter++;
+    const codeQuality: CodeQuality = {
+      ...insertCodeQuality,
+      id,
+      lastAnalyzed: insertCodeQuality.lastAnalyzed || new Date(),
+    };
+    this.codeQuality.set(id, codeQuality);
+    return codeQuality;
+  }
+
+  async updateCodeQuality(id: number, updates: Partial<InsertCodeQuality>): Promise<CodeQuality | undefined> {
+    const codeQuality = this.codeQuality.get(id);
+    if (!codeQuality) return undefined;
+    
+    const updatedCodeQuality: CodeQuality = {
+      ...codeQuality,
+      ...updates,
+    };
+    this.codeQuality.set(id, updatedCodeQuality);
+    return updatedCodeQuality;
+  }
+
+  // Component Dependencies operations
+  async getComponentDependency(id: number): Promise<ComponentDependency | undefined> {
+    return this.componentDependencies.get(id);
+  }
+
+  async getComponentDependencies(orgId: number, componentId: number): Promise<ComponentDependency[]> {
+    return Array.from(this.componentDependencies.values()).filter(
+      (dependency) => dependency.orgId === orgId && dependency.sourceComponentId === componentId
+    );
+  }
+
+  async getReverseDependencies(orgId: number, componentId: number): Promise<ComponentDependency[]> {
+    return Array.from(this.componentDependencies.values()).filter(
+      (dependency) => dependency.orgId === orgId && dependency.targetComponentId === componentId
+    );
+  }
+
+  async createComponentDependency(insertDependency: InsertComponentDependency): Promise<ComponentDependency> {
+    const id = this.componentDependencyIdCounter++;
+    const dependency: ComponentDependency = {
+      ...insertDependency,
+      id,
+      lastUpdated: insertDependency.lastUpdated || new Date(),
+    };
+    this.componentDependencies.set(id, dependency);
+    return dependency;
+  }
+
+  async updateComponentDependency(id: number, updates: Partial<InsertComponentDependency>): Promise<ComponentDependency | undefined> {
+    const dependency = this.componentDependencies.get(id);
+    if (!dependency) return undefined;
+    
+    const updatedDependency: ComponentDependency = {
+      ...dependency,
+      ...updates,
+      lastUpdated: updates.lastUpdated || dependency.lastUpdated,
+    };
+    this.componentDependencies.set(id, updatedDependency);
+    return updatedDependency;
+  }
+
+  // Compliance operations
+  async getCompliance(id: number): Promise<Compliance | undefined> {
+    return this.compliance.get(id);
+  }
+
+  async getOrgCompliance(orgId: number, frameworkName?: string): Promise<Compliance[]> {
+    return Array.from(this.compliance.values()).filter(
+      (compliance) => compliance.orgId === orgId && (!frameworkName || compliance.frameworkName === frameworkName)
+    );
+  }
+
+  async createCompliance(insertCompliance: InsertCompliance): Promise<Compliance> {
+    const id = this.complianceIdCounter++;
+    const compliance: Compliance = {
+      ...insertCompliance,
+      id,
+      lastScanned: insertCompliance.lastScanned || new Date(),
+      nextScanDue: insertCompliance.nextScanDue || null,
+    };
+    this.compliance.set(id, compliance);
+    return compliance;
+  }
+
+  async updateCompliance(id: number, updates: Partial<InsertCompliance>): Promise<Compliance | undefined> {
+    const compliance = this.compliance.get(id);
+    if (!compliance) return undefined;
+    
+    const updatedCompliance: Compliance = {
+      ...compliance,
+      ...updates,
+    };
+    this.compliance.set(id, updatedCompliance);
+    return updatedCompliance;
+  }
+
+  // Technical Debt operations
+  async getTechnicalDebtItem(id: number): Promise<TechnicalDebtItem | undefined> {
+    return this.technicalDebtItems.get(id);
+  }
+
+  async getComponentTechnicalDebt(orgId: number, componentId: number): Promise<TechnicalDebtItem[]> {
+    return Array.from(this.technicalDebtItems.values()).filter(
+      (item) => item.orgId === orgId && item.componentId === componentId
+    );
+  }
+
+  async getOrgTechnicalDebt(orgId: number, category?: string, status?: string): Promise<TechnicalDebtItem[]> {
+    return Array.from(this.technicalDebtItems.values()).filter(
+      (item) => {
+        const orgMatch = item.orgId === orgId;
+        const categoryMatch = !category || item.category === category;
+        const statusMatch = !status || item.status === status;
+        return orgMatch && categoryMatch && statusMatch;
+      }
+    );
+  }
+
+  async createTechnicalDebtItem(insertItem: InsertTechnicalDebtItem): Promise<TechnicalDebtItem> {
+    const id = this.technicalDebtItemIdCounter++;
+    const now = new Date();
+    const item: TechnicalDebtItem = {
+      ...insertItem,
+      id,
+      createdAt: insertItem.createdAt || now,
+      updatedAt: insertItem.updatedAt || now,
+      resolvedAt: insertItem.resolvedAt || null,
+      tags: insertItem.tags || [],
+    };
+    this.technicalDebtItems.set(id, item);
+    return item;
+  }
+
+  async updateTechnicalDebtItem(id: number, updates: Partial<InsertTechnicalDebtItem>): Promise<TechnicalDebtItem | undefined> {
+    const item = this.technicalDebtItems.get(id);
+    if (!item) return undefined;
+    
+    const updatedItem: TechnicalDebtItem = {
+      ...item,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.technicalDebtItems.set(id, updatedItem);
+    return updatedItem;
+  }
+
+  // Release Impact operations
+  async getReleaseImpact(id: number): Promise<ReleaseImpact | undefined> {
+    return this.releaseImpacts.get(id);
+  }
+
+  async getOrgReleaseImpacts(orgId: number, status?: string): Promise<ReleaseImpact[]> {
+    return Array.from(this.releaseImpacts.values()).filter(
+      (impact) => impact.orgId === orgId && (!status || impact.status === status)
+    );
+  }
+
+  async createReleaseImpact(insertImpact: InsertReleaseImpact): Promise<ReleaseImpact> {
+    const id = this.releaseImpactIdCounter++;
+    const now = new Date();
+    const impact: ReleaseImpact = {
+      ...insertImpact,
+      id,
+      createdAt: insertImpact.createdAt || now,
+      updatedAt: insertImpact.updatedAt || now,
+    };
+    this.releaseImpacts.set(id, impact);
+    return impact;
+  }
+
+  async updateReleaseImpact(id: number, updates: Partial<InsertReleaseImpact>): Promise<ReleaseImpact | undefined> {
+    const impact = this.releaseImpacts.get(id);
+    if (!impact) return undefined;
+    
+    const updatedImpact: ReleaseImpact = {
+      ...impact,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.releaseImpacts.set(id, updatedImpact);
+    return updatedImpact;
   }
 }
 
