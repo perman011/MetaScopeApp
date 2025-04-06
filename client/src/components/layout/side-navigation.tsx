@@ -250,7 +250,7 @@ function CollapsedNavigation({
   activeCategory: string | null;
 }) {
   return (
-    <aside className="w-[50px] bg-white border-r border-neutral-200 flex flex-col h-full overflow-hidden">
+    <aside className="w-[54px] bg-white border-r border-neutral-200 flex flex-col h-full overflow-hidden">
       <div className="p-2 border-b border-neutral-200 flex justify-center mb-4">
         <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-xs">
           MS
@@ -280,8 +280,12 @@ function CollapsedNavigation({
                 {key === "ADMINISTRATION" && <Shield className="h-4 w-4" />}
                 {key === "SETTINGS" && <Settings className="h-4 w-4" />}
               </div>
-              <span className="text-[8px] uppercase font-semibold tracking-tight text-center">
-                {key === "BUSINESS_INSIGHTS" ? "Insights" : key.slice(0, 6)}
+              <span className="text-[8px] uppercase font-semibold tracking-tight text-center leading-none px-1">
+                {key === "CORE" && "Home"}
+                {key === "BUSINESS_INSIGHTS" && "Insights"}
+                {key === "DEVELOPMENT_TOOLS" && "Dev"}
+                {key === "ADMINISTRATION" && "Admin"}
+                {key === "SETTINGS" && "Settings"}
               </span>
             </button>
           </div>
@@ -513,11 +517,12 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
       )}
       
       <button 
-        className={`absolute top-4 ${isCollapsed ? 'left-[38px]' : 'left-60'} bg-white border border-neutral-200 rounded-full p-1 shadow-md z-20 hover:bg-neutral-50`}
+        className={`absolute top-4 ${isCollapsed ? 'left-[43px]' : 'left-60'} bg-white border border-neutral-200 rounded-full p-0.5 shadow-sm z-20 hover:bg-neutral-50`}
         onClick={() => setIsCollapsed(!isCollapsed)}
         aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
+        style={{ width: "16px", height: "16px" }}
       >
-        <ChevronRight className={`h-4 w-4 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} />
+        <ChevronRight className={`h-3 w-3 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} />
       </button>
     </div>
   );
