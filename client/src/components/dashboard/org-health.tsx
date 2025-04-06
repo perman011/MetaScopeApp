@@ -143,7 +143,7 @@ export default function OrgHealth() {
           <CardContent className="p-8">
             <h3 className="text-xl font-medium mb-2">No Salesforce Org Connected</h3>
             <p className="text-neutral-500 mb-6">
-              Connect a Salesforce org to view health analytics and improve your org configuration.
+              Connect a Salesforce org to view field intelligence analytics.
             </p>
             <div className="flex space-x-4 justify-center">
               <Button onClick={() => setOpenConnectDialog(true)}>
