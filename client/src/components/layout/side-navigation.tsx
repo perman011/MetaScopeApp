@@ -250,31 +250,24 @@ function CollapsedNavigation({
   activeCategory: string | null;
 }) {
   return (
-    <aside className="w-10 bg-white border-r border-neutral-200 flex flex-col h-full overflow-y-auto">
-      <div className="p-2 border-b border-neutral-200 flex justify-center">
-        <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-xs">
-          MS
-        </div>
-      </div>
-      
-      <nav className="flex-1 p-1">
+    <aside className="w-0 border-r border-neutral-200 flex flex-col h-full overflow-visible relative">
+      <div className="absolute left-0 h-12 top-20 flex flex-col space-y-2">
         {Object.entries(navigationConfig).map(([key, category]) => (
           <button
             key={key}
             className={cn(
-              "w-full flex flex-col items-center justify-center p-1 mb-1 rounded-md text-[9px] font-semibold",
+              "w-8 h-8 bg-white flex items-center justify-center rounded-e-md shadow-sm border border-l-0 border-neutral-200 text-[9px] font-semibold",
               activeCategory === key 
-                ? "bg-primary-50 text-primary-700" 
+                ? "bg-primary-50 text-primary-700 border-primary-100" 
                 : "text-neutral-600 hover:bg-neutral-100"
             )}
             onClick={() => onCategoryClick(key)}
             title={category.label}
           >
-            <span className="truncate max-w-full">{key.substring(0, 3)}</span>
-            <ChevronDown className="h-2 w-2 opacity-70 mt-1" />
+            <span>{key.substring(0, 1)}</span>
           </button>
         ))}
-      </nav>
+      </div>
     </aside>
   );
 }
@@ -501,7 +494,7 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
       )}
       
       <button 
-        className="absolute top-1/2 -right-3 transform -translate-y-1/2 bg-white border border-neutral-200 rounded-full p-1 shadow-sm z-10 hover:bg-neutral-50"
+        className={`absolute top-20 ${isCollapsed ? 'left-8' : '-right-3'} bg-white border border-neutral-200 rounded-full p-1 shadow-sm z-20 hover:bg-neutral-50`}
         onClick={() => setIsCollapsed(!isCollapsed)}
         aria-label={isCollapsed ? "Expand navigation" : "Collapse navigation"}
       >
