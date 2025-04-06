@@ -20,7 +20,6 @@ interface SalesforceMetadataType {
 }
 
 export class SalesforceService {
-  // Authenticate with Salesforce using email and password + security token
   async authenticateWithCredentials(credentials: SalesforceLoginCredentials): Promise<{
     accessToken: string;
     instanceUrl: string;
@@ -28,36 +27,29 @@ export class SalesforceService {
     userId: string;
   }> {
     try {
-      console.log(`Authenticating with email: ${credentials.email}`);
-      
-      // Initialize JSForce connection to Salesforce
       const conn = new jsforce.Connection({
         loginUrl: credentials.environment === 'sandbox' 
           ? 'https://test.salesforce.com' 
           : 'https://login.salesforce.com'
       });
+
+      // Combine password and security token
+      const fullPassword = credentials.password + credentials.securityToken;
       
-      // Try to authenticate with provided credentials
-      try {
-        // Use actual credentials to connect to Salesforce
-        await conn.login(credentials.email, credentials.password + credentials.securityToken);
-        
-        console.log("Authentication successful");
-        
-        return {
-          accessToken: conn.accessToken || '',
-          instanceUrl: conn.instanceUrl || '',
-          refreshToken: null,
-          userId: conn.userInfo?.id || 'unknown'
-        };
-      } catch (loginError) {
-        console.error('Login error:', loginError);
-        throw new Error('Invalid Salesforce credentials. Please check your username, password, and security token.');
-      }
-    
+      await conn.login(credentials.email, fullPassword);
+
+      // Get metadata API access
+      const metadata = new jsforce.Metadata(conn);
+      
+      return {
+        accessToken: conn.accessToken || '',
+        instanceUrl: conn.instanceUrl || '',
+        refreshToken: null,
+        userId: conn.userInfo?.id || ''
+      };
     } catch (error) {
-      console.error('Authentication error:', error);
-      throw new Error('Failed to authenticate with Salesforce. Please check your credentials.');
+      console.error("Salesforce authentication error:", error);
+      throw new Error("Invalid credentials or connection configuration");
     }
   }
 

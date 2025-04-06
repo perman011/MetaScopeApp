@@ -50,25 +50,23 @@ export default function SalesforceCredentialConnection({ open, onOpenChange }: C
           credentials: 'include',
           body: JSON.stringify({
             name: orgName,
-            username: email, // Map email to username parameter for backend compatibility
+            email, // Directly use email field
             password,
             securityToken,
             environment,
             authMethod: "credentials",
-            type: environment // Make sure type is also sent
+            type: environment
           })
         });
-        
+
         if (!res.ok) {
           const errorData = await res.json();
-          console.error("Connection error response:", errorData);
           throw new Error(errorData.message || 'Failed to connect to Salesforce org');
         }
-        
+
         setConnectionStatus('success');
         return await res.json();
       } catch (error: any) {
-        console.error("Connection error:", error);
         setConnectionStatus('error');
         setConnectionError(error.message || "Failed to connect to Salesforce org");
         throw error;
