@@ -145,15 +145,9 @@ export default function OrgHealth() {
             <p className="text-neutral-500 mb-6">
               Connect a Salesforce org to view field intelligence analytics.
             </p>
-            <div className="flex space-x-4 justify-center">
+            <div className="flex justify-center">
               <Button onClick={() => setOpenConnectDialog(true)}>
                 Connect Salesforce Org
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setUseMockData(true)}
-              >
-                Load Test Data
               </Button>
             </div>
             {openConnectDialog && (
