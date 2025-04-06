@@ -33,7 +33,7 @@ export default function ConnectSalesforceOrgDialog({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [securityToken, setSecurityToken] = useState("");
-  const [environment, setEnvironment] = useState("production"); // or "sandbox"
+  const [environment, setEnvironment] = useState<"production" | "sandbox">("production");
   
   const [isOpen, setIsOpen] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
@@ -41,8 +41,7 @@ export default function ConnectSalesforceOrgDialog({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
   const { toast } = useToast();
-  const org = useOrg();
-  const refreshOrgs = org.refreshOrgs;
+  const { refreshOrgs } = useOrg();
   
   // Update progress bar based on connection status
   useEffect(() => {
@@ -231,7 +230,10 @@ export default function ConnectSalesforceOrgDialog({
                 
                 <div className="grid gap-2">
                   <Label>Environment</Label>
-                  <RadioGroup value={environment} onValueChange={setEnvironment}>
+                  <RadioGroup 
+                    value={environment} 
+                    onValueChange={(value) => setEnvironment(value as "production" | "sandbox")}
+                  >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="production" id="production" />
                       <Label htmlFor="production">Production</Label>
