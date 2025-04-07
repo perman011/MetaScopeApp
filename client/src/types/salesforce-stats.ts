@@ -4,6 +4,15 @@
 export type StatCategory = 'storage' | 'metadata' | 'api' | 'users' | 'automation';
 
 /**
+ * Interface for license details
+ */
+export interface LicenseDetail {
+  name: string;
+  used: number;
+  total: number;
+}
+
+/**
  * Interface for a single organizational statistic
  */
 export interface OrgStat {
@@ -13,6 +22,7 @@ export interface OrgStat {
   limit: number;
   unit?: string;
   category?: StatCategory;
+  details?: LicenseDetail[]; // Used for license breakdown and other detailed stats
 }
 
 /**

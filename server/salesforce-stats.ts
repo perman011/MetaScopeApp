@@ -2,6 +2,15 @@ import * as jsforce from 'jsforce';
 import { SalesforceOrg } from '@shared/schema';
 
 /**
+ * Interface for license details
+ */
+export interface LicenseDetail {
+  name: string;
+  used: number;
+  total: number;
+}
+
+/**
  * Interface for general organizational statistics
  */
 export interface OrgStat {
@@ -11,6 +20,7 @@ export interface OrgStat {
   limit: number;
   unit?: string;
   category?: 'storage' | 'metadata' | 'api' | 'users' | 'automation';
+  details?: LicenseDetail[]; // For license breakdown and other detailed stats
 }
 
 /**
@@ -93,17 +103,19 @@ export class SalesforceStatsService {
         // Users
         {
           key: 'activeUsers',
-          label: 'Active Users',
+          label: 'Active User Accounts',
           value: activeUsers.value,
           limit: activeUsers.limit,
           category: 'users'
         },
         {
           key: 'licenseUsage',
-          label: 'License Usage',
+          label: 'Salesforce Licenses',
           value: licenseUsage.value,
           limit: licenseUsage.limit,
-          category: 'users'
+          unit: 'seats',
+          category: 'users',
+          details: licenseUsage.details
         },
         
         // Metadata objects
@@ -208,29 +220,93 @@ export class SalesforceStatsService {
   
   /**
    * Gets license usage in the organization
+   * Focuses on the primary Salesforce licenses (not including feature licenses)
+   * Returns both aggregate counts and detailed breakdown by license type
    */
-  private async getLicenseUsage(conn: jsforce.Connection): Promise<{ value: number, limit: number }> {
+  private async getLicenseUsage(conn: jsforce.Connection): Promise<{ value: number, limit: number, details?: LicenseDetail[] }> {
     try {
-      // Try to fetch license usage from UserLicense object
-      const licensesResult = await conn.query('SELECT LicenseDefinitionKey, TotalLicenses, UsedLicenses FROM UserLicense');
+      // Try to fetch license usage from UserLicense object for the main Salesforce licenses
+      const licensesResult = await conn.query(`
+        SELECT Id, LicenseDefinitionKey, Name, TotalLicenses, UsedLicenses 
+        FROM UserLicense 
+        WHERE Name LIKE '%Salesforce%' 
+        OR Name LIKE '%Platform%' 
+        OR Name LIKE '%CRM%'
+        OR Name LIKE '%Enterprise%'
+        OR Name = 'Force.com - Free'
+        OR Name = 'Chatter Free'
+        OR Name = 'Guest User License'
+        ORDER BY UsedLicenses DESC
+      `);
       
       if (licensesResult.records && licensesResult.records.length > 0) {
         // Sum up all licenses and their usage
         let totalLicenses = 0;
         let usedLicenses = 0;
+        const licenseDetails: LicenseDetail[] = [];
         
+        // Focus on main licenses only and build details array
         licensesResult.records.forEach((license: any) => {
-          totalLicenses += license.TotalLicenses || 0;
-          usedLicenses += license.UsedLicenses || 0;
+          const total = license.TotalLicenses || 0;
+          const used = license.UsedLicenses || 0;
+          
+          totalLicenses += total;
+          usedLicenses += used;
+          
+          // Skip licenses with zero total (these are often feature licenses or temporary licenses)
+          if (total > 0) {
+            licenseDetails.push({
+              name: license.Name || 'Unknown License Type',
+              used: used,
+              total: total
+            });
+          }
         });
         
         return {
           value: usedLicenses,
-          limit: totalLicenses
+          limit: totalLicenses,
+          details: licenseDetails
         };
       }
       
-      // Fallback to counting active users if UserLicense query fails
+      // If no specific license types found, get all licenses
+      const allLicensesResult = await conn.query(`
+        SELECT Id, LicenseDefinitionKey, Name, TotalLicenses, UsedLicenses 
+        FROM UserLicense
+        ORDER BY UsedLicenses DESC
+      `);
+      
+      if (allLicensesResult.records && allLicensesResult.records.length > 0) {
+        let totalLicenses = 0;
+        let usedLicenses = 0;
+        const licenseDetails: LicenseDetail[] = [];
+        
+        allLicensesResult.records.forEach((license: any) => {
+          const total = license.TotalLicenses || 0;
+          const used = license.UsedLicenses || 0;
+          
+          totalLicenses += total;
+          usedLicenses += used;
+          
+          // Only include licenses that have allocations
+          if (total > 0) {
+            licenseDetails.push({
+              name: license.Name || 'Unknown License Type',
+              used: used,
+              total: total
+            });
+          }
+        });
+        
+        return {
+          value: usedLicenses,
+          limit: totalLicenses,
+          details: licenseDetails
+        };
+      }
+      
+      // Fallback to counting all users if UserLicense query fails
       const usersResult = await conn.query('SELECT COUNT(Id) total FROM User');
       return {
         value: usersResult.records[0].total,
