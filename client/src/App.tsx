@@ -14,6 +14,7 @@ import AutomationAnalyzer from "@/pages/automation-analyzer";
 import UIComponentAnalyzer from "@/pages/ui-component-analyzer";
 import MetadataDependencyAnalyzer from "@/pages/metadata-dependency-analyzer";
 import PermissionsAnalyzer from "@/pages/permissions-analyzer";
+import AccessTool from "@/pages/access-tool";
 import ApexDebugAnalyzer from "@/pages/apex-debug-analyzer";
 import FieldIntelligence from "@/pages/field-intelligence";
 import MetadataAnalytics from "@/pages/metadata-analytics";
@@ -77,6 +78,7 @@ function AuthenticatedRoutes() {
               <Route path="/ui-component-analyzer" component={UIComponentAnalyzer} />
               <Route path="/metadata-dependency-analyzer" component={MetadataDependencyAnalyzer} />
               <Route path="/permissions-analyzer" component={PermissionsAnalyzer} />
+              <Route path="/access-tool" component={AccessTool} />
               <Route path="/apex-debug-analyzer" component={ApexDebugAnalyzer} />
               {/* Field Intelligence is now only accessible as a tab within Dashboard */}
               {/* <Route path="/field-intelligence" component={FieldIntelligence} /> */}
