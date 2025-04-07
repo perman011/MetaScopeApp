@@ -48,6 +48,7 @@ interface NavigationItem {
   icon: React.ElementType;
   roles?: UserRole[];
   beta?: boolean;
+  children?: NavigationItem[];
 }
 
 // Navigation category interface
@@ -72,13 +73,22 @@ const navigationConfig: NavigationConfig = {
         href: '/dashboard',
         icon: Home,
         roles: ['all'],
-      },
-      {
-        id: 'org-general-stats',
-        label: 'Org General Stats',
-        href: '/org-general-stats/1',
-        icon: BarChart3,
-        roles: ['manager', 'admin', 'developer'],
+        children: [
+          {
+            id: 'org-health',
+            label: 'Org Health',
+            href: '/dashboard/org-health/metadata-components',
+            icon: BarChart3,
+            roles: ['manager', 'admin', 'developer'],
+          },
+          {
+            id: 'org-general-stats',
+            label: 'Org General Stats',
+            href: '/org-general-stats/1',
+            icon: BarChart3,
+            roles: ['manager', 'admin', 'developer'],
+          },
+        ]
       },
     ],
   },
@@ -258,11 +268,21 @@ function getNavigationByRole(role: UserRole): NavigationConfig {
 // Collapsed Navigation Component
 function CollapsedNavigation({ 
   onCategoryClick, 
-  activeCategory
+  activeCategory,
+  currentPath
 }: { 
   onCategoryClick: (categoryKey: string) => void; 
   activeCategory: string | null;
+  currentPath: string;
 }) {
+  const [, navigate] = useLocation();
+  
+  // Find if the current path matches any child item in Dashboard
+  const isChildActive = (item: NavigationItem): boolean => {
+    if (!item.children) return false;
+    return item.children.some(child => child.href === currentPath);
+  };
+  
   return (
     <aside className="w-[54px] bg-white border-r border-neutral-200 flex flex-col h-full overflow-hidden">
       <div className="p-2 border-b border-neutral-200 flex justify-center mb-4">
@@ -302,6 +322,33 @@ function CollapsedNavigation({
                 {key === "SETTINGS" && "Settings"}
               </span>
             </button>
+            
+            {/* Show child indicators for items with children in collapsed view */}
+            {key === "CORE" && 
+              category.items.map(item => 
+                item.children && item.children.length > 0 && (
+                  <div key={`${item.id}-children`} className="mt-1 flex justify-center">
+                    <div className="flex flex-col gap-1">
+                      {item.children.map(child => (
+                        <button
+                          key={child.id}
+                          onClick={() => navigate(child.href)}
+                          className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center",
+                            currentPath === child.href
+                              ? "bg-primary-100 text-primary-700"
+                              : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                          )}
+                          title={child.label}
+                        >
+                          <child.icon className="h-3 w-3" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              )
+            }
           </div>
         ))}
       </div>
@@ -352,9 +399,18 @@ function ExpandedNavigation({
     const term = searchTerm.trim().toLowerCase();
     
     Object.entries(filteredNavigation).forEach(([key, category]) => {
-      const matchedItems = category.items.filter((item: NavigationItem) => 
-        item.label.toLowerCase().includes(term)
-      );
+      // Filter items including children based on search term
+      const matchedItems = category.items.filter((item: NavigationItem) => {
+        // Check if the main item matches
+        const mainItemMatches = item.label.toLowerCase().includes(term);
+        
+        // Check if any child items match
+        const hasMatchingChild = item.children?.some(child => 
+          child.label.toLowerCase().includes(term)
+        ) || false;
+        
+        return mainItemMatches || hasMatchingChild;
+      });
       
       if (matchedItems.length > 0) {
         filtered[key] = {
@@ -373,6 +429,74 @@ function ExpandedNavigation({
       (currentPath === '/' && item.href === '/dashboard');
     const Icon = item.icon;
     
+    // Check if any child is active to auto-expand parent
+    const hasActiveChild = item.children ? 
+      item.children.some(child => currentPath === child.href) : false;
+    
+    // Auto-open the dropdown if a child route is active
+    const [isOpen, setIsOpen] = useState(hasActiveChild);
+    
+    // Handle parent item with children
+    if (item.children) {
+      return (
+        <div className="space-y-1">
+          <Button
+            variant="ghost"
+            className={cn(
+              "flex items-center w-full justify-between px-3 py-2 text-sm font-medium rounded-md",
+              (isActive || hasActiveChild)
+                ? "bg-primary-50 text-primary-600" 
+                : "text-neutral-700 hover:bg-neutral-100"
+            )}
+            onClick={() => setIsOpen(!isOpen)}
+          >
+            <div className="flex items-center">
+              {Icon && <Icon className="h-5 w-5 mr-3" />}
+              <span>{item.label}</span>
+              {item.beta && (
+                <span className="ml-2 px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary-100 text-primary-700">
+                  Beta
+                </span>
+              )}
+            </div>
+            {isOpen ? (
+              <ChevronUp className="h-4 w-4 ml-2" />
+            ) : (
+              <ChevronDown className="h-4 w-4 ml-2" />
+            )}
+          </Button>
+          
+          {/* Child items */}
+          {isOpen && (
+            <div className="pl-8 space-y-1">
+              {item.children.map((child) => (
+                <Button
+                  key={child.id}
+                  variant="ghost"
+                  className={cn(
+                    "flex items-center w-full justify-start px-3 py-2 text-sm font-medium rounded-md",
+                    currentPath === child.href
+                      ? "bg-primary-50 text-primary-600" 
+                      : "text-neutral-700 hover:bg-neutral-100"
+                  )}
+                  onClick={() => navigate(child.href)}
+                >
+                  {child.icon && <child.icon className="h-4 w-4 mr-2" />}
+                  <span>{child.label}</span>
+                  {child.beta && (
+                    <span className="ml-2 px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary-100 text-primary-700">
+                      Beta
+                    </span>
+                  )}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Regular item without children
     return (
       <Button
         variant="ghost"
@@ -488,7 +612,22 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
   
   // Find the active navigation item based on the current path
   const findActiveItem = () => {
-    const allItems = Object.values(navigationConfig).flatMap(category => category.items);
+    // Flatten all items including children
+    const allItems: NavigationItem[] = [];
+    
+    Object.values(navigationConfig).forEach(category => {
+      category.items.forEach(item => {
+        allItems.push(item);
+        
+        // Add children items if they exist
+        if (item.children && item.children.length > 0) {
+          item.children.forEach(child => {
+            allItems.push(child);
+          });
+        }
+      });
+    });
+    
     return allItems.find(item => location === item.href || 
       (location === '/' && item.href === '/dashboard'));
   };
@@ -498,11 +637,25 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
     const activeItem = findActiveItem();
     if (!activeItem) return null;
     
+    // Check if the item is a direct child of a category
     const foundCategory = Object.entries(navigationConfig).find(([_, category]) => 
       category.items.some(item => item.id === activeItem.id)
     );
     
-    return foundCategory ? foundCategory[0] : null;
+    if (foundCategory) {
+      return foundCategory[0];
+    }
+    
+    // Check if the item is a child of an item in a category
+    for (const [categoryKey, category] of Object.entries(navigationConfig)) {
+      for (const item of category.items) {
+        if (item.children && item.children.some(child => child.id === activeItem.id)) {
+          return categoryKey;
+        }
+      }
+    }
+    
+    return null;
   };
 
   // Handle category click in collapsed navigation
@@ -527,6 +680,7 @@ export default function SideNavigation({ defaultCollapsed = false }: NavigationC
         <CollapsedNavigation 
           onCategoryClick={handleCategoryClick}
           activeCategory={findActiveCategory()}
+          currentPath={location}
         />
       ) : (
         <ExpandedNavigation 
