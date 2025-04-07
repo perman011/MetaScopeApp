@@ -40,6 +40,7 @@ export class SalesforceStatsService {
       const [
         limitsData,
         activeUsers,
+        licenseUsage,
         customObjects,
         apexClasses,
         visualforcePages,
@@ -50,6 +51,7 @@ export class SalesforceStatsService {
       ] = await Promise.all([
         this.getLimitsData(conn),
         this.getActiveUsersCount(conn),
+        this.getLicenseUsage(conn),
         this.getCustomObjectsCount(conn),
         this.getApexClassesCount(conn),
         this.getVisualforcePagesCount(conn),
@@ -94,6 +96,13 @@ export class SalesforceStatsService {
           label: 'Active Users',
           value: activeUsers.value,
           limit: activeUsers.limit,
+          category: 'users'
+        },
+        {
+          key: 'licenseUsage',
+          label: 'License Usage',
+          value: licenseUsage.value,
+          limit: licenseUsage.limit,
           category: 'users'
         },
         
@@ -193,6 +202,42 @@ export class SalesforceStatsService {
       };
     } catch (error) {
       console.error('Error counting active users:', error);
+      return { value: 0, limit: 100 };
+    }
+  }
+  
+  /**
+   * Gets license usage in the organization
+   */
+  private async getLicenseUsage(conn: jsforce.Connection): Promise<{ value: number, limit: number }> {
+    try {
+      // Try to fetch license usage from UserLicense object
+      const licensesResult = await conn.query('SELECT LicenseDefinitionKey, TotalLicenses, UsedLicenses FROM UserLicense');
+      
+      if (licensesResult.records && licensesResult.records.length > 0) {
+        // Sum up all licenses and their usage
+        let totalLicenses = 0;
+        let usedLicenses = 0;
+        
+        licensesResult.records.forEach((license: any) => {
+          totalLicenses += license.TotalLicenses || 0;
+          usedLicenses += license.UsedLicenses || 0;
+        });
+        
+        return {
+          value: usedLicenses,
+          limit: totalLicenses
+        };
+      }
+      
+      // Fallback to counting active users if UserLicense query fails
+      const usersResult = await conn.query('SELECT COUNT(Id) total FROM User');
+      return {
+        value: usersResult.records[0].total,
+        limit: 100 // Default value if actual license count can't be determined
+      };
+    } catch (error) {
+      console.error('Error getting license usage:', error);
       return { value: 0, limit: 100 };
     }
   }
