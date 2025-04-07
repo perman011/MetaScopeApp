@@ -19,6 +19,7 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import { eq, or } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 import * as schema from "@shared/schema";
+import bcrypt from "bcrypt";
 
 // Initialize memory store for session
 const MemoryStore = createMemoryStore(expressSession);
@@ -155,20 +156,23 @@ export class MemStorage implements IStorage {
   private async setupAdminUser() {
     const existingAdmin = await this.getUserByUsername('4980005@gmail.com');
     if (!existingAdmin) {
-      // Create an admin user with preset credentials using proper password hashing
-      const salt = crypto.randomBytes(16).toString('hex');
-      const hash = crypto.scryptSync('admin123', salt, 64).toString('hex');
-      const hashedPassword = `${hash}.${salt}`;
-      
-      // Create an admin user with preset credentials
-      await this.createUser({
-        username: '4980005@gmail.com',
-        password: hashedPassword,
-        fullName: 'System Administrator',
-        email: '4980005@gmail.com',
-        isAdmin: true
-      });
-      console.log('Admin user created successfully');
+      try {
+        // Use the imported bcrypt
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash('admin123', saltRounds);
+        
+        // Create an admin user with preset credentials
+        await this.createUser({
+          username: '4980005@gmail.com',
+          password: hashedPassword,
+          fullName: 'System Administrator',
+          email: '4980005@gmail.com',
+          isAdmin: true
+        });
+        console.log('Admin user created successfully');
+      } catch (error) {
+        console.error('Error creating admin user:', error);
+      }
     }
   }
 
