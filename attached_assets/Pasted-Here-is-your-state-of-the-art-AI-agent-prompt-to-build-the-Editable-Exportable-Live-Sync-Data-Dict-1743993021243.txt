@@ -1,0 +1,107 @@
+Here is your state-of-the-art AI agent prompt to build the Editable, Exportable, Live-Sync Data Dictionary for MetaScope.
+
+⸻
+
+AI Agent Prompt: Implement Editable, Exportable, Live Salesforce Data Dictionary Module
+
+Objective:
+Create a full-featured Data Dictionary module within MetaScope that allows users to view, edit, export, and push metadata field-level changes back to Salesforce in a secure, collaborative, and user-friendly way.
+
+⸻
+
+Frontend Requirements:
+
+UI Framework & Libraries:
+	•	Built using React + TypeScript
+	•	Styled with Tailwind CSS
+	•	Use shadcn/ui for components (tables, modals, buttons)
+	•	Use React Hook Form + Zod for field editing
+	•	React Table or TanStack Table for grid
+	•	Lucide Icons for visual cues
+	•	Use Framer Motion for smooth transitions (editable rows/modals)
+
+Features:
+	•	Searchable, sortable, filterable grid view of all objects and fields
+	•	Each row displays:
+	•	Object Name
+	•	Field API Name
+	•	Label
+	•	Type
+	•	Length
+	•	Required (Y/N)
+	•	Description (editable)
+	•	Help Text (editable)
+	•	Last Modified By / Date
+	•	Inline or modal-based editing for:
+	•	Field Label
+	•	Description
+	•	Help Text
+
+Exporting:
+	•	Export full or filtered results to:
+	•	Excel (XLSX) via SheetJS
+	•	PDF via jsPDF (nice header, logo, styling)
+	•	JSON for API integration
+
+⸻
+
+Backend Requirements:
+
+Stack:
+	•	Node.js + Express
+	•	Drizzle ORM for tracking local changes
+	•	JSForce for Salesforce Metadata API access
+	•	Zod validation for incoming edit payloads
+
+Metadata Fetching:
+	•	Fetch full metadata description from conn.metadata.read()
+	•	Support both Custom and Standard Objects
+	•	Cache locally and refresh on-demand or scheduled (daily)
+
+Live Editing:
+	•	When a user edits a field:
+	•	Store it locally in Postgres as a pending change
+	•	Show visual diff/highlight in UI
+
+Deploy Back to Salesforce:
+	•	Use conn.metadata.update('CustomField', { ... }) to push back:
+	•	Description
+	•	Help Text
+	•	Label
+	•	Ensure bulk-safe metadata deployment with confirmation + rollback
+
+Audit Log:
+	•	Record who made what change, and when
+	•	Optional “review before push” workflow for enterprise customers
+
+⸻
+
+Security & Permissions:
+	•	Only users with “Manage Metadata” permissions can deploy changes
+	•	Admins can enable “Review & Approve” toggle per org
+	•	Include permission warnings if user is connected as read-only
+
+⸻
+
+Nice-to-Have Add-ons:
+	•	Side-by-side diff view of current vs. edited metadata
+	•	Versioned snapshot for rollback
+	•	Label descriptions inline with Salesforce best practices
+	•	Comment thread or collaboration notes per field
+
+⸻
+
+Routing:
+	•	Add new sidebar menu: Tools > Data Dictionary
+	•	Path: /orgs/:orgId/tools/data-dictionary
+
+⸻
+
+Expected User Personas:
+	•	Salesforce Admins: clean up, document, and push changes without needing VS Code
+	•	Developers/Architects: understand fields in context before development
+	•	IT Managers/Business Analysts: export full org schema for review, documentation, or audits
+
+⸻
+
+Let me know if you’d like me to mock up a UI layout or component wireframe for the table editor next!

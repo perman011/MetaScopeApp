@@ -20,6 +20,24 @@ interface SalesforceMetadataType {
 }
 
 export class SalesforceService {
+  /**
+   * Creates a Salesforce connection based on stored credentials
+   * @param org The Salesforce org to connect to
+   * @returns A jsforce Connection instance
+   */
+  private async createConnection(org: SalesforceOrg): Promise<any> {
+    // Create a connection with the instance URL
+    const conn = new jsforce.Connection({
+      instanceUrl: org.instanceUrl,
+      accessToken: org.accessToken
+    });
+    
+    // Set the access token
+    conn.accessToken = org.accessToken;
+    
+    return conn;
+  }
+
   async authenticateWithCredentials(credentials: SalesforceLoginCredentials): Promise<{
     accessToken: string;
     instanceUrl: string;
@@ -1443,6 +1461,260 @@ export class SalesforceService {
   }
   
   /**
+   * Retrieves data dictionary information for fields in a Salesforce org
+   * @param org The Salesforce org to retrieve field metadata from
+   * @param objectNames Optional array of object names to limit the query to specific objects
+   * @returns An array of field metadata objects
+   */
+  async getDataDictionaryFields(org: SalesforceOrg, objectNames?: string[]): Promise<any[]> {
+    try {
+      const conn = await this.createConnection(org);
+      let objectsToQuery: string[] = [];
+      
+      if (objectNames && objectNames.length > 0) {
+        objectsToQuery = objectNames;
+      } else {
+        // First, get a list of all objects in the org
+        const describeResult = await conn.describeGlobal();
+        objectsToQuery = describeResult.sobjects
+          .filter((obj: any) => !obj.name.startsWith('__'))  // Exclude system objects
+          .map((obj: any) => obj.name);
+          
+        // Limit to a reasonable number for initial load
+        objectsToQuery = objectsToQuery.slice(0, 50);
+      }
+      
+      const results: any[] = [];
+      
+      // Process objects in batches to avoid hitting limits
+      for (let i = 0; i < objectsToQuery.length; i += 5) {
+        const batch = objectsToQuery.slice(i, i + 5);
+        
+        await Promise.all(batch.map(async (objectName: string) => {
+          try {
+            // Get field metadata for this object
+            const objectMetadata = await conn.sobject(objectName).describe();
+            
+            // Process each field
+            objectMetadata.fields.forEach((field: any) => {
+              results.push({
+                orgId: org.id,
+                objectApiName: objectMetadata.name,
+                objectLabel: objectMetadata.label,
+                fieldApiName: field.name,
+                fieldLabel: field.label,
+                dataType: field.type,
+                required: !field.nillable,
+                unique: field.unique,
+                formula: field.calculatedFormula || null,
+                defaultValue: field.defaultValue || null,
+                description: field.description || null,
+                helpText: field.inlineHelpText || null,
+                referenceTo: field.referenceTo?.length ? field.referenceTo[0] : null,
+                relationshipName: field.relationshipName || null,
+                relationshipOrder: field.relationshipOrder,
+                precision: field.precision,
+                scale: field.scale,
+                digits: field.digits,
+                length: field.length,
+                byteLength: field.byteLength,
+                picklistValues: field.picklistValues?.length ? JSON.stringify(field.picklistValues) : null,
+                autoNumber: field.autoNumber || false,
+                calculated: field.calculated || false,
+                caseSensitive: field.caseSensitive || false,
+                createable: field.createable || false,
+                updateable: field.updateable || false,
+                externalId: field.externalId || false,
+                visible: field.visible || false
+              });
+            });
+          } catch (err) {
+            console.error(`Error getting metadata for object ${objectName}:`, err);
+          }
+        }));
+      }
+      
+      return results;
+    } catch (error) {
+      console.error("Error fetching data dictionary fields:", error);
+      return [];
+    }
+  }
+  
+  /**
+   * Updates field metadata in Salesforce based on changes made in the Data Dictionary
+   * @param org The Salesforce org to update
+   * @param objectName The API name of the object containing the field
+   * @param fieldName The API name of the field to update
+   * @param updates Object containing the field properties to update
+   * @returns Boolean indicating success or failure
+   */
+  async updateDataDictionaryField(
+    org: SalesforceOrg, 
+    objectName: string, 
+    fieldName: string, 
+    updates: Record<string, string>
+  ): Promise<{ success: boolean; errorMessage?: string }> {
+    try {
+      const conn = await this.createConnection(org);
+      
+      // Get the Metadata API
+      const metadata = conn.metadata;
+      
+      // Check if this is a custom field
+      const isCustomField = fieldName.endsWith('__c');
+      let fullFieldName: string;
+      
+      // Construct the full field name based on whether it's custom or standard
+      if (isCustomField) {
+        fullFieldName = `${objectName}.${fieldName}`;
+      } else {
+        throw new Error("Only custom fields can be updated via the Metadata API");
+      }
+      
+      // First, retrieve the field metadata
+      const fieldMetadata = await metadata.read('CustomField', [fullFieldName]);
+      
+      if (!fieldMetadata) {
+        throw new Error(`Field metadata not found for ${fullFieldName}`);
+      }
+      
+      // Create a field to update
+      const fieldToUpdate = {
+        ...fieldMetadata,
+      };
+      
+      // Apply updates
+      if (updates.description !== undefined) {
+        fieldToUpdate.description = updates.description;
+      }
+      
+      if (updates.helpText !== undefined) {
+        fieldToUpdate.inlineHelpText = updates.helpText;
+      }
+      
+      if (updates.fieldLabel !== undefined) {
+        fieldToUpdate.label = updates.fieldLabel;
+      }
+      
+      // Update the field
+      const updateResult = await metadata.update('CustomField', fieldToUpdate);
+      
+      return {
+        success: updateResult.success,
+        errorMessage: updateResult.success ? undefined : updateResult.errors?.join(', ')
+      };
+    } catch (error) {
+      console.error("Error updating data dictionary field:", error);
+      return {
+        success: false,
+        errorMessage: error.message || "Unknown error occurred"
+      };
+    }
+  }
+  
+  /**
+   * Bulk updates multiple field metadata properties in Salesforce
+   * @param org The Salesforce org to update
+   * @param changes Array of changes to apply to field metadata
+   * @returns Object with success status and detailed results for each field
+   */
+  async bulkUpdateDataDictionaryFields(
+    org: SalesforceOrg, 
+    changes: Array<{ objectName: string; fieldName: string; updates: Record<string, string> }>
+  ): Promise<{ success: boolean; results: Array<{ fieldName: string; success: boolean; errorMessage?: string }> }> {
+    try {
+      const conn = await this.createConnection(org);
+      
+      // Get the Metadata API
+      const metadata = conn.metadata;
+      
+      // Filter to only custom fields
+      const customFieldChanges = changes.filter(change => 
+        change.fieldName.endsWith('__c')
+      );
+      
+      if (customFieldChanges.length === 0) {
+        return {
+          success: false,
+          results: changes.map(change => ({
+            fieldName: change.fieldName,
+            success: false,
+            errorMessage: "Only custom fields can be updated via the Metadata API"
+          }))
+        };
+      }
+      
+      // First, retrieve all field metadata in one call
+      const fullFieldNames = customFieldChanges.map(change => 
+        `${change.objectName}.${change.fieldName}`
+      );
+      
+      const fieldMetadataArray = await metadata.read('CustomField', fullFieldNames);
+      
+      // Prepare updates
+      const fieldsToUpdate = customFieldChanges.map(change => {
+        const fullFieldName = `${change.objectName}.${change.fieldName}`;
+        const fieldMetadata = Array.isArray(fieldMetadataArray) 
+          ? fieldMetadataArray.find((meta: any) => meta.fullName === fullFieldName)
+          : fieldMetadataArray;
+        
+        if (!fieldMetadata) {
+          return null;
+        }
+        
+        // Create a field to update
+        const fieldToUpdate = { ...fieldMetadata };
+        
+        // Apply updates
+        if (change.updates.description !== undefined) {
+          fieldToUpdate.description = change.updates.description;
+        }
+        
+        if (change.updates.inlineHelpText !== undefined) {
+          fieldToUpdate.inlineHelpText = change.updates.inlineHelpText;
+        }
+        
+        if (change.updates.label !== undefined) {
+          fieldToUpdate.label = change.updates.label;
+        }
+        
+        return fieldToUpdate;
+      }).filter(field => field !== null);
+      
+      // Execute the update
+      const updateResults = await metadata.update('CustomField', fieldsToUpdate);
+      
+      const results = customFieldChanges.map((change, index) => {
+        const result = Array.isArray(updateResults) ? updateResults[index] : updateResults;
+        return {
+          fieldName: change.fieldName,
+          success: result?.success || false,
+          errorMessage: result?.success ? undefined : result?.errors?.join(', ') || "Unknown error"
+        };
+      });
+      
+      // Calculate overall success
+      const success = results.every(result => result.success);
+      
+      return {
+        success,
+        results
+      };
+    } catch (error) {
+      console.error("Error bulk updating data dictionary fields:", error);
+      return {
+        success: false,
+        results: changes.map(change => ({
+          fieldName: change.fieldName,
+          success: false,
+          errorMessage: error.message || "Unknown error occurred"
+        }))
+      };
+    }
+  }
+  
+  /**
    * Process raw metadata components into structured analytics data
    * This transforms the data into a format ready for visualization
    */
@@ -1497,3 +1769,89 @@ export class SalesforceService {
 }
 
 export const salesforceService = new SalesforceService();
+
+// This is a placeholder for documentation purposes - actual implementation in the SalesforceService class
+/**
+ * Retrieves data dictionary information for fields in a Salesforce org
+ * @param org The Salesforce org to retrieve field metadata from
+ * @param objectNames Optional array of object names to limit the query to specific objects
+ * @returns An array of field metadata objects
+ */
+// async function getDataDictionaryFields(org: SalesforceOrg, objectNames?: string[]): Promise<any[]> {
+/*
+// This code has been moved to the SalesforceService class
+try {
+  // Create a connection using the stored credentials
+  const conn = await this.createConnection(org);
+  
+  // Get list of objects if not provided
+  let objectsToQuery = objectNames || [];
+  if (objectsToQuery.length === 0) {
+    // Get all object names from the org
+    const describeGlobal = await conn.describeGlobal();
+    objectsToQuery = describeGlobal.sobjects
+      .filter((sobject: any) => sobject.queryable)
+      .map((sobject: any) => sobject.name);
+  }
+  
+  // Process objects in batches to avoid hitting limits
+  const batchSize = 10;
+  const results: any[] = [];
+  
+  for (let i = 0; i < objectsToQuery.length; i += batchSize) {
+    const batch = objectsToQuery.slice(i, i + batchSize);
+    const batchPromises = batch.map(async (objectName: string) => {
+      try {
+        // Get detailed object description including fields
+        const objectDescribe = await conn.describe(objectName);
+        
+        // Map fields to our data dictionary format
+        const fields = objectDescribe.fields.map((field: any) => ({
+          objectApiName: objectName,
+          objectLabel: objectDescribe.label,
+          fieldApiName: field.name,
+          fieldLabel: field.label,
+          dataType: field.type,
+          length: field.length,
+          precision: field.precision,
+          scale: field.scale,
+          required: field.nillable === false,
+          unique: field.unique,
+          defaultValue: field.defaultValue,
+          formula: field.calculatedFormula,
+          description: field.description || '',
+          helpText: field.inlineHelpText || '',
+          picklistValues: field.picklistValues,
+          createdBy: '', // Not available through describe calls
+          lastModifiedBy: '', // Not available through describe calls
+          lastModifiedDate: null, // Not available through describe calls
+          controllingField: field.controllerName,
+          referenceTo: field.referenceTo && field.referenceTo.length > 0 ? field.referenceTo.join(',') : null,
+          relationshipName: field.relationshipName,
+          inlineHelpText: field.inlineHelpText,
+          searchable: field.filterable, // Using filterable as a proxy for searchable
+          filterable: field.filterable,
+          sortable: true, // Assuming all fields are sortable
+          visible: !field.hidden,
+          lastSyncedAt: new Date(),
+        }));
+        
+        return fields;
+      } catch (error) {
+        console.error(`Error fetching fields for object ${objectName}:`, error);
+        return [];
+      }
+    });
+    
+    // Collect results from this batch
+    const batchResults = await Promise.all(batchPromises);
+    results.push(...batchResults.flat());
+  }
+  
+  return results;
+} catch (error: any) {
+  console.error("Error in getDataDictionaryFields:", error);
+  throw new Error(`Failed to retrieve data dictionary fields: ${error.message}`);
+}
+*/
+

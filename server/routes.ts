@@ -10,7 +10,10 @@ import {
   insertComponentDependenciesSchema,
   insertComplianceSchema,
   insertTechnicalDebtItemsSchema,
-  insertReleaseImpactSchema
+  insertReleaseImpactSchema,
+  insertDataDictionaryFieldSchema,
+  insertDataDictionaryChangeSchema,
+  insertDataDictionaryAuditLogSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1217,6 +1220,326 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(reverseDependencies);
     } catch (error) {
       console.error("Error fetching reverse dependencies:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  // Data Dictionary Routes
+  app.get("/api/orgs/:id/data-dictionary", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user!.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      // Get object names from query params (optional)
+      const objectNames = req.query.objects ? 
+        (Array.isArray(req.query.objects) ? req.query.objects : [req.query.objects]) as string[] : 
+        undefined;
+      
+      // First check if we have cached data for these objects
+      const cachedFields = await storage.getDataDictionaryFields(org.id, objectNames);
+      
+      // If we have enough cached data, use it
+      if (cachedFields.length > 0 && (!objectNames || objectNames.length === 0)) {
+        return res.json(cachedFields);
+      }
+      
+      // Otherwise, fetch from Salesforce
+      console.log(`Fetching data dictionary fields from Salesforce for org ${org.id}`);
+      const freshFields = await salesforceService.getDataDictionaryFields(org, objectNames);
+      
+      // Store the fetched fields
+      if (freshFields && freshFields.length > 0) {
+        // Store each field
+        for (const field of freshFields) {
+          await storage.saveDataDictionaryField({
+            orgId: org.id,
+            ...field,
+            lastSyncedAt: new Date()
+          });
+        }
+        
+        // Return the fresh data
+        return res.json(freshFields);
+      }
+      
+      // If we reach here, return whatever cached data we have
+      return res.json(cachedFields);
+    } catch (error) {
+      console.error("Error fetching data dictionary:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  app.post("/api/orgs/:id/data-dictionary/edit", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user!.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const { fieldId, objectApiName, fieldApiName, changes } = req.body;
+      
+      if (!fieldId || !objectApiName || !fieldApiName || !changes) {
+        return res.status(400).send("Missing required fields");
+      }
+      
+      // Get the field to edit
+      const field = await storage.getDataDictionaryField(fieldId);
+      if (!field) {
+        return res.status(404).send("Field not found");
+      }
+      
+      // Create a record of the change
+      const changeRecord = {
+        orgId: org.id,
+        fieldId: field.id,
+        fieldApiName: fieldApiName,
+        objectApiName: objectApiName,
+        propertyName: Object.keys(changes)[0],
+        oldValue: field[Object.keys(changes)[0]] || '',
+        newValue: Object.values(changes)[0] as string,
+        status: "pending",
+        createdBy: req.user!.id,
+        createdAt: new Date(),
+        notes: req.body.notes || ''
+      };
+      
+      // Save the change record
+      await storage.createDataDictionaryChange(changeRecord);
+      
+      // Update the field locally
+      await storage.updateDataDictionaryField(fieldId, changes);
+      
+      // Record the audit log
+      await storage.createDataDictionaryAuditLog({
+        orgId: org.id,
+        userId: req.user!.id,
+        action: "edit",
+        details: {
+          fieldId,
+          objectApiName,
+          fieldApiName,
+          changes
+        },
+        status: "success",
+        timestamp: new Date(),
+        ipAddress: req.ip || '',
+        userAgent: req.headers['user-agent'] || ''
+      });
+      
+      res.status(200).json({ success: true, message: "Field edited successfully" });
+    } catch (error) {
+      console.error("Error editing data dictionary field:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  app.post("/api/orgs/:id/data-dictionary/deploy", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user!.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const { changeIds } = req.body;
+      
+      if (!changeIds || !Array.isArray(changeIds) || changeIds.length === 0) {
+        return res.status(400).send("No changes selected for deployment");
+      }
+      
+      // Get all the changes
+      const pendingChanges = await storage.getDataDictionaryChanges(org.id, changeIds);
+      
+      if (pendingChanges.length === 0) {
+        return res.status(404).send("No pending changes found");
+      }
+      
+      // Group changes by field to optimize Salesforce API calls
+      const changesByField = pendingChanges.reduce((acc, change) => {
+        const key = `${change.objectApiName}.${change.fieldApiName}`;
+        if (!acc[key]) {
+          acc[key] = {
+            objectName: change.objectApiName,
+            fieldName: change.fieldApiName,
+            updates: {}
+          };
+        }
+        
+        // Map property names to Salesforce field names
+        const propertyMapping = {
+          description: 'description',
+          helpText: 'inlineHelpText',
+          fieldLabel: 'label'
+        };
+        
+        const sfProperty = propertyMapping[change.propertyName] || change.propertyName;
+        acc[key].updates[sfProperty] = change.newValue;
+        
+        return acc;
+      }, {});
+      
+      // Deploy changes to Salesforce
+      const changes = Object.values(changesByField);
+      const deployResults = await salesforceService.bulkUpdateDataDictionaryFields(org, changes);
+      
+      // Update the status of all changes
+      for (let i = 0; i < pendingChanges.length; i++) {
+        const change = pendingChanges[i];
+        const result = deployResults.results.find(r => 
+          r.fieldName === change.fieldApiName
+        );
+        
+        await storage.updateDataDictionaryChangeStatus(
+          change.id, 
+          result && result.success ? "deployed" : "failed",
+          req.user!.id,
+          result && !result.success ? result.errorMessage : undefined
+        );
+      }
+      
+      // Record the audit log
+      await storage.createDataDictionaryAuditLog({
+        orgId: org.id,
+        userId: req.user!.id,
+        action: "deploy",
+        details: {
+          changeIds,
+          results: deployResults.results
+        },
+        status: deployResults.success ? "success" : "partial_failure",
+        timestamp: new Date(),
+        ipAddress: req.ip || '',
+        userAgent: req.headers['user-agent'] || ''
+      });
+      
+      res.status(200).json({
+        success: deployResults.success,
+        results: deployResults.results
+      });
+    } catch (error) {
+      console.error("Error deploying data dictionary changes:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  app.get("/api/orgs/:id/data-dictionary/changes", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user!.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const status = req.query.status as string | undefined;
+      const changes = await storage.getDataDictionaryChanges(org.id, undefined, status);
+      
+      res.json(changes);
+    } catch (error) {
+      console.error("Error fetching data dictionary changes:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  app.get("/api/orgs/:id/data-dictionary/export", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user!.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      // Get object names from query params (optional)
+      const objectNames = req.query.objects ? 
+        (Array.isArray(req.query.objects) ? req.query.objects : [req.query.objects]) as string[] : 
+        undefined;
+        
+      // Get format from query params
+      const format = (req.query.format as string || 'json').toLowerCase();
+      
+      // Get fields
+      const fields = await storage.getDataDictionaryFields(org.id, objectNames);
+      
+      // Record the audit log
+      await storage.createDataDictionaryAuditLog({
+        orgId: org.id,
+        userId: req.user!.id,
+        action: "export",
+        details: {
+          format,
+          objectCount: [...new Set(fields.map(f => f.objectApiName))].length,
+          fieldCount: fields.length
+        },
+        status: "success",
+        timestamp: new Date(),
+        ipAddress: req.ip || '',
+        userAgent: req.headers['user-agent'] || ''
+      });
+      
+      if (format === 'csv') {
+        // Convert to CSV
+        const csv = [
+          // Header row
+          ['Object API Name', 'Object Label', 'Field API Name', 'Field Label', 'Data Type', 
+           'Required', 'Description', 'Help Text', 'Unique', 'Reference To', 'Formula'].join(','),
+          // Data rows
+          ...fields.map(field => [
+            field.objectApiName,
+            field.objectLabel,
+            field.fieldApiName,
+            field.fieldLabel,
+            field.dataType,
+            field.required ? 'Yes' : 'No',
+            `"${(field.description || '').replace(/"/g, '""')}"`,
+            `"${(field.helpText || '').replace(/"/g, '""')}"`,
+            field.unique ? 'Yes' : 'No',
+            field.referenceTo || '',
+            `"${(field.formula || '').replace(/"/g, '""')}"`
+          ].join(','))
+        ].join('\n');
+        
+        // Set content type and filename
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename=data-dictionary-${org.name.replace(/\s+/g, '-')}.csv`);
+        return res.send(csv);
+      } else {
+        // Default to JSON
+        return res.json(fields);
+      }
+    } catch (error) {
+      console.error("Error exporting data dictionary:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
+  
+  app.get("/api/orgs/:id/data-dictionary/audit-log", ensureAuthenticated, async (req, res) => {
+    try {
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user!.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      const auditLogs = await storage.getDataDictionaryAuditLogs(org.id);
+      res.json(auditLogs);
+    } catch (error) {
+      console.error("Error fetching data dictionary audit logs:", error);
       res.status(500).send("Internal Server Error");
     }
   });

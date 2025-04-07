@@ -348,3 +348,139 @@ export interface ComplexityMetrics {
   nestingDepth: number;
   duplicatedCode: number;
 }
+
+// -------- DATA DICTIONARY TABLES --------
+
+// Data Dictionary Field Records Table
+export const dataDictionaryFields = pgTable("data_dictionary_fields", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id").notNull().references(() => salesforceOrgs.id),
+  objectApiName: text("object_api_name").notNull(),
+  objectLabel: text("object_label").notNull(),
+  fieldApiName: text("field_api_name").notNull(), 
+  fieldLabel: text("field_label").notNull(),
+  dataType: text("data_type").notNull(),
+  length: integer("length"),
+  precision: integer("precision"),
+  scale: integer("scale"),
+  required: boolean("required").default(false),
+  unique: boolean("unique").default(false),
+  defaultValue: text("default_value"),
+  formula: text("formula"),
+  description: text("description"),
+  helpText: text("help_text"),
+  picklistValues: json("picklist_values"),
+  createdBy: text("created_by"),
+  lastModifiedBy: text("last_modified_by"),
+  lastModifiedDate: timestamp("last_modified_date"),
+  controllingField: text("controlling_field"),
+  referenceTo: text("reference_to"),
+  relationshipName: text("relationship_name"),
+  inlineHelpText: text("inline_help_text"),
+  searchable: boolean("searchable").default(false),
+  filterable: boolean("filterable").default(false),
+  sortable: boolean("sortable").default(false),
+  visible: boolean("visible").default(true),
+  lastSyncedAt: timestamp("last_synced_at").notNull(),
+});
+
+export const insertDataDictionaryFieldSchema = createInsertSchema(dataDictionaryFields).pick({
+  orgId: true,
+  objectApiName: true,
+  objectLabel: true,
+  fieldApiName: true,
+  fieldLabel: true,
+  dataType: true,
+  length: true,
+  precision: true,
+  scale: true,
+  required: true,
+  unique: true,
+  defaultValue: true,
+  formula: true,
+  description: true,
+  helpText: true,
+  picklistValues: true,
+  createdBy: true,
+  lastModifiedBy: true,
+  lastModifiedDate: true,
+  controllingField: true,
+  referenceTo: true,
+  relationshipName: true,
+  inlineHelpText: true,
+  searchable: true,
+  filterable: true,
+  sortable: true,
+  visible: true,
+  lastSyncedAt: true,
+});
+
+// Data Dictionary Pending Changes Table - tracks changes pending deployment back to Salesforce
+export const dataDictionaryChanges = pgTable("data_dictionary_changes", {
+  id: serial("id").primaryKey(),
+  orgId: integer("org_id").notNull().references(() => salesforceOrgs.id),
+  fieldId: integer("field_id").notNull().references(() => dataDictionaryFields.id),
+  fieldApiName: text("field_api_name").notNull(),
+  objectApiName: text("object_api_name").notNull(),
+  propertyName: text("property_name").notNull(), // Field property being changed (label, helpText, description)
+  oldValue: text("old_value"),
+  newValue: text("new_value").notNull(),
+  status: text("status").notNull().default("pending"), // pending, approved, deployed, rejected, failed
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  deployedAt: timestamp("deployed_at"),
+  notes: text("notes"),
+});
+
+export const insertDataDictionaryChangeSchema = createInsertSchema(dataDictionaryChanges).pick({
+  orgId: true,
+  fieldId: true,
+  fieldApiName: true,
+  objectApiName: true,
+  propertyName: true,
+  oldValue: true,
+  newValue: true,
+  status: true,
+  createdBy: true,
+  createdAt: true,
+  approvedBy: true,
+  approvedAt: true,
+  deployedAt: true,
+  notes: true,
+});
+
+// Data Dictionary Audit Log - records all actions performed on data dictionary
+export const dataDictionaryAuditLog = pgTable("data_dictionary_audit_log", {
+  id: serial("id").primaryKey(), 
+  orgId: integer("org_id").notNull().references(() => salesforceOrgs.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  action: text("action").notNull(), // edit, deploy, sync, export, etc.
+  details: json("details").notNull(),
+  status: text("status").notNull(), // success, failure
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+});
+
+export const insertDataDictionaryAuditLogSchema = createInsertSchema(dataDictionaryAuditLog).pick({
+  orgId: true,
+  userId: true,
+  action: true,
+  details: true,
+  status: true,
+  timestamp: true,
+  ipAddress: true,
+  userAgent: true,
+});
+
+// Type definitions for data dictionary tables
+export type InsertDataDictionaryField = z.infer<typeof insertDataDictionaryFieldSchema>;
+export type DataDictionaryField = typeof dataDictionaryFields.$inferSelect;
+
+export type InsertDataDictionaryChange = z.infer<typeof insertDataDictionaryChangeSchema>;
+export type DataDictionaryChange = typeof dataDictionaryChanges.$inferSelect;
+
+export type InsertDataDictionaryAuditLog = z.infer<typeof insertDataDictionaryAuditLogSchema>;
+export type DataDictionaryAuditLog = typeof dataDictionaryAuditLog.$inferSelect;

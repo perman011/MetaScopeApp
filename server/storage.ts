@@ -7,12 +7,16 @@ import {
   ComponentDependency, InsertComponentDependency,
   Compliance, InsertCompliance,
   TechnicalDebtItem, InsertTechnicalDebtItem,
-  ReleaseImpact, InsertReleaseImpact
+  ReleaseImpact, InsertReleaseImpact,
+  DataDictionaryField, InsertDataDictionaryField,
+  DataDictionaryChange, InsertDataDictionaryChange,
+  DataDictionaryAuditLog, InsertDataDictionaryAuditLog
 } from "@shared/schema";
 import crypto from "crypto";
 import expressSession from 'express-session';
 import createMemoryStore from 'memorystore';
 import { drizzle } from 'drizzle-orm/neon-serverless';
+import { eq, or } from 'drizzle-orm';
 import { neon } from '@neondatabase/serverless';
 import * as schema from "@shared/schema";
 
@@ -77,6 +81,21 @@ export interface IStorage {
   getOrgReleaseImpacts(orgId: number, status?: string): Promise<ReleaseImpact[]>;
   createReleaseImpact(impact: InsertReleaseImpact): Promise<ReleaseImpact>;
   updateReleaseImpact(id: number, updates: Partial<InsertReleaseImpact>): Promise<ReleaseImpact | undefined>;
+  
+  // Data Dictionary Field operations
+  getDataDictionaryField(id: number): Promise<DataDictionaryField | undefined>;
+  getDataDictionaryFields(orgId: number, objectNames?: string[]): Promise<DataDictionaryField[]>;
+  saveDataDictionaryField(field: InsertDataDictionaryField): Promise<DataDictionaryField>;
+  updateDataDictionaryField(id: number, updates: Partial<InsertDataDictionaryField>): Promise<DataDictionaryField | undefined>;
+  
+  // Data Dictionary Change operations
+  getDataDictionaryChanges(orgId: number, changeIds?: number[], status?: string): Promise<DataDictionaryChange[]>;
+  createDataDictionaryChange(change: InsertDataDictionaryChange): Promise<DataDictionaryChange>;
+  updateDataDictionaryChangeStatus(id: number, status: string, approvedBy?: number, errorMessage?: string): Promise<DataDictionaryChange | undefined>;
+  
+  // Data Dictionary Audit Log operations
+  getDataDictionaryAuditLogs(orgId: number): Promise<DataDictionaryAuditLog[]>;
+  createDataDictionaryAuditLog(log: InsertDataDictionaryAuditLog): Promise<DataDictionaryAuditLog>;
   
   // Session store
   sessionStore: any; // Express session store type
@@ -628,6 +647,140 @@ export class MemStorage implements IStorage {
     this.releaseImpacts.set(id, updatedImpact);
     return updatedImpact;
   }
+
+  // Data Dictionary Field storage
+  private dataDictionaryFields: Map<number, DataDictionaryField> = new Map();
+  private dataDictionaryFieldIdCounter: number = 1;
+  
+  async getDataDictionaryField(id: number): Promise<DataDictionaryField | undefined> {
+    return this.dataDictionaryFields.get(id);
+  }
+  
+  async getDataDictionaryFields(orgId: number, objectNames?: string[]): Promise<DataDictionaryField[]> {
+    const fields = Array.from(this.dataDictionaryFields.values()).filter(
+      (field) => field.orgId === orgId
+    );
+    
+    if (objectNames && objectNames.length > 0) {
+      return fields.filter(field => objectNames.includes(field.objectApiName));
+    }
+    
+    return fields;
+  }
+  
+  async saveDataDictionaryField(field: InsertDataDictionaryField): Promise<DataDictionaryField> {
+    // Check if the field already exists
+    const existingField = Array.from(this.dataDictionaryFields.values()).find(
+      (f) => 
+        f.orgId === field.orgId && 
+        f.objectApiName === field.objectApiName && 
+        f.fieldApiName === field.fieldApiName
+    );
+    
+    if (existingField) {
+      // Update the existing field
+      const updatedField: DataDictionaryField = {
+        ...existingField,
+        ...field,
+        lastSyncedAt: field.lastSyncedAt || new Date()
+      };
+      this.dataDictionaryFields.set(existingField.id, updatedField);
+      return updatedField;
+    }
+    
+    // Create a new field
+    const id = this.dataDictionaryFieldIdCounter++;
+    const newField: DataDictionaryField = {
+      ...field,
+      id,
+      lastSyncedAt: field.lastSyncedAt || new Date()
+    };
+    this.dataDictionaryFields.set(id, newField);
+    return newField;
+  }
+  
+  async updateDataDictionaryField(id: number, updates: Partial<InsertDataDictionaryField>): Promise<DataDictionaryField | undefined> {
+    const field = this.dataDictionaryFields.get(id);
+    if (!field) return undefined;
+    
+    const updatedField: DataDictionaryField = {
+      ...field,
+      ...updates,
+    };
+    this.dataDictionaryFields.set(id, updatedField);
+    return updatedField;
+  }
+  
+  // Data Dictionary Change storage
+  private dataDictionaryChanges: Map<number, DataDictionaryChange> = new Map();
+  private dataDictionaryChangeIdCounter: number = 1;
+  
+  async getDataDictionaryChanges(orgId: number, changeIds?: number[], status?: string): Promise<DataDictionaryChange[]> {
+    let changes = Array.from(this.dataDictionaryChanges.values()).filter(
+      (change) => change.orgId === orgId
+    );
+    
+    if (changeIds && changeIds.length > 0) {
+      changes = changes.filter(change => changeIds.includes(change.id));
+    }
+    
+    if (status) {
+      changes = changes.filter(change => change.status === status);
+    }
+    
+    return changes;
+  }
+  
+  async createDataDictionaryChange(change: InsertDataDictionaryChange): Promise<DataDictionaryChange> {
+    const id = this.dataDictionaryChangeIdCounter++;
+    const newChange: DataDictionaryChange = {
+      ...change,
+      id,
+      updatedAt: change.updatedAt || null,
+      updatedBy: change.updatedBy || null,
+      deployedAt: change.deployedAt || null,
+      errorMessage: change.errorMessage || null
+    };
+    this.dataDictionaryChanges.set(id, newChange);
+    return newChange;
+  }
+  
+  async updateDataDictionaryChangeStatus(id: number, status: string, approvedBy?: number, errorMessage?: string): Promise<DataDictionaryChange | undefined> {
+    const change = this.dataDictionaryChanges.get(id);
+    if (!change) return undefined;
+    
+    const updatedChange: DataDictionaryChange = {
+      ...change,
+      status,
+      updatedAt: new Date(),
+      updatedBy: approvedBy || null,
+      deployedAt: status === 'deployed' ? new Date() : change.deployedAt,
+      errorMessage: errorMessage || null
+    };
+    this.dataDictionaryChanges.set(id, updatedChange);
+    return updatedChange;
+  }
+  
+  // Data Dictionary Audit Log storage
+  private dataDictionaryAuditLogs: Map<number, DataDictionaryAuditLog> = new Map();
+  private dataDictionaryAuditLogIdCounter: number = 1;
+  
+  async getDataDictionaryAuditLogs(orgId: number): Promise<DataDictionaryAuditLog[]> {
+    return Array.from(this.dataDictionaryAuditLogs.values()).filter(
+      (log) => log.orgId === orgId
+    ).sort((a, b) => (b.timestamp as any) - (a.timestamp as any)); // Sort newest first
+  }
+  
+  async createDataDictionaryAuditLog(log: InsertDataDictionaryAuditLog): Promise<DataDictionaryAuditLog> {
+    const id = this.dataDictionaryAuditLogIdCounter++;
+    const newLog: DataDictionaryAuditLog = {
+      ...log,
+      id,
+      timestamp: log.timestamp || new Date()
+    };
+    this.dataDictionaryAuditLogs.set(id, newLog);
+    return newLog;
+  }
 }
 
 // PostgreSQL Storage Implementation
@@ -947,6 +1100,139 @@ class PostgresStorage implements IStorage {
   async updateReleaseImpact(id: number, updates: Partial<InsertReleaseImpact>): Promise<ReleaseImpact | undefined> {
     const result = await this.db.update(schema.releaseImpact).set(updates).where({ id }).returning();
     return result.length > 0 ? result[0] : undefined;
+  }
+
+  // Data Dictionary Field operations
+  async getDataDictionaryField(id: number): Promise<DataDictionaryField | undefined> {
+    const result = await this.db.select().from(schema.dataDictionaryFields).where({ id }).limit(1);
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async getDataDictionaryFields(orgId: number, objectNames?: string[]): Promise<DataDictionaryField[]> {
+    if (objectNames && objectNames.length > 0) {
+      return await this.db.select()
+        .from(schema.dataDictionaryFields)
+        .where({ orgId })
+        .where(
+          or(
+            ...objectNames.map(name => 
+              eq(schema.dataDictionaryFields.objectApiName, name)
+            )
+          )
+        );
+    }
+    return await this.db.select().from(schema.dataDictionaryFields).where({ orgId });
+  }
+  
+  async saveDataDictionaryField(field: InsertDataDictionaryField): Promise<DataDictionaryField> {
+    // Check if the field already exists
+    const existingField = await this.db.select()
+      .from(schema.dataDictionaryFields)
+      .where({ 
+        orgId: field.orgId,
+        objectApiName: field.objectApiName,
+        fieldApiName: field.fieldApiName
+      })
+      .limit(1);
+    
+    if (existingField.length > 0) {
+      // Update the existing field
+      const result = await this.db.update(schema.dataDictionaryFields)
+        .set({
+          ...field,
+          lastSyncedAt: field.lastSyncedAt || new Date()
+        })
+        .where({ id: existingField[0].id })
+        .returning();
+      return result[0];
+    }
+    
+    // Create a new field
+    const result = await this.db.insert(schema.dataDictionaryFields)
+      .values({
+        ...field,
+        lastSyncedAt: field.lastSyncedAt || new Date()
+      })
+      .returning();
+    return result[0];
+  }
+  
+  async updateDataDictionaryField(id: number, updates: Partial<InsertDataDictionaryField>): Promise<DataDictionaryField | undefined> {
+    const result = await this.db.update(schema.dataDictionaryFields)
+      .set(updates)
+      .where({ id })
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  // Data Dictionary Change operations
+  async getDataDictionaryChanges(orgId: number, changeIds?: number[], status?: string): Promise<DataDictionaryChange[]> {
+    let query = this.db.select()
+      .from(schema.dataDictionaryChanges)
+      .where({ orgId });
+    
+    if (changeIds && changeIds.length > 0) {
+      query = query.where(
+        or(
+          ...changeIds.map(id => 
+            eq(schema.dataDictionaryChanges.id, id)
+          )
+        )
+      );
+    }
+    
+    if (status) {
+      query = query.where({ status });
+    }
+    
+    return await query;
+  }
+  
+  async createDataDictionaryChange(change: InsertDataDictionaryChange): Promise<DataDictionaryChange> {
+    const result = await this.db.insert(schema.dataDictionaryChanges)
+      .values({
+        ...change,
+        updatedAt: change.updatedAt || null,
+        updatedBy: change.updatedBy || null,
+        deployedAt: change.deployedAt || null,
+        errorMessage: change.errorMessage || null
+      })
+      .returning();
+    return result[0];
+  }
+  
+  async updateDataDictionaryChangeStatus(id: number, status: string, approvedBy?: number, errorMessage?: string): Promise<DataDictionaryChange | undefined> {
+    const updates = {
+      status,
+      updatedAt: new Date(),
+      updatedBy: approvedBy || null,
+      deployedAt: status === 'deployed' ? new Date() : undefined,
+      errorMessage: errorMessage || null
+    };
+    
+    const result = await this.db.update(schema.dataDictionaryChanges)
+      .set(updates)
+      .where({ id })
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  // Data Dictionary Audit Log operations
+  async getDataDictionaryAuditLogs(orgId: number): Promise<DataDictionaryAuditLog[]> {
+    return await this.db.select()
+      .from(schema.dataDictionaryAuditLog)
+      .where({ orgId })
+      .orderBy({ timestamp: 'desc' });
+  }
+  
+  async createDataDictionaryAuditLog(log: InsertDataDictionaryAuditLog): Promise<DataDictionaryAuditLog> {
+    const result = await this.db.insert(schema.dataDictionaryAuditLog)
+      .values({
+        ...log,
+        timestamp: log.timestamp || new Date()
+      })
+      .returning();
+    return result[0];
   }
 }
 
