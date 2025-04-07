@@ -43,11 +43,11 @@ type Action =
     }
   | {
       type: ActionType["DISMISS_TOAST"]
-      toastId?: string
+      toastId?: ToasterToast["id"]
     }
   | {
       type: ActionType["REMOVE_TOAST"]
-      toastId?: string
+      toastId?: ToasterToast["id"]
     }
 
 interface State {
@@ -186,6 +186,16 @@ function useToast() {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+  }
+}
+
+// Safe toast function that doesn't throw errors
+export function safeToast(props: Toast) {
+  try {
+    return toast(props);
+  } catch (error) {
+    console.error('Toast error:', error);
+    return { id: 'error', dismiss: () => {}, update: () => {} };
   }
 }
 

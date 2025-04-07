@@ -1,75 +1,97 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useAuth } from './use-auth';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export interface SalesforceOrg {
+interface SalesforceOrg {
   id: number;
   name: string;
   instanceUrl: string;
-  accessToken: string | null;
-  refreshToken: string | null;
-  userId: number;
-  type?: string;
-  domain?: string;
+  orgId: string;
+  edition: string;
+  isSandbox: boolean;
 }
 
-export interface OrgContextType {
+interface OrgContextType {
   orgs: SalesforceOrg[];
+  currentOrg: SalesforceOrg | null;
   isLoading: boolean;
-  error: string | null;
-  selectedOrg: SalesforceOrg | null;
-  setSelectedOrg: (org: SalesforceOrg | null) => void;
-  fetchOrgs: () => Promise<void>;
+  error: Error | null;
+  selectOrg: (org: SalesforceOrg) => void;
+  refreshOrgs: () => Promise<void>;
 }
 
-const OrgContext = createContext<OrgContextType | null>(null);
+const defaultContext: OrgContextType = {
+  orgs: [],
+  currentOrg: null,
+  isLoading: false,
+  error: null,
+  selectOrg: () => {},
+  refreshOrgs: async () => {},
+};
 
-export function OrgProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+const OrgContext = createContext<OrgContextType>(defaultContext);
+
+export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [orgs, setOrgs] = useState<SalesforceOrg[]>([]);
-  const [selectedOrg, setSelectedOrg] = useState<SalesforceOrg | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [currentOrg, setCurrentOrg] = useState<SalesforceOrg | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<Error | null>(null);
 
   const fetchOrgs = async () => {
-    if (!user) return;
-    
     setIsLoading(true);
     setError(null);
-    
     try {
       const response = await fetch('/api/orgs');
-      
       if (!response.ok) {
         throw new Error('Failed to fetch organizations');
       }
-      
       const data = await response.json();
       setOrgs(data);
       
-      // Set the first org as selected if there's no selection yet
-      if (data.length > 0 && !selectedOrg) {
-        setSelectedOrg(data[0]);
+      // If we have orgs and no current org is selected, select the first one
+      if (data.length > 0 && !currentOrg) {
+        setCurrentOrg(data[0]);
       }
+
+      return data;
     } catch (err) {
-      setError((err as Error).message);
+      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
+      return [];
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (user) {
-      fetchOrgs();
+    // Fetch orgs on component mount
+    fetchOrgs();
+  }, []);
+
+  const selectOrg = (org: SalesforceOrg) => {
+    setCurrentOrg(org);
+    // You might want to store the selected org in localStorage or make an API call
+    localStorage.setItem('selectedOrgId', org.id.toString());
+  };
+
+  const refreshOrgs = async () => {
+    const orgsData = await fetchOrgs();
+    
+    // If we have a currentOrg, make sure it still exists in the refreshed list
+    if (currentOrg) {
+      const stillExists = orgsData.some(org => org.id === currentOrg.id);
+      if (!stillExists && orgsData.length > 0) {
+        setCurrentOrg(orgsData[0]);
+      } else if (!stillExists) {
+        setCurrentOrg(null);
+      }
     }
-  }, [user]);
+  };
 
   const value = {
     orgs,
+    currentOrg,
     isLoading,
     error,
-    selectedOrg,
-    setSelectedOrg,
-    fetchOrgs
+    selectOrg,
+    refreshOrgs,
   };
 
   return <OrgContext.Provider value={value}>{children}</OrgContext.Provider>;
@@ -77,10 +99,8 @@ export function OrgProvider({ children }: { children: ReactNode }) {
 
 export function useOrg() {
   const context = useContext(OrgContext);
-  
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useOrg must be used within an OrgProvider');
   }
-  
   return context;
 }

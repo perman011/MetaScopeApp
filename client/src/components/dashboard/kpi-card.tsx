@@ -1,10 +1,8 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { OrgStat } from '@/types/salesforce-stats';
-import { InfoCircledIcon } from '@radix-ui/react-icons';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getStatusColor, formatNumber, formatPercentage } from '@/lib/utils';
 
 interface KPICardProps {
   stat: OrgStat;
@@ -12,53 +10,31 @@ interface KPICardProps {
 }
 
 export function KPICard({ stat, className }: KPICardProps) {
-  // Calculate percentage
-  const percentage = Math.min(100, (stat.value / stat.limit) * 100);
+  const percentage = (stat.value / stat.limit) * 100;
+  const statusColor = getStatusColor(stat.value, stat.limit);
   
-  // Determine color based on percentage
-  const getColorClass = () => {
-    if (percentage < 60) return 'bg-emerald-500';
-    if (percentage < 80) return 'bg-amber-500';
-    return 'bg-red-500';
-  };
-
-  // Format the value with units if available
-  const formatValue = (value: number) => {
-    return stat.unit ? `${value.toLocaleString()} ${stat.unit}` : value.toLocaleString();
-  };
-
   return (
-    <Card className={cn("h-full", className)}>
+    <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium flex items-center">
-          {stat.label}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <InfoCircledIcon className="h-4 w-4 ml-1 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Current: {formatValue(stat.value)}</p>
-                <p>Limit: {formatValue(stat.limit)}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </CardTitle>
+        <CardTitle className="text-sm font-medium">{stat.label}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold mb-1">
-          {formatValue(stat.value)}
-        </div>
-        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-          <span>0</span>
-          <span>Limit: {formatValue(stat.limit)}</span>
+        <div className="text-2xl font-bold">
+          {formatNumber(stat.value)}
+          {stat.unit && <span className="text-sm ml-1">{stat.unit}</span>}
         </div>
         <Progress 
           value={percentage} 
-          className="h-2" 
-          indicatorClassName={getColorClass()} 
+          className="h-2 mt-2" 
+          variant={statusColor}
         />
       </CardContent>
+      <CardFooter className="pt-1 text-xs text-muted-foreground">
+        <div>
+          {formatPercentage(stat.value, stat.limit)} of {formatNumber(stat.limit)}
+          {stat.unit && <span>{stat.unit}</span>}
+        </div>
+      </CardFooter>
     </Card>
   );
 }

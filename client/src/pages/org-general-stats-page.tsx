@@ -1,109 +1,160 @@
-import React from 'react';
-import { useParams } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
-import { KpiGrid } from '@/components/dashboard/kpi-grid';
-import { useToast } from '@/hooks/use-toast';
-import { PageHeader } from '@/components/ui/page-header';
+import React, { useState, useEffect } from 'react';
 import { useOrg } from '@/hooks/use-org';
-import { BarChart3, RefreshCw } from 'lucide-react';
+import { KPIGrid } from '@/components/dashboard/kpi-grid';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { OrgStatsResponse } from '@/types/salesforce-stats';
+import { RefreshCw } from 'lucide-react';
+import { OrgStat, StatCategory, OrgStatsResponse } from '@/types/salesforce-stats';
 
 export function OrgGeneralStatsPage() {
-  const { toast } = useToast();
-  const { id } = useParams();
-  const { selectedOrg } = useOrg();
+  const { currentOrg } = useOrg();
+  const [stats, setStats] = useState<OrgStat[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<StatCategory | null>(null);
   
-  const orgId = id || selectedOrg?.id?.toString() || '';
+  // Function to fetch org general stats
+  const fetchStats = async () => {
+    if (!currentOrg) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`/api/orgs/${currentOrg.id}/general-stats`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch organization statistics: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setStats(data);
+    } catch (err) {
+      console.error('Error fetching org stats:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
   
-  const {
-    data,
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching
-  } = useQuery<OrgStatsResponse>({
-    queryKey: ['/api/orgs/stats/general', orgId],
-    enabled: !!orgId,
-    refetchOnWindowFocus: false
-  });
-
-  const refreshStats = () => {
-    refetch();
-    toast({
-      title: 'Refreshing stats',
-      description: 'Fetching the latest data from Salesforce'
-    });
+  // Fetch stats when the component mounts or when the selected org changes
+  useEffect(() => {
+    if (currentOrg) {
+      fetchStats();
+    }
+  }, [currentOrg]);
+  
+  // Handle category filter change
+  const handleCategoryFilter = (category: StatCategory | null) => {
+    setSelectedCategory(category === selectedCategory ? null : category);
   };
-
-  // Format the timestamp for display
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString();
-  };
-
+  
+  // Render loading state
+  if (loading && stats.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh]">
+        <RefreshCw className="animate-spin h-8 w-8 text-primary mb-4" />
+        <p>Loading organization statistics...</p>
+      </div>
+    );
+  }
+  
+  // Render error state
+  if (error && !loading && stats.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] text-destructive">
+        <p className="text-lg font-semibold mb-2">Error loading statistics</p>
+        <p className="mb-4">{error}</p>
+        <Button onClick={fetchStats} variant="outline">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
+  
+  // Render empty state
+  if (!currentOrg) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh]">
+        <p className="text-lg font-semibold mb-2">No Organization Selected</p>
+        <p className="text-muted-foreground">Please select a Salesforce organization to view its statistics.</p>
+      </div>
+    );
+  }
+  
   return (
-    <div className="p-6">
-      <PageHeader
-        title="Org General Statistics"
-        description="Key metrics and limits for your Salesforce organization"
-        icon={<BarChart3 className="h-6 w-6" />}
-        action={
-          <Button 
-            variant="outline" 
-            onClick={refreshStats} 
-            disabled={isLoading || isFetching}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh Stats
-          </Button>
-        }
-      />
-
-      {isLoading ? (
-        <div className="mt-6 space-y-8">
-          <div>
-            <Skeleton className="h-8 w-36 mb-3" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))}
-            </div>
-          </div>
-          <div>
-            <Skeleton className="h-8 w-36 mb-3" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : isError ? (
-        <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
-          <h3 className="font-semibold">Error loading statistics</h3>
-          <p>{(error as Error)?.message || 'Failed to fetch organization statistics.'}</p>
-          <Button variant="outline" className="mt-2" onClick={() => refetch()}>
-            Try Again
-          </Button>
-        </div>
-      ) : data?.stats?.length === 0 ? (
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800">
-          <h3 className="font-semibold">No statistics available</h3>
-          <p>We couldn't find any statistics for this organization.</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">
+          {currentOrg.name} - Organization Health
+        </h1>
+        <Button 
+          onClick={fetchStats} 
+          variant="outline" 
+          size="sm"
+          disabled={loading}
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Refreshing...' : 'Refresh Data'}
+        </Button>
+      </div>
+      
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Button 
+          variant={selectedCategory === null ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleCategoryFilter(null)}
+        >
+          All
+        </Button>
+        <Button 
+          variant={selectedCategory === 'api' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleCategoryFilter('api')}
+        >
+          API Usage
+        </Button>
+        <Button 
+          variant={selectedCategory === 'storage' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleCategoryFilter('storage')}
+        >
+          Storage
+        </Button>
+        <Button 
+          variant={selectedCategory === 'metadata' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleCategoryFilter('metadata')}
+        >
+          Metadata Components
+        </Button>
+        <Button 
+          variant={selectedCategory === 'users' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleCategoryFilter('users')}
+        >
+          Users
+        </Button>
+        <Button 
+          variant={selectedCategory === 'automation' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => handleCategoryFilter('automation')}
+        >
+          Automation
+        </Button>
+      </div>
+      
+      {stats.length > 0 ? (
+        <KPIGrid 
+          stats={stats} 
+          filterByCategory={selectedCategory || undefined} 
+        />
       ) : (
-        <>
-          <div className="mt-2 text-sm text-muted-foreground flex justify-end">
-            Last updated: {data?.timestamp ? formatTimestamp(data.timestamp) : 'Unknown'}
-          </div>
-          <div className="mt-6">
-            <KpiGrid stats={data?.stats || []} />
-          </div>
-        </>
+        <div className="bg-card border rounded-lg p-6 text-center">
+          <p className="text-muted-foreground">
+            No statistics available for this organization.
+          </p>
+        </div>
       )}
     </div>
   );
