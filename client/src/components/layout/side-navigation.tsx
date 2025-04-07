@@ -22,7 +22,8 @@ import {
   Zap,
   AlertTriangle,
   BarChartHorizontal,
-  Home
+  Home,
+  KeyRound
 } from 'lucide-react';
 import { 
   Select,
@@ -183,10 +184,10 @@ const navigationConfig: NavigationConfig = {
         roles: ['admin'],
       },
       {
-        id: 'permissions-analyzer',
-        label: 'Permissions Analyzer',
-        href: '/permissions-analyzer',
-        icon: Lock,
+        id: 'access-tool',
+        label: 'Access Tool',
+        href: '/access-tool',
+        icon: KeyRound,
         roles: ['admin'],
       },
       {

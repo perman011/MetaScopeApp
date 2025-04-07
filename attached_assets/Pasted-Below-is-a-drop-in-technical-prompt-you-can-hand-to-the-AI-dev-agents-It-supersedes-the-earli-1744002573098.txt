@@ -1,0 +1,110 @@
+Below is a **drop‑in technical prompt** you can hand to the AI dev agents.  
+It supersedes the earlier draft and folds in manual share records, a root‑cause engine, and an action center so admins can both diagnose and remediate access issues from one place.
+
+---
+
+### **Title:** Build “Access Tool” (v2) — end‑to‑end access analysis & remediation
+
+---
+
+#### **1. Rename & Navigation**
+* Replace every “Permissions Analyzer” reference (routes, labels, breadcrumbs, docs) with **“Access Tool.”**
+* Keep it under the **Security** nav group; order it right after “Security Analyzer.”
+* Icon: `KeyRound` (Lucide).
+
+---
+
+#### **2. Data Ingestion & Modeling**
+| Source | Objects / APIs | Persist to Drizzle |
+|--------|----------------|--------------------|
+| **Profiles & Permission Sets** | `Profile`, `PermissionSet`, `PermissionSetAssignment` | `access_profiles`, `access_psets`, `access_pset_assignments` |
+| **Role Hierarchy** | `UserRole` | `access_roles` |
+| **Sharing Rules** | `SharingRules` (owner‑based, criteria‑based) | `access_sharing_rules` |
+| **Org‑Wide Defaults (OWD)** | `OrgWideDefaults` | `access_owd` |
+| **Manual Shares** | `AccountShare`, `CaseShare`, `OpportunityShare`, etc. (support dynamic object list) | `access_manual_shares` |
+| **User <-> Group Memberships** | `Group`, `GroupMember`, `QueueSobject` | `access_groups`, `access_group_members` |
+
+*Extend the JSForce fetcher & ETL to pull all above. Use incremental sync keyed by `LastModifiedDate`.*
+
+---
+
+#### **3. Analysis Engine**
+1. **Effective‑Access Calculator**  
+   *For a given User ⟶ Record, compute cumulative access path:*  
+   `Profile → PermissionSet → Role → OWD → SharingRule → ManualShare`.  
+   Persist computed results in `access_effective` (userId, objectId, recordId, accessLevel, path JSONB).
+
+2. **Root‑Cause Service**  
+   *Input:* `{ userId, recordId }`  
+   *Output:* ordered list of granting factors with contribution score (0‑1).  
+   *Algorithm:* DAG walk with weights: ManualShare 1.0 > SharingRule 0.8 > Role 0.6 > PermSet 0.4 > Profile 0.3 > OWD 0.1.
+
+3. **Risk Scoring**  
+   *Per object & per user* — flag  
+   * “Public Read/Write with >X records”  
+   * Users with **>N** high‑risk grants (write to financial objects, etc.).  
+   Store in `access_risks`.
+
+---
+
+#### **4. UI / UX**
+* **Overview Tab**  
+  * KPI cards: *Public RW Objects*, *Users with Broad Access*, *Manual Shares Count*, *High‑Risk Grants*.  
+  * Recharts stacked bars: object‑level access distribution.
+
+* **Explore Tab**  
+  * **Left panel:** filters (User, Object, Access Level).  
+  * **Main panel:**  
+    * Cytoscape graph ‑ nodes: Users, Roles, Groups, Records; edges colored by grant type.  
+    * Click a node to open side drawer with details & root‑cause list.
+
+* **Root‑Cause Drawer**  
+  * Table: factor, weight, “Revoke?” checkbox.  
+  * “Generate Fix Script” button.
+
+* **Action Center Tab**  
+  * Queue of recommended fixes (e.g., tighten OWD, delete manual share, adjust sharing rule criteria).  
+  * One‑click execution via backend mutation endpoints (secured with confirm modal).
+
+---
+
+#### **5. Backend / API**
+* **/api/access/effective** `GET` — query effective access with filters.  
+* **/api/access/rca** `POST` — body `{ userId, recordId }`, returns path & factors.  
+* **/api/access/fix** `POST` — body `{ type, payload }` (e.g., deleteShare, updateOWD).  
+  *Use JSForce for write‑backs; wrap in queue with retry & audit log.*
+
+---
+
+#### **6. Tests & Quality**
+* **Unit:** Effective‑access calculator edge cases.  
+* **Integration:** Sync job pulling 10k+ manual shares.  
+* **E2E (Cypress):**  
+  * Rename visible.  
+  * RCA path shows correct order for test user.  
+  * Fix Script deletes a manual share and refreshes graph.
+
+---
+
+#### **7. Docs & Help**
+* Update in‑app markdown help: “Access Tool Overview,” “How RCA Works,” “Action Center.”  
+* README section on new ETL tables & sync job cron.
+
+---
+
+#### **8. Acceptance Criteria**
+1. “Access Tool” visible in nav; old routes redirect.  
+2. RCA returns correct path within 500 ms (p95) for orgs ≤ 1 M records.  
+3. Action Center executes fix and logs audit row.  
+4. All tests green in CI.
+
+---
+
+**Stretch Ideas (if time permits)**  
+* **Least‑Privilege Simulator:** preview impact before executing fixes.  
+* **Time‑series Access Drift:** Sparkline of risk score over last 30 days.  
+* **Slack alert webhook:** notify when new public RW object detected.
+
+---
+
+Feel free to tweak numbers (e.g., weightings, thresholds) to fit your org’s policies. Let me know if you’d like any more refinements!
