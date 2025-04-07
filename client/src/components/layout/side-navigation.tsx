@@ -78,14 +78,14 @@ const navigationConfig: NavigationConfig = {
           {
             id: 'org-health',
             label: 'Org Health',
-            href: '/dashboard/org-health/metadata-components',
+            href: '/dashboard/org-health',
             icon: BarChart3,
             roles: ['manager', 'admin', 'developer'],
           },
           {
             id: 'org-general-stats',
             label: 'Org General Stats',
-            href: '/org-general-stats',
+            href: '/dashboard/org-general-stats',
             icon: BarChart3,
             roles: ['manager', 'admin', 'developer'],
           },

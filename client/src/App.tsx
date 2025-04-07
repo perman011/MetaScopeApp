@@ -25,6 +25,7 @@ import { OrgGeneralStatsPage } from "@/pages/org-general-stats-page";
 import MetadataAnalyticsPanel from "@/pages/dashboard/MetadataAnalyticsPanel";
 import FieldIntelligencePage from "@/pages/dashboard/FieldIntelligencePage";
 import ApiUsagePage from "@/pages/dashboard/ApiUsagePage";
+import OrgHealth from "@/components/dashboard/org-health";
 import SettingsPage from "@/pages/settings-page";
 import Support from "@/pages/support";
 import Subscription from "@/pages/subscription";
@@ -98,6 +99,7 @@ function AuthenticatedRoutes() {
                   <MetadataAnalyticsPanel />
                 </div>
               } />
+              <Route path="/dashboard/org-health" component={OrgHealth} />
               <Route path="/dashboard/field-intelligence" component={FieldIntelligencePage} />
               <Route path="/dashboard/api-usage" component={ApiUsagePage} />
               <Route path="/settings" component={SettingsPage} />
