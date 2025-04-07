@@ -46,7 +46,7 @@ export function KPICard({ stat, className }: KPICardProps) {
         {expanded && hasDetails && (
           <div className="mt-4 space-y-2 text-xs">
             <div className="font-medium">Breakdown by Type:</div>
-            {stat.details.map((detail, index) => (
+            {stat.details?.map((detail, index) => (
               <div key={index} className="grid grid-cols-[1fr,auto,auto] gap-2">
                 <div className="truncate" title={detail.name}>{detail.name}</div>
                 <div className="text-right">{detail.used}/{detail.total}</div>

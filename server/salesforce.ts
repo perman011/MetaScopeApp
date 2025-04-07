@@ -45,10 +45,18 @@ export class SalesforceService {
     userId: string;
   }> {
     try {
-      const conn = new jsforce.Connection({
-        loginUrl: credentials.environment === 'sandbox' 
+      console.log(`Attempting Salesforce login for ${credentials.email} in ${credentials.environment} environment`);
+      
+      // Use the correct login URL for the environment
+      const loginUrl = credentials.environment === 'sandbox' 
           ? 'https://test.salesforce.com' 
-          : 'https://login.salesforce.com'
+          : 'https://login.salesforce.com';
+          
+      console.log(`Using login URL: ${loginUrl}`);
+      
+      const conn = new jsforce.Connection({
+        loginUrl: loginUrl,
+        version: '56.0' // Use a recent API version
       });
 
       // Combine password and security token (if provided)
@@ -56,8 +64,20 @@ export class SalesforceService {
         credentials.password + credentials.securityToken : 
         credentials.password;
       
+      // Attempt login with debug information
+      console.log(`Authenticating user ${credentials.email} with JSForce...`);
+      
       await conn.login(credentials.email, fullPassword);
 
+      // Log successful authentication details
+      console.log(`Successfully authenticated as ${credentials.email} to ${conn.instanceUrl}`);
+      console.log(`Connection established with API version: ${conn.version}`);
+      
+      // Access user info if available
+      if (conn.userInfo) {
+        console.log(`User ID: ${conn.userInfo.id}, Organization ID: ${conn.userInfo.organizationId}`);
+      }
+      
       // Access metadata API through conn.metadata (not as a constructor)
       // This is just to validate that metadata API access is available
       const metadata = conn.metadata;
@@ -68,9 +88,23 @@ export class SalesforceService {
         refreshToken: null,
         userId: conn.userInfo?.id || ''
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Salesforce authentication error:", error);
-      throw new Error("Invalid credentials or connection configuration");
+      
+      // Provide more specific error messages for common issues
+      if (error.errorCode === 'INVALID_LOGIN') {
+        throw new Error("Invalid username or password. Please check your credentials and try again.");
+      } else if (error.errorCode === 'INVALID_SESSION_ID') {
+        throw new Error("Invalid or expired session. Please log in again.");
+      } else if (error.errorCode === 'INVALID_AUTH') {
+        throw new Error("Authentication failed. If using Production, try Sandbox environment instead or vice versa.");
+      } else if (error.message && error.message.includes('security token')) {
+        throw new Error("Security token missing or invalid. Please include your security token with your password.");
+      } else if (error.message && error.message.includes('Network error')) {
+        throw new Error("Network connection error. Please check your internet connection and try again.");
+      } else {
+        throw new Error(`Authentication failed: ${error.message || 'Unknown error'}`);
+      }
     }
   }
 
