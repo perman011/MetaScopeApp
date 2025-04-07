@@ -1,3 +1,4 @@
+// Inspired by react-hot-toast library
 import * as React from "react"
 
 import type {
@@ -5,8 +6,8 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 5000
+const TOAST_LIMIT = 5
+const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = ToastProps & {
   id: string
@@ -25,7 +26,7 @@ const actionTypes = {
 let count = 0
 
 function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  count = (count + 1) % Number.MAX_VALUE
   return count.toString()
 }
 
@@ -42,11 +43,11 @@ type Action =
     }
   | {
       type: ActionType["DISMISS_TOAST"]
-      toastId?: ToasterToast["id"]
+      toastId?: string
     }
   | {
       type: ActionType["REMOVE_TOAST"]
-      toastId?: ToasterToast["id"]
+      toastId?: string
     }
 
 interface State {
@@ -131,96 +132,44 @@ const listeners: Array<(state: State) => void> = []
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
-  try {
-    memoryState = reducer(memoryState, action)
-    listeners.forEach((listener) => {
-      listener(memoryState)
-    })
-  } catch (error) {
-    console.error("Error dispatching toast action:", error)
-  }
+  memoryState = reducer(memoryState, action)
+  listeners.forEach((listener) => {
+    listener(memoryState)
+  })
 }
 
 type Toast = Omit<ToasterToast, "id">
 
-// Helper function to create a fallback toast object
-const createFallbackToast = (props: Toast) => {
-  const { title, description, variant } = props;
-  console.log(`[Toast ${variant || 'default'}]: ${title} - ${description}`);
-  return {
-    id: "fallback-" + Math.random().toString(36).substr(2, 9),
-    dismiss: () => {},
-    update: () => {},
-  };
-};
+function toast({ ...props }: Toast) {
+  const id = genId()
 
-// Main toast function that's safe to use anywhere
-export function toast(props: Toast) {
-  try {
-    const id = genId()
-
-    const update = (props: ToasterToast) =>
-      dispatch({
-        type: "UPDATE_TOAST",
-        toast: { ...props, id },
-      })
-    const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
-
+  const update = (props: ToasterToast) =>
     dispatch({
-      type: "ADD_TOAST",
-      toast: {
-        ...props,
-        id,
-        open: true,
-        onOpenChange: (open) => {
-          if (!open) dismiss()
-        },
-      },
+      type: "UPDATE_TOAST",
+      toast: { ...props, id },
     })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
-    return {
-      id: id,
-      dismiss,
-      update,
-    }
-  } catch (error) {
-    console.error("Error showing toast:", error)
-    return createFallbackToast(props)
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) dismiss()
+      },
+    },
+  })
+
+  return {
+    id: id,
+    dismiss,
+    update,
   }
 }
 
-// Safe version that's also exported
-export function safeToast(props: Toast) {
-  try {
-    // Try using the window.__TOAST_SERVICE first if it exists
-    if (typeof window !== 'undefined' && (window as any).__TOAST_SERVICE && (window as any).__TOAST_SERVICE.toast) {
-      return (window as any).__TOAST_SERVICE.toast(props);
-    }
-    return toast(props);
-  } catch (error) {
-    console.error("Error in safeToast:", error);
-    return createFallbackToast(props);
-  }
-}
-
-// Global notify function that will never fail
-export const notify = (props: Toast) => {
-  try {
-    // Try using the window.__TOAST_SERVICE first if it exists
-    if (typeof window !== 'undefined' && (window as any).__TOAST_SERVICE && (window as any).__TOAST_SERVICE.notify) {
-      return (window as any).__TOAST_SERVICE.notify(props);
-    }
-    return safeToast(props);
-  } catch (error) {
-    console.error("Error in notify:", error);
-    return createFallbackToast(props);
-  }
-}
-
-// Make globalToast an alias for toast for backward compatibility
-export const globalToast = safeToast;
-
-export function useToast() {
+function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
   React.useEffect(() => {
@@ -234,20 +183,10 @@ export function useToast() {
   }, [state])
 
   return {
-    toasts: state.toasts,
-    toast: safeToast,
+    ...state,
+    toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-    notify: safeToast,  // Add notify as an alias for toast
-    isHeadless: false,  // Add isHeadless property to prevent errors
   }
 }
 
-// Make sure we have a default global object with these properties to prevent null errors
-if (typeof window !== 'undefined') {
-  // @ts-ignore - Adding global properties
-  window.__TOAST_SERVICE = {
-    notify,
-    toast: safeToast,
-    isHeadless: false
-  }
-}
+export { useToast, toast }

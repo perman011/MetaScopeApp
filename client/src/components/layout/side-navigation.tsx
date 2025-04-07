@@ -107,6 +107,13 @@ const navigationConfig: NavigationConfig = {
         roles: ['manager', 'admin', 'developer'],
       },
       {
+        id: 'org-general-stats',
+        label: 'Org General Stats',
+        href: '/org-general-stats/1',
+        icon: BarChart3,
+        roles: ['manager', 'admin', 'developer'],
+      },
+      {
         id: 'tech-debt-scanner',
         label: 'Technical Debt Scanner',
         href: '/tech-debt-scanner',

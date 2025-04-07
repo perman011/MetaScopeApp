@@ -1,21 +1,32 @@
-import React from 'react';
-import TopNavBar from './top-nav-bar';
-import SideNavigation from './side-navigation';
+import React, { ReactNode } from 'react';
+import { SideNavigation } from './side-navigation';
+import { TopNavBar } from './top-nav-bar';
+import { cn } from '@/lib/utils';
+import { Toaster } from '@/components/ui/toaster';
 
-export interface LayoutProps {
-  children: React.ReactNode;
+interface LayoutProps {
+  children: ReactNode;
+  showSidebar?: boolean;
+  className?: string;
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, showSidebar = true, className }: LayoutProps) {
   return (
-    <div className="flex flex-col h-screen">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <TopNavBar />
+      
       <div className="flex flex-1 overflow-hidden">
-        <SideNavigation />
-        <main className="flex-1 overflow-y-auto bg-neutral-50">
+        {showSidebar && <SideNavigation />}
+        
+        <main className={cn(
+          "flex-1 overflow-auto p-4 md:p-6",
+          className
+        )}>
           {children}
         </main>
       </div>
+      
+      <Toaster />
     </div>
   );
 }

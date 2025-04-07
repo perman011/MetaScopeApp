@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { salesforceService, SalesforceService } from "./salesforce";
+import { salesforceStatsService, OrgStat } from "./salesforce-stats";
 import { z } from "zod";
 import { 
   insertSalesforceOrgSchema, 
@@ -963,6 +964,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).send("Internal Server Error");
     }
   });
+  
+  // General Stats Endpoint
+  app.get("/api/orgs/:id/general-stats", ensureAuthenticated, async (req, res) => {
+    try {
+      console.log(`Received request for general stats for org ID: ${req.params.id}`);
+      
+      const org = await storage.getOrg(parseInt(req.params.id));
+      if (!org) {
+        return res.status(404).send("Org not found");
+      }
+      if (org.userId !== req.user.id) {
+        return res.status(403).send("Forbidden");
+      }
+      
+      // Check if demo mode is requested
+      const demoMode = req.query.demo === 'true';
+      
+      if (demoMode) {
+        console.log("Demo mode requested, returning sample general stats data");
+        // Sample data for demo/testing purposes
+        return res.json([
+          { key: 'dailyApiRequests', label: 'Daily API Calls', value: 77900, limit: 100000, category: 'api' },
+          { key: 'dataStorage', label: 'Data Storage', value: 1500, limit: 5000, unit: 'MB', category: 'storage' },
+          { key: 'fileStorage', label: 'File Storage', value: 7800, limit: 10000, unit: 'MB', category: 'storage' },
+          { key: 'activeUsers', label: 'Active Users', value: 75, limit: 100, category: 'users' },
+          { key: 'customObjects', label: 'Custom Objects', value: 127, limit: 3000, category: 'metadata' },
+          { key: 'apexClasses', label: 'Apex Classes', value: 342, limit: 5000, category: 'metadata' },
+          { key: 'visualforcePages', label: 'Visualforce Pages', value: 118, limit: 5000, category: 'metadata' },
+          { key: 'lightningComponents', label: 'Lightning Web Components', value: 54, limit: 2000, category: 'metadata' },
+          { key: 'auraComponents', label: 'Aura Components', value: 89, limit: 5000, category: 'metadata' },
+          { key: 'flows', label: 'Flows', value: 65, limit: 2000, category: 'automation' },
+          { key: 'platformEvents', label: 'Platform Events', value: 12, limit: 250, category: 'automation' }
+        ]);
+      }
+      
+      try {
+        // Get general stats from Salesforce
+        const stats = await salesforceStatsService.getGeneralStats(org);
+        console.log(`Retrieved ${stats.length} general stats from Salesforce`);
+        res.json(stats);
+      } catch (error) {
+        console.error("Error fetching general stats from Salesforce:", error);
+        res.status(500).json({ 
+          error: "Failed to retrieve general stats", 
+          message: error.message 
+        });
+      }
+    } catch (error) {
+      console.error("Error in general stats endpoint:", error);
+      res.status(500).send("Internal Server Error");
+    }
+  });
 
   app.post("/api/orgs/:id/analyze", ensureAuthenticated, async (req, res) => {
     try {
@@ -1613,11 +1666,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const metadataAnalytics = await salesforceService.getMetadataDetailsFromOrg(org);
       return res.json(metadataAnalytics);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch metadata analytics:', error);
       return res.status(500).json({ 
         error: 'Failed to fetch metadata analytics',
-        message: error.message
+        message: error.message || 'Unknown error'
+      });
+    }
+  });
+  
+  // Org General Stats Endpoint
+  app.get("/api/orgs/:id/general-stats", ensureAuthenticated, async (req, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const org = await storage.getOrg(orgId);
+      
+      if (!org) {
+        return res.status(404).json({ error: 'Organization not found' });
+      }
+      
+      if (org.userId !== req.user!.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      
+      const generalStats = await salesforceStatsService.getGeneralStats(org);
+      return res.json(generalStats);
+    } catch (error: any) {
+      console.error('Failed to fetch general stats:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch general stats',
+        message: error.message || 'Unknown error'
       });
     }
   });

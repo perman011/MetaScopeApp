@@ -1,103 +1,113 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-
-// Define the user type
-export interface User {
+interface User {
   id: number;
   email: string;
   name: string;
-  role?: string;
+  role: string;
 }
 
-// Define the auth context
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean, error?: string }>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-// Create the auth context
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isLoading: true,
-  login: async () => ({ success: false, error: 'Not implemented' }),
-  logout: async () => {},
-});
+const AuthContext = createContext<AuthContextType | null>(null);
 
-// Auth provider component
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is already logged in on mount
+  // Check if user is logged in on mount
   useEffect(() => {
-    const checkAuth = async () => {
+    async function fetchUser() {
       try {
-        setIsLoading(true);
-        const response = await fetch('/api/user', {
-          credentials: 'include', // Include cookies for session management
-        });
+        const response = await fetch('/api/auth/me');
         
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
+        } else {
+          setUser(null);
         }
       } catch (error) {
-        console.error('Authentication check failed:', error);
+        setUser(null);
+        console.error('Error fetching user:', error);
       } finally {
         setIsLoading(false);
       }
-    };
+    }
 
-    checkAuth();
+    fetchUser();
   }, []);
 
   // Login function
   const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ username: email, password }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        return { success: true };
-      } else {
+      if (!response.ok) {
         const error = await response.json();
-        return { success: false, error: error.message || 'Login failed' };
+        throw new Error(error.message || 'Failed to login');
       }
+
+      const userData = await response.json();
+      setUser(userData);
     } catch (error) {
-      console.error('Login failed:', error);
-      return { success: false, error: 'Network error. Please try again.' };
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Logout function
   const logout = async () => {
+    setIsLoading(true);
+    
     try {
-      await fetch('/api/logout', { 
+      const response = await fetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include'
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to logout');
+      }
+
       setUser(null);
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('Error during logout:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    isLoading,
+    login,
+    logout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// Custom hook for using auth
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  
+  return context;
 }

@@ -1,0 +1,104 @@
+### 📑 Technical prompt — “Build Org General Stats panel for MetaScope Dashboard”
+
+> **Context**  
+> MetaScope already has the **Org Health** dashboard card (donut + bar + table + list) delivered and routed. We now need a *second* card/page that surfaces “big‑picture” statistics & limits for the connected org. Preserve the existing codebase, stack and routing conventions.
+
+---
+
+#### 1 — User‑value & UX goals  
+| Goal | Why it matters | UX hint |
+|------|----------------|---------|
+| Show **how big** the org is (users, metadata footprint, automation, integration) | Gives admins a one‑look sense of org complexity | “At‑a‑glance” number cards in a responsive grid |
+| Show **% of platform limit used** for each metric | Prevents hitting hard limits and supports capacity planning | Circular or horizontal progress bars, red >80 %, yellow 60‑80 % |
+| Offer **actionable links** (“view unused fields”, “buy more API calls”) | Turns insight into next step | `onClick` navigates to existing Analyzer modules |
+
+---
+
+#### 2 — Metrics & where to fetch them  
+
+| Category | Metric | Source query (JSForce / Tooling / REST) | Hard limit reference |
+|----------|--------|------------------------------------------|----------------------|
+| **People & Licenses** | Total active users | `SELECT COUNT() FROM User WHERE IsActive=true` | n/a |
+| | License types & counts | `SELECT LicenseDefinitionKey, COUNT(Id) FROM User GROUP BY LicenseDefinitionKey` | n/a |
+| **Cloud enablement** | Enabled Clouds (Sales, Service, etc.) | `Organization.Is*` flags via `Organization` object | n/a |
+| **Apps** | Custom Apps | `SELECT COUNT() FROM AppMenuItem WHERE Type='TabSet'` | 2,500 custom apps (EE) citeturn0search2 |
+| | Connected Apps | `SELECT COUNT() FROM ConnectedApplication` | 2,000 |
+| **Objects** | Custom objects | `SELECT COUNT() FROM CustomObject` via Metadata API | 3,000 custom objs (UE) citeturn0search2 |
+| **Fields** | Custom fields (per object & total) | `Tooling: SELECT TableEnumOrId, COUNT(Id) FROM CustomField GROUP BY TableEnumOrId` | 800 / object citeturn0search3 |
+| | Field data‑type distribution | same query, aggregate on `DataType` | n/a |
+| **Code & UI** | Apex classes, triggers | `SELECT COUNT() FROM ApexClass` / `ApexTrigger` | 5 MB compiled per class |
+| | Lightning Web Components | Metadata API `listMetadata LightningComponentBundle` | 2,000 bundles |
+| | Aura bundles | `AuraDefinitionBundle` Tooling query | 5,000 |
+| | Visualforce pages | `SELECT COUNT() FROM ApexPage` | 5,000 |
+| **Automation** | Flows (active / total) | `SELECT Status, COUNT(Id) FROM FlowDefinition GROUP BY Status` | 2,000 |
+| | Scheduled Apex jobs | `SELECT COUNT() FROM CronTrigger` | 100 |
+| **Integration & Limits** | Daily API calls (24 h) | REST `/limits` → `DailyApiRequests` | edition‑based calc citeturn0search1 |
+| | Monthly API entitlement | REST `/limits` → `MonthlyApiRequests` | edition‑based |
+| | Platform Events definitions & usage | `SELECT COUNT() FROM CustomObject WHERE DeploymentStatus='Deployed' AND IsPlatformEvent=true`; usage via `/limits` → `DailyStreamingApiEvents` | 250k/24 h |
+| **Data & Storage** | Data storage used vs limit | REST `/limits` → `DataStorageMB` | edition‑based |
+| | File storage used vs limit | REST `/limits` → `FileStorageMB` | edition‑based |
+
+*(Feel free to stub less‑critical metrics first; design allows incremental add.)*
+
+---
+
+#### 3 — Backend tasks (Node + Express + JSForce)
+
+1. **`/api/org/:id/general-stats`**  
+   *Aggregate all queries above in parallel (Promise.all) and return a flat JSON:*  
+   ```ts
+   interface OrgStat {
+     key: 'users' | 'customObjects' | 'apiDaily' | ...;
+     value: number;
+     limit?: number;          // undefined when no hard limit
+     unit?: 'count' | 'MB' | '%';
+   }
+   ```
+2. Cache results for 15 min in PostgreSQL `org_stats_cache` to avoid limit hits.
+3. Add Zod schema validation + Drizzle model.
+
+---
+
+#### 4 — Frontend tasks (React + TS + TanStack Query + Tailwind)
+
+1. **Hook** `useOrgGeneralStats(orgId)` → TanStack query fetching endpoint.
+2. **`GeneralStatsCard` component**  
+   * Responsive CSS grid of `StatTile`s (icon, label, value, progress bar).  
+   * Tiles clickable if a deeper analyzer exists (e.g., fields → Field Utilization Analyzer).  
+   * Animate entry with Framer Motion.
+3. Route `/dashboard/general-stats` and add a small **card** on main Dashboard landing page (beside Org Health card).  
+
+---
+
+#### 5 — Acceptance criteria
+
+- ✅ 95 %+ Lighthouse performance; no regression to existing Org Health card.  
+- ✅ Loading skeletons & error states implemented.  
+- ✅ Unit tests for backend aggregation service; React Testing Library tests for `StatTile`.  
+- ✅ Works on mobile viewport ≤ 375 px.  
+- ✅ Limits & usage numbers match Setup → System Overview for the same org (±5 %).  
+
+---
+
+#### 6 — Stretch / future ideas
+
+| Idea | Effort | Benefit |
+|------|--------|---------|
+| Heat‑map of API calls over last 30 days (line chart) | M | Trend visibility |
+| Unused custom fields & objects count | M | Cleanup insights |
+| Apex code coverage % | M | DevOps quality |
+| Package dependency size (managed pkg count, unlocked pkgs) | S | Complexity signal |
+| API version distribution of Apex classes | S | Upgrade planning |
+
+---
+
+#### 7 — Questions for product owner
+
+1. Any edition‑specific metrics we should hide to avoid confusion?  
+2. Preferred colour thresholds for “warning” and “critical” usage?  
+3. Should we expose *limits without usage* (e.g., LWC bundles) or hide until >0 %?
+
+---
+
+### Ready for dev 🚀  
+Use this prompt as the single source of truth for implementing the **Org General Stats** panel while preserving existing MetaScope functionality.

@@ -12,16 +12,54 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
   options?: RequestInit,
-): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-    ...options,
-  });
+): Promise<Response>;
 
+export async function apiRequest(
+  url: string,
+  options?: RequestInit,
+): Promise<any>;
+
+export async function apiRequest(
+  methodOrUrl: string,
+  urlOrOptions?: string | RequestInit,
+  data?: unknown | undefined,
+  options?: RequestInit,
+): Promise<any> {
+  let method: string;
+  let url: string;
+  let requestOptions: RequestInit = {};
+  
+  // Handle overloaded function signatures
+  if (typeof urlOrOptions === 'string') {
+    // First signature: (method, url, data?, options?)
+    method = methodOrUrl;
+    url = urlOrOptions;
+    requestOptions = {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+      ...options,
+    };
+  } else {
+    // Second signature: (url, options?)
+    method = 'GET';
+    url = methodOrUrl;
+    requestOptions = {
+      method,
+      credentials: "include",
+      ...urlOrOptions,
+    };
+  }
+
+  const res = await fetch(url, requestOptions);
   await throwIfResNotOk(res);
+  
+  // For GET requests, return the parsed JSON
+  if (method === 'GET') {
+    return await res.json();
+  }
+  
   return res;
 }
 
