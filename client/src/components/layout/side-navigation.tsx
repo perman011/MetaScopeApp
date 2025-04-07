@@ -370,7 +370,7 @@ function ExpandedNavigation({
         )}
         onClick={() => navigate(item.href)}
       >
-        <Icon className="h-5 w-5 mr-3" />
+        {Icon && <Icon className="h-5 w-5 mr-3" />}
         <span>{item.label}</span>
         {item.beta && (
           <span className="ml-2 px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary-100 text-primary-700">

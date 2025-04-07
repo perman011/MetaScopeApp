@@ -74,7 +74,8 @@ const CustomTreemapContent = (props: any) => {
   const { x, y, width, height, depth, name, category, root, index } = props;
   
   // Determine if there's enough space to render text
-  const minTextWidth = name.length * 6;
+  const nameLength = name ? name.length : 0;
+  const minTextWidth = nameLength * 6;
   const minTextHeight = 20;
   const hasEnoughSpace = width > minTextWidth && height > minTextHeight;
   
