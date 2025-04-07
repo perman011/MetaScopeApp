@@ -51,8 +51,10 @@ export class SalesforceService {
           : 'https://login.salesforce.com'
       });
 
-      // Combine password and security token
-      const fullPassword = credentials.password + credentials.securityToken;
+      // Combine password and security token (if provided)
+      const fullPassword = credentials.securityToken ? 
+        credentials.password + credentials.securityToken : 
+        credentials.password;
       
       await conn.login(credentials.email, fullPassword);
 

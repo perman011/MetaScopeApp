@@ -261,14 +261,14 @@ export default function ConnectSalesforceOrgDialog({
                     </div>
                     
                     <div className="grid gap-2">
-                      <Label htmlFor="securityToken">Security Token</Label>
+                      <Label htmlFor="securityToken">Security Token (Optional for IP whitelisted orgs)</Label>
                       <Input
                         id="securityToken"
                         value={securityToken}
                         onChange={(e) => setSecurityToken(e.target.value)}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Your security token is sent to your email when you change your password or reset your security token in Salesforce.
+                        Your security token is sent to your email when you reset it in Salesforce. Leave empty if your IP is whitelisted or using a Network Security Trusted IP.
                       </p>
                     </div>
                     
