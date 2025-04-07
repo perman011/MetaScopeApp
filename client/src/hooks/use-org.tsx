@@ -17,6 +17,7 @@ export interface SalesforceOrg {
 interface OrgContextType {
   orgs: SalesforceOrg[];
   activeOrg: SalesforceOrg | null;
+  currentOrg: SalesforceOrg | null;  // Alias for activeOrg for compatibility
   setActiveOrg: (org: SalesforceOrg | null) => void;
   loading: boolean;
   error: string | null;
@@ -27,6 +28,7 @@ interface OrgContextType {
 const OrgContext = createContext<OrgContextType>({
   orgs: [],
   activeOrg: null,
+  currentOrg: null,
   setActiveOrg: () => {},
   loading: false,
   error: null,
@@ -96,6 +98,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
       value={{
         orgs,
         activeOrg,
+        currentOrg: activeOrg, // Alias activeOrg as currentOrg for compatibility
         setActiveOrg,
         loading,
         error,
