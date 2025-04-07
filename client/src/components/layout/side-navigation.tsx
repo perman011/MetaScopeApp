@@ -85,7 +85,7 @@ const navigationConfig: NavigationConfig = {
           {
             id: 'org-general-stats',
             label: 'Org General Stats',
-            href: '/org-general-stats/1',
+            href: '/org-general-stats',
             icon: BarChart3,
             roles: ['manager', 'admin', 'developer'],
           },

@@ -12,18 +12,22 @@ interface SalesforceOrg {
 interface OrgContextType {
   orgs: SalesforceOrg[];
   currentOrg: SalesforceOrg | null;
+  activeOrg: SalesforceOrg | null; // Added for backward compatibility
   isLoading: boolean;
   error: Error | null;
   selectOrg: (org: SalesforceOrg) => void;
+  setActiveOrg: (org: SalesforceOrg) => void; // Added for backward compatibility
   refreshOrgs: () => Promise<void>;
 }
 
 const defaultContext: OrgContextType = {
   orgs: [],
   currentOrg: null,
+  activeOrg: null,
   isLoading: false,
   error: null,
   selectOrg: () => {},
+  setActiveOrg: () => {},
   refreshOrgs: async () => {},
 };
 
@@ -76,7 +80,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     
     // If we have a currentOrg, make sure it still exists in the refreshed list
     if (currentOrg) {
-      const stillExists = orgsData.some(org => org.id === currentOrg.id);
+      const stillExists = orgsData.some((org: SalesforceOrg) => org.id === currentOrg.id);
       if (!stillExists && orgsData.length > 0) {
         setCurrentOrg(orgsData[0]);
       } else if (!stillExists) {
@@ -85,12 +89,17 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Define setActiveOrg as an alias for selectOrg to maintain backward compatibility
+  const setActiveOrg = selectOrg;
+
   const value = {
     orgs,
     currentOrg,
+    activeOrg: currentOrg, // Alias for backward compatibility
     isLoading,
     error,
     selectOrg,
+    setActiveOrg, // Alias for backward compatibility
     refreshOrgs,
   };
 
