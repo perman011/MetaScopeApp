@@ -73,6 +73,13 @@ const navigationConfig: NavigationConfig = {
         icon: Home,
         roles: ['all'],
       },
+      {
+        id: 'org-general-stats',
+        label: 'Org General Stats',
+        href: '/org-general-stats/1',
+        icon: BarChart3,
+        roles: ['manager', 'admin', 'developer'],
+      },
     ],
   },
   BUSINESS_INSIGHTS: {
@@ -104,13 +111,6 @@ const navigationConfig: NavigationConfig = {
         label: 'Data Dictionary',
         href: '/data-dictionary',
         icon: Database,
-        roles: ['manager', 'admin', 'developer'],
-      },
-      {
-        id: 'org-general-stats',
-        label: 'Org General Stats',
-        href: '/org-general-stats/1',
-        icon: BarChart3,
         roles: ['manager', 'admin', 'developer'],
       },
       {
