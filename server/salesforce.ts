@@ -56,8 +56,9 @@ export class SalesforceService {
       
       await conn.login(credentials.email, fullPassword);
 
-      // Get metadata API access
-      const metadata = new jsforce.Metadata(conn);
+      // Access metadata API through conn.metadata (not as a constructor)
+      // This is just to validate that metadata API access is available
+      const metadata = conn.metadata;
       
       return {
         accessToken: conn.accessToken || '',
