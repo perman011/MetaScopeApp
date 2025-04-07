@@ -100,6 +100,13 @@ const navigationConfig: NavigationConfig = {
         roles: ['manager', 'admin'],
       },
       {
+        id: 'data-dictionary',
+        label: 'Data Dictionary',
+        href: '/data-dictionary',
+        icon: Database,
+        roles: ['manager', 'admin', 'developer'],
+      },
+      {
         id: 'tech-debt-scanner',
         label: 'Technical Debt Scanner',
         href: '/tech-debt-scanner',

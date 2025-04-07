@@ -1,15 +1,29 @@
 import React from 'react';
 
-interface PageHeaderProps {
+export interface PageHeaderProps {
   title: string;
   description?: string;
+  icon?: React.ReactNode;
+  className?: string;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) => {
+export function PageHeader({ 
+  title, 
+  description, 
+  icon, 
+  className = "" 
+}: PageHeaderProps) {
   return (
-    <div className="mb-8">
-      <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-      {description && <p className="text-muted-foreground mt-2">{description}</p>}
+    <div className={`space-y-1 ${className}`}>
+      <div className="flex items-center gap-2">
+        {icon && <div className="text-primary-600">{icon}</div>}
+        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+      </div>
+      {description && (
+        <p className="text-sm text-neutral-500">
+          {description}
+        </p>
+      )}
     </div>
   );
-};
+}

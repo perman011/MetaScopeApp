@@ -38,12 +38,12 @@ const categoryColors: Record<string, string> = {
 
 // Custom tooltip for TreeMap
 const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length > 0) {
+  if (active && payload && payload.length > 0 && payload[0] && payload[0].payload) {
     const data = payload[0].payload;
     
     return (
       <div className="bg-white p-3 border shadow-sm rounded-md">
-        <p className="font-medium">{data.name}</p>
+        {data.name && <p className="font-medium">{data.name}</p>}
         {data.category && (
           <p className="text-sm text-neutral-600">Type: {data.category}</p>
         )}
@@ -86,6 +86,11 @@ const CustomTreemapContent = (props: any) => {
   // Adjust opacity for visual hierarchy - deeper nodes are more transparent
   const opacity = Math.max(0.7, 1 - depth * 0.2);
   
+  // Guard against undefined or null coordinate values
+  if (x === undefined || y === undefined || width === undefined || height === undefined) {
+    return null; // Don't render anything if we don't have valid coordinates
+  }
+  
   return (
     <g>
       <rect
@@ -98,7 +103,7 @@ const CustomTreemapContent = (props: any) => {
         stroke="#fff"
         strokeWidth={1}
       />
-      {hasEnoughSpace && (
+      {hasEnoughSpace && name && (
         <>
           <text
             x={x + width / 2}
@@ -171,7 +176,9 @@ export default function MetadataTreemapViz({
     }
   ];
 
-  const displayData = data || defaultData;
+  // Ensure data is valid: if it's undefined, null, or empty array, use default data
+  const isValidData = data && Array.isArray(data) && data.length > 0;
+  const displayData = isValidData ? data : defaultData;
 
   return (
     <Card className={className}>

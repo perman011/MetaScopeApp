@@ -83,6 +83,7 @@ function AuthenticatedRoutes() {
               <Route path="/code-analysis" component={CodeAnalysisPage} />
               <Route path="/tech-debt-scanner" component={TechnicalDebtScanner} />
               <Route path="/data-dictionary/:orgId" component={DataDictionaryPage} />
+              <Route path="/data-dictionary" component={DataDictionaryPage} />
               <Route path="/dashboard/org-health/metadata-components" component={() => 
                 <div className="p-6">
                   <h1 className="text-2xl font-bold mb-6">Metadata Components Analytics</h1>
