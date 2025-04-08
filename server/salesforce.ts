@@ -179,174 +179,155 @@ export class SalesforceService {
   // Get detailed information for a specific apex log
   async getApexLogDetail(org: SalesforceOrg, logId: string): Promise<any> {
     try {
-      // In a real implementation, this would fetch the actual log from Salesforce
-      // For demonstration purposes, we'll return mock data with realistic log events
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
       
-      // Generate random apex execution events to simulate a real log
-      const generateEvents = (count: number) => {
-        const eventTypes = [
-          'CODE_UNIT', 'DML', 'SOQL', 'EXCEPTION', 'CALLOUT', 'VALIDATION', 'SYSTEM'
-        ] as const;
+      // Fetch the raw log body using the tooling API
+      const logResult = await conn.tooling.request({
+        method: 'GET',
+        url: `/services/data/v56.0/tooling/sobjects/ApexLog/${logId}/Body`
+      });
+      
+      // Parse the log content and extract events
+      const logBody = logResult || '';
+      const logLines = logBody.split('\n');
+      
+      // Process log data to extract events
+      const events = [];
+      const soqlQueries = [];
+      const methods = [];
+      let totalDatabaseTime = 0;
+      let totalApexTime = 0;
+      let maxHeapSize = 0;
+      
+      // Process each line to extract events
+      for (let i = 0; i < logLines.length; i++) {
+        const line = logLines[i];
         
-        const severities = [
-          'INFO', 'DEBUG', 'WARNING', 'ERROR'
-        ] as const;
+        // Basic parsing - in a production app, this would be much more robust
+        // Extract timestamp, log level and message
+        const timestampMatch = line.match(/^\d\d:\d\d:\d\d\.\d+/);
+        const levelMatch = line.match(/\|(INFO|DEBUG|WARN|ERROR)\|/);
         
-        const events = [];
-        let timeOffset = 0;
-        
-        for (let i = 0; i < count; i++) {
-          const type = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-          const severity = severities[Math.floor(Math.random() * severities.length)];
-          const timestamp = new Date(Date.now() - timeOffset).toISOString().slice(11, 23);
-          timeOffset += Math.floor(Math.random() * 1000); // Random time increment
+        if (timestampMatch && levelMatch) {
+          const timestamp = timestampMatch[0];
+          const severity = levelMatch[1];
+          const message = line.substring(line.indexOf('|', line.indexOf('|') + 1) + 1).trim();
           
-          let details = '';
-          let executionTime = type === 'CODE_UNIT' || type === 'SOQL' || type === 'DML' ? 
-            Math.floor(Math.random() * 500) : undefined;
-          let heapSize = Math.floor(Math.random() * 1000000);
+          // Determine event type
+          let type = 'SYSTEM';
+          let executionTime;
+          let heapSize;
           
-          switch (type) {
-            case 'CODE_UNIT':
-              details = `Execute ${Math.random() > 0.5 ? 'anonymous' : 'AccountTrigger'}: line ${Math.floor(Math.random() * 500)}`;
-              break;
-            case 'SOQL':
-              details = `SELECT Id, Name, ${Math.random() > 0.5 ? 'Industry' : 'Rating'} FROM Account ${Math.random() > 0.7 ? 'WHERE Id != null' : ''} LIMIT 100`;
-              break;
-            case 'DML':
-              details = `DML ${Math.random() > 0.5 ? 'INSERT' : 'UPDATE'}: ${Math.floor(Math.random() * 10)} ${Math.random() > 0.5 ? 'Account' : 'Contact'} records`;
-              break;
-            case 'EXCEPTION':
-              details = `System.${Math.random() > 0.5 ? 'NullPointerException' : 'DmlException'}: ${Math.random() > 0.5 ? 'Attempt to de-reference a null object' : 'REQUIRED_FIELD_MISSING'}`;
-              // For exceptions, always use ERROR severity
-              let eventSeverity = 'ERROR';
-              break;
-            case 'CALLOUT':
-              details = `HTTP ${Math.random() > 0.5 ? 'GET' : 'POST'} callout to ${Math.random() > 0.5 ? 'https://api.example.com/v1/data' : 'https://api.external-service.com/api'}`;
-              break;
-            case 'VALIDATION':
-              details = `VALIDATION_RULE: ${Math.random() > 0.5 ? 'Account_must_have_industry' : 'Opportunity_closed_date_required'}`;
-              break;
-            case 'SYSTEM':
-              details = `System.${Math.random() > 0.5 ? 'debug' : 'runAs'}: ${Math.random() > 0.5 ? 'Debug message' : 'Running as different user'}`;
-              break;
+          if (message.includes('SOQL_EXECUTE')) {
+            type = 'SOQL';
+            // Extract execution time if available
+            const timeMatch = message.match(/(\d+)\s+ms/);
+            if (timeMatch) {
+              executionTime = parseInt(timeMatch[1]);
+              totalDatabaseTime += executionTime;
+              
+              // Extract query and add to slow queries if over 100ms
+              const queryMatch = message.match(/SOQL_EXECUTE\s+\[\d+\]\s+(.*)/);
+              if (queryMatch && executionTime > 100) {
+                soqlQueries.push({
+                  query: queryMatch[1],
+                  time: executionTime,
+                  lineNumber: i + 1,
+                  rows: 0 // Without parsing result rows
+                });
+              }
+            }
+          } else if (message.includes('METHOD_')) {
+            type = 'CODE_UNIT';
+            // Extract execution time and method details
+            const timeMatch = message.match(/(\d+)\s+ms/);
+            const methodMatch = message.match(/METHOD_\w+\s+\[\d+\]\s+([\w\.]+)\.(\w+)/);
+            
+            if (timeMatch) {
+              executionTime = parseInt(timeMatch[1]);
+              totalApexTime += executionTime;
+              
+              if (methodMatch && executionTime > 100) {
+                methods.push({
+                  className: methodMatch[1],
+                  methodName: methodMatch[2],
+                  time: executionTime,
+                  lineNumber: i + 1,
+                  called: 1
+                });
+              }
+            }
+          } else if (message.includes('DML_')) {
+            type = 'DML';
+          } else if (message.includes('EXCEPTION')) {
+            type = 'EXCEPTION';
+          } else if (message.includes('CALLOUT')) {
+            type = 'CALLOUT';
+          } else if (message.includes('VALIDATION_')) {
+            type = 'VALIDATION';
+          }
+          
+          // Extract heap size if available
+          const heapMatch = message.match(/HEAP_ALLOCATE.*?(\d+)/);
+          if (heapMatch) {
+            heapSize = parseInt(heapMatch[1]);
+            maxHeapSize = Math.max(maxHeapSize, heapSize);
           }
           
           events.push({
             type,
             timestamp,
-            details,
-            line: Math.floor(Math.random() * 1000) + 1,
+            details: message,
+            line: i + 1,
             executionTime,
             heapSize,
             category: type,
-            severity: type === 'EXCEPTION' ? 'ERROR' : severity
+            severity
           });
         }
+      }
+      
+      // Fetch governor limits from the log
+      const limitUsage = [];
+      const limitsPattern = /LIMIT_USAGE_FOR_NS.*?(\w+)\s+(\d+)\s+out of\s+(\d+)/g;
+      let limitMatch;
+      let limitText = logLines.join('\n');
+      
+      while ((limitMatch = limitsPattern.exec(limitText)) !== null) {
+        const name = limitMatch[1];
+        const used = parseInt(limitMatch[2]);
+        const total = parseInt(limitMatch[3]);
+        const percentage = Math.floor((used / total) * 100);
         
-        return events;
-      };
+        limitUsage.push({
+          name,
+          used,
+          total,
+          percentage
+        });
+      }
       
-      // Generate example slow queries
-      const slowQueries = [
-        {
-          query: "SELECT Id, Name, AccountNumber, Site, Type, ParentId FROM Account WHERE CreatedDate > LAST_MONTH",
-          time: 756,
-          lineNumber: 143,
-          rows: 342
-        },
-        {
-          query: "SELECT Id, Name, Email, Phone, AccountId FROM Contact WHERE AccountId IN (SELECT Id FROM Account WHERE Industry = 'Technology')",
-          time: 1253,
-          lineNumber: 247,
-          rows: 1456
-        },
-        {
-          query: "SELECT Id, Amount, StageName, AccountId, Probability FROM Opportunity WHERE CloseDate >= THIS_MONTH AND StageName NOT IN ('Closed Won', 'Closed Lost')",
-          time: 654,
-          lineNumber: 382,
-          rows: 120
-        }
-      ];
+      // Sort slow queries and methods by execution time
+      soqlQueries.sort((a, b) => b.time - a.time);
+      methods.sort((a, b) => b.time - a.time);
       
-      // Generate example slow methods
-      const slowMethods = [
-        {
-          className: "AccountController",
-          methodName: "processAccountHierarchy",
-          time: 1876,
-          lineNumber: 126,
-          called: 3
-        },
-        {
-          className: "OpportunityTriggerHandler",
-          methodName: "updateRelatedRecords",
-          time: 1350,
-          lineNumber: 245,
-          called: 12
-        },
-        {
-          className: "DataMigrationBatch",
-          methodName: "execute",
-          time: 2310,
-          lineNumber: 78,
-          called: 1
-        }
-      ];
-      
-      // Generate example governor limit usage
-      const limitUsage = [
-        {
-          name: "Heap Size",
-          used: 2345678,
-          total: 6000000,
-          percentage: 39
-        },
-        {
-          name: "CPU Time",
-          used: 5432,
-          total: 10000,
-          percentage: 54
-        },
-        {
-          name: "SOQL Queries",
-          used: 74,
-          total: 100,
-          percentage: 74
-        },
-        {
-          name: "DML Statements",
-          used: 28,
-          total: 150,
-          percentage: 19
-        },
-        {
-          name: "SOQL Query Rows",
-          used: 3456,
-          total: 50000,
-          percentage: 7
-        },
-        {
-          name: "DML Rows",
-          used: 256,
-          total: 10000,
-          percentage: 3
-        }
-      ];
-      
-      // Simulating the full log response
+      // Return detailed log information
       return {
         id: logId,
-        body: "This would be the raw log body text...",
-        events: generateEvents(50), // Generate 50 sample log events
+        body: logBody,
+        events: events,
         performance: {
-          databaseTime: 3210,
-          slowestQueries: slowQueries,
-          apexExecutionTime: 8765,
-          slowestMethods: slowMethods,
-          heapUsage: 2345678,
+          databaseTime: totalDatabaseTime,
+          slowestQueries: soqlQueries.slice(0, 5), // Top 5 slowest queries
+          apexExecutionTime: totalApexTime,
+          slowestMethods: methods.slice(0, 5), // Top 5 slowest methods
+          heapUsage: maxHeapSize,
           limitUsage: limitUsage,
-          totalExecutionTime: 12876 // Total execution time in milliseconds
+          totalExecutionTime: totalDatabaseTime + totalApexTime
         }
       };
     } catch (error) {
@@ -358,9 +339,18 @@ export class SalesforceService {
   // Delete an apex log
   async deleteApexLog(org: SalesforceOrg, logId: string): Promise<void> {
     try {
-      // In a real implementation, this would call Salesforce to delete the log
       console.log(`Deleting apex log ${logId} from org ${org.name}`);
-      // Success response (no actual deletion in mock version)
+      
+      // Connect to Salesforce using stored credentials
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
+      
+      // Delete the apex log using the tooling API
+      await conn.tooling.delete('ApexLog', logId);
+      
+      console.log(`Apex log ${logId} deleted successfully`);
       return;
     } catch (error) {
       console.error('Error deleting apex log:', error);
@@ -864,80 +854,214 @@ export class SalesforceService {
   // Generate a health score for a Salesforce org based on its metadata
   async generateHealthScore(orgId: number): Promise<any> {
     try {
-      // In a real implementation, this would analyze the actual metadata
-      // For now, we'll create a mock health score
+      // Get the org details to connect to Salesforce
+      const org = await storage.getOrg(orgId);
+      if (!org) {
+        throw new Error(`Org with ID ${orgId} not found.`);
+      }
       
       // Get org's metadata for analysis
       const metadata = await storage.getOrgMetadata(orgId);
       
-      // Calculate complexity metrics
-      const complexityMetrics = this.calculateComplexityMetrics(metadata);
+      // Connect to Salesforce to get data for analysis
+      const conn = new jsforce.Connection({
+        instanceUrl: org.instanceUrl,
+        accessToken: org.accessToken || ''
+      });
       
-      const issues = [
-        {
-          id: "SEC-001",
-          severity: "critical",
-          category: "security",
-          title: "Overexposed Field Permissions",
-          description: "Customer.SSN field is accessible to 4 profiles that don't require it",
-          impact: "Sensitive data could be accessed by unauthorized users",
-          recommendation: "Review and restrict field-level security for sensitive fields"
-        },
-        {
-          id: "SEC-002",
-          severity: "critical",
-          category: "security",
-          title: "SOQL Injection Vulnerability",
-          description: "LeadController.apex contains potential SOQL injection vulnerability",
-          impact: "Could allow unauthorized data access or modification",
-          recommendation: "Use parameterized queries instead of string concatenation"
-        },
-        {
-          id: "SEC-003",
-          severity: "warning",
-          category: "security",
-          title: "Excessive Profile Permissions",
-          description: "Support Profile has unnecessary Modify All Data permission",
-          impact: "Provides more access than required, violating principle of least privilege",
-          recommendation: "Review and remove unnecessary permissions"
-        },
-        {
-          id: "SEC-004",
-          severity: "warning",
-          category: "security",
-          title: "Sharing Rule Gaps",
-          description: "Finance records have inconsistent sharing rules across objects",
-          impact: "May result in inconsistent data access",
-          recommendation: "Standardize sharing rules across related objects"
-        },
-        {
-          id: "COMP-001",
+      // Fetch information for analysis
+      const [
+        apexClassesResult,
+        triggersResult,
+        objectsResponse,
+        flowsResult,
+        profilesResult
+      ] = await Promise.all([
+        // Get Apex classes for code analysis
+        conn.tooling.query('SELECT Id, Name, Body, LengthWithoutComments, Status FROM ApexClass ORDER BY LengthWithoutComments DESC LIMIT 50'),
+        // Get triggers for automation analysis
+        conn.tooling.query('SELECT Id, Name, Body, Status FROM ApexTrigger ORDER BY Name ASC LIMIT 50'),
+        // Get object details for data model analysis
+        conn.describeGlobal(),
+        // Get flows for automation analysis
+        conn.tooling.query('SELECT Id, ApiName, Label, ProcessType, Status FROM Flow WHERE Status = \'Active\' ORDER BY Label ASC LIMIT 50'),
+        // Get profiles for security analysis
+        conn.query('SELECT Id, Name FROM Profile ORDER BY Name ASC LIMIT 20')
+      ]);
+      
+      // Extract information from the results
+      const apexClasses = apexClassesResult.records || [];
+      const triggers = triggersResult.records || [];
+      const objects = objectsResponse.sobjects || [];
+      const flows = flowsResult.records || [];
+      const profiles = profilesResult.records || [];
+      
+      // Analyze data to identify issues
+      const issues = [];
+      
+      // Security analysis
+      // Check for large Apex classes with potential security issues
+      for (const apexClass of apexClasses) {
+        const body = apexClass.Body || '';
+        
+        // Check for potential SOQL injection vulnerability (simplified check)
+        if (body.includes('String.valueOf') && body.includes('query') && body.includes('execute')) {
+          issues.push({
+            id: `SEC-SOQL-${apexClass.Id.substring(0, 5)}`,
+            severity: "critical",
+            category: "security",
+            title: "Potential SOQL Injection Vulnerability",
+            description: `${apexClass.Name} contains potential SOQL injection patterns`,
+            impact: "Could allow unauthorized data access or modification",
+            recommendation: "Use parameterized queries instead of string concatenation"
+          });
+        }
+        
+        // Check for hardcoded credentials
+        if (body.includes('password') && /['"][^'"]{5,}['"]/.test(body)) {
+          issues.push({
+            id: `SEC-CRED-${apexClass.Id.substring(0, 5)}`,
+            severity: "critical",
+            category: "security",
+            title: "Hardcoded Credential",
+            description: `${apexClass.Name} may contain hardcoded credentials`,
+            impact: "Security risk from exposed credentials in code",
+            recommendation: "Move credentials to secure custom settings or named credentials"
+          });
+        }
+      }
+      
+      // Data model analysis
+      const standardObjects = objects.filter(obj => !obj.custom).length;
+      const customObjects = objects.filter(obj => obj.custom).length;
+      
+      // If there are many custom objects, flag as a complexity issue
+      if (customObjects > 50) {
+        issues.push({
+          id: "COMP-OBJ-01",
           severity: "warning",
           category: "dataModel",
-          title: "Complex Object Relationships",
-          description: "Account object has excessive number of child objects (10+)",
-          impact: "May lead to query performance issues and trigger complexity",
-          recommendation: "Review data model and consider simplification or restructuring"
-        },
-        {
-          id: "COMP-002",
+          title: "High Custom Object Count",
+          description: `Org has ${customObjects} custom objects which may indicate high complexity`,
+          impact: "May lead to maintenance challenges and complex relationships",
+          recommendation: "Review the data model for consolidation opportunities"
+        });
+      }
+      
+      // Apex code analysis
+      const largeClasses = apexClasses.filter(cls => (cls.LengthWithoutComments || 0) > 1000);
+      if (largeClasses.length > 0) {
+        issues.push({
+          id: "COMP-APEX-01",
           severity: "info",
           category: "apex",
-          title: "High Technical Debt in Legacy Code",
-          description: "Several Apex classes are over 1000 lines with low test coverage",
+          title: "Large Apex Classes",
+          description: `Found ${largeClasses.length} Apex classes with more than 1000 lines of code`,
           impact: "Increases maintenance burden and risk of bugs during changes",
           recommendation: "Refactor large classes into smaller, more maintainable units"
+        });
+      }
+      
+      // Automation analysis - check for many triggers and flows
+      if (triggers.length > 20 || flows.length > 30) {
+        issues.push({
+          id: "AUTO-01",
+          severity: "warning",
+          category: "automation",
+          title: "High Automation Volume",
+          description: `Org has ${triggers.length} triggers and ${flows.length} flows`,
+          impact: "May lead to performance issues and difficult debugging",
+          recommendation: "Consolidate and streamline automations where possible"
+        });
+      }
+      
+      // Calculate scores based on the actual data
+      const calculateScore = (baseline: number, factors: Array<{weight: number, score: number}>): number => {
+        let adjustedScore = baseline;
+        for (const factor of factors) {
+          adjustedScore += factor.weight * factor.score;
         }
-      ];
+        return Math.min(100, Math.max(0, Math.round(adjustedScore)));
+      };
+      
+      // Scale metrics by actual data
+      // More objects and classes = higher complexity and volume
+      const objectComplexity = Math.min(100, Math.round((customObjects / 100) * 100));
+      const codeComplexity = Math.min(100, Math.round((apexClasses.length / 200) * 100));
+      const automationComplexity = Math.min(100, Math.round(((triggers.length + flows.length) / 100) * 100));
+      
+      // More large classes = higher technical debt
+      const technicalDebtScore = Math.min(100, Math.round((largeClasses.length / Math.max(1, apexClasses.length)) * 100));
+      
+      // More issues = lower security score
+      const securityIssues = issues.filter(i => i.category === 'security').length;
+      
+      // Calculate metrics
+      const complexityMetrics = {
+        complexityScore: calculateScore(50, [
+          { weight: 0.4, score: objectComplexity },
+          { weight: 0.3, score: codeComplexity },
+          { weight: 0.3, score: automationComplexity }
+        ]),
+        performanceRisk: calculateScore(40, [
+          { weight: 0.5, score: automationComplexity },
+          { weight: 0.3, score: objectComplexity },
+          { weight: 0.2, score: codeComplexity }
+        ]),
+        technicalDebt: calculateScore(30, [
+          { weight: 0.6, score: technicalDebtScore },
+          { weight: 0.2, score: codeComplexity },
+          { weight: 0.2, score: automationComplexity }
+        ]),
+        metadataVolume: calculateScore(50, [
+          { weight: 0.4, score: objectComplexity },
+          { weight: 0.3, score: apexClasses.length / 2 },
+          { weight: 0.3, score: (triggers.length + flows.length) / 2 }
+        ]),
+        customizationLevel: calculateScore(40, [
+          { weight: 0.5, score: customObjects / Math.max(1, standardObjects) * 50 },
+          { weight: 0.5, score: codeComplexity }
+        ])
+      };
+      
+      // Calculate domain scores
+      const securityScore = calculateScore(80, [
+        { weight: -5, score: securityIssues }
+      ]);
+      
+      const dataModelScore = calculateScore(90, [
+        { weight: -0.2, score: objectComplexity }
+      ]);
+      
+      const automationScore = calculateScore(85, [
+        { weight: -0.2, score: automationComplexity }
+      ]);
+      
+      const apexScore = calculateScore(85, [
+        { weight: -0.3, score: technicalDebtScore }
+      ]);
+      
+      const uiComponentScore = calculateScore(70, [
+        { weight: 0, score: 0 } // No specific UI components analyzed yet
+      ]);
+      
+      // Overall score is a weighted average of all domain scores
+      const overallScore = calculateScore(0, [
+        { weight: 0.25, score: securityScore },
+        { weight: 0.2, score: dataModelScore },
+        { weight: 0.2, score: automationScore },
+        { weight: 0.2, score: apexScore },
+        { weight: 0.15, score: uiComponentScore }
+      ]);
       
       const healthScore = {
         orgId,
-        overallScore: 87,
-        securityScore: 72,
-        dataModelScore: 91,
-        automationScore: 88,
-        apexScore: 85,
-        uiComponentScore: 64,
+        overallScore,
+        securityScore,
+        dataModelScore,
+        automationScore,
+        apexScore,
+        uiComponentScore,
         // Add complexity metrics
         complexityScore: complexityMetrics.complexityScore,
         performanceRisk: complexityMetrics.performanceRisk,
@@ -966,10 +1090,7 @@ export class SalesforceService {
     metadataVolume: number;
     customizationLevel: number;
   } {
-    // In a real implementation, this would do a detailed analysis of the metadata
-    // For this example, we'll create realistic complexity metrics based on simulated patterns
-
-    // If no metadata, return default values
+    // Default values if no metadata is available
     if (!metadata || metadata.length === 0) {
       return {
         complexityScore: 50,  // Medium complexity
@@ -980,39 +1101,71 @@ export class SalesforceService {
       };
     }
     
-    // Example logic to calculate complexity:
-    // 1. Count total objects and custom fields
-    // 2. Analyze relationship complexity (lookups vs master-detail)
-    // 3. Check for complex automations (flows, triggers, etc.)
-    // 4. Evaluate code quality and test coverage
+    // Analyze metadata components to calculate complexity metrics
+    // Count different types of components
+    const typeCounts: Record<string, number> = {};
+    metadata.forEach((item: any) => {
+      const type = item.type || 'Unknown';
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
     
-    // For this demo, we'll use random values between 30-85 to simulate a real org
-    // In a production version, these would be calculated from actual metadata analysis
-    const randomBetween = (min: number, max: number) => 
-      Math.floor(Math.random() * (max - min + 1) + min);
+    // Calculate complexity score based on component counts
+    const customObjects = typeCounts['CustomObject'] || 0;
+    const customFields = typeCounts['CustomField'] || 0;
+    const apexClasses = typeCounts['ApexClass'] || 0;
+    const apexTriggers = typeCounts['ApexTrigger'] || 0;
+    const flows = typeCounts['Flow'] || 0;
+    const validationRules = typeCounts['ValidationRule'] || 0;
+    const workflows = typeCounts['Workflow'] || 0;
     
-    const complexityScore = randomBetween(40, 85);  // Overall complexity
+    // Measure code complexity based on component counts
+    // More components = higher complexity
+    const complexityScore = Math.min(100, Math.round(
+      (customObjects * 2 + 
+       customFields * 0.5 + 
+       apexClasses * 1.5 + 
+       apexTriggers * 2 + 
+       flows * 1.5 + 
+       validationRules + 
+       workflows) / 10
+    ));
     
-    // Make other metrics somewhat correlated with complexity
-    const variance = 15; // How much metrics can vary from complexityScore
-    const performanceRisk = Math.min(100, Math.max(0, 
-      complexityScore + randomBetween(-variance, variance)));
-      
-    const technicalDebt = Math.min(100, Math.max(0, 
-      complexityScore + randomBetween(-variance, variance)));
-      
-    const metadataVolume = Math.min(100, Math.max(0, 
-      complexityScore + randomBetween(-variance, variance)));
-      
-    const customizationLevel = Math.min(100, Math.max(0, 
-      complexityScore + randomBetween(-variance, variance)));
+    // Performance risk is higher with more automations (triggers, flows, workflows)
+    const performanceRisk = Math.min(100, Math.round(
+      (apexTriggers * 3 + 
+       flows * 2 + 
+       workflows * 1.5 + 
+       validationRules) / 5
+    ));
+    
+    // Technical debt increases with code volume and complexity
+    const technicalDebt = Math.min(100, Math.round(
+      (apexClasses * 2 + 
+       apexTriggers * 2.5 + 
+       customObjects * 1.5 + 
+       customFields * 0.3) / 8
+    ));
+    
+    // Metadata volume is a direct measure of total components
+    const metadataVolume = Math.min(100, Math.round(
+      Object.values(typeCounts).reduce((sum, count) => sum + count, 0) / 5
+    ));
+    
+    // Customization level relates to how much custom development exists
+    const customizationLevel = Math.min(100, Math.round(
+      (customObjects * 3 + 
+       apexClasses * 2 + 
+       apexTriggers * 2 + 
+       flows * 1.5 + 
+       customFields * 0.2) / 10
+    ));
     
     return {
-      complexityScore,
-      performanceRisk,
-      technicalDebt,
-      metadataVolume,
-      customizationLevel
+      complexityScore: Math.max(10, complexityScore),  // Ensure minimum values
+      performanceRisk: Math.max(10, performanceRisk),
+      technicalDebt: Math.max(10, technicalDebt),
+      metadataVolume: Math.max(10, metadataVolume),
+      customizationLevel: Math.max(10, customizationLevel)
     };
   }
   
@@ -1114,40 +1267,274 @@ export class SalesforceService {
   
   // Generate dependency references for a component based on real metadata
   private generateDependencyReferences(componentName: string, componentType: string, metadata: any[]): any[] {
-    // This is where you would implement logic to analyze the metadata and generate actual dependencies
-    // For now, we'll create some realistic-looking dependencies based on component type and name
-    
+    // Analyze the metadata to find actual dependencies
     const references = [];
-    let referenceCount = Math.floor(Math.random() * 5) + 1; // Generate 1-5 references
     
-    for (let i = 0; i < referenceCount; i++) {
-      const relatedItems = metadata.filter(item => item.name !== componentName);
-      if (relatedItems.length > 0) {
-        const randomIndex = Math.floor(Math.random() * relatedItems.length);
-        const relatedItem = relatedItems[randomIndex];
-        
-        // Determine reference type based on component relationships
-        let referenceType = "Reference";
-        
-        if (componentType === 'ApexClass' && relatedItem.type === 'ApexTrigger') {
-          referenceType = "Trigger Handler";
-        } else if (componentType === 'ApexClass' && relatedItem.type === 'ApexClass') {
-          referenceType = "Method Call";
-        } else if (componentType === 'CustomObject' && relatedItem.type === 'ApexClass') {
-          referenceType = "Object Reference";
-        } else if (componentType === 'CustomField' && relatedItem.type === 'ApexClass') {
-          referenceType = "Field Reference";
-        } else if (componentType === 'CustomField' && relatedItem.type === 'Layout') {
-          referenceType = "Layout Field";
-        }
-        
-        references.push({
-          id: i + 1,
-          name: relatedItem.name,
-          type: relatedItem.type,
-          referenceType: referenceType
-        });
+    try {
+      // Find the specific component in the metadata
+      const component = metadata.find(item => 
+        item.name === componentName && item.type === componentType
+      );
+      
+      if (!component) {
+        return [];
       }
+      
+      // Different analysis strategies based on component type
+      switch (componentType) {
+        case 'ApexClass':
+          // For Apex classes, analyze the body for references to other components
+          if (component.body) {
+            // Look for references to other Apex classes
+            const apexClasses = metadata.filter(item => 
+              item.type === 'ApexClass' && item.name !== componentName
+            );
+            
+            for (const cls of apexClasses) {
+              // Check if class name appears in the body
+              // This is simplified - in reality, we would use regex with word boundaries
+              if (component.body.includes(cls.name)) {
+                references.push({
+                  id: references.length + 1,
+                  name: cls.name,
+                  type: 'ApexClass',
+                  referenceType: "Method Call"
+                });
+              }
+            }
+            
+            // Look for references to custom objects
+            const objects = metadata.filter(item => item.type === 'CustomObject');
+            
+            for (const obj of objects) {
+              // Check for SObject references like Account, Custom_Object__c
+              if (component.body.includes(obj.name) || 
+                  component.body.includes(`${obj.name}__c`) || 
+                  component.body.includes(`[SELECT`) && component.body.includes(`FROM ${obj.name}`)) {
+                
+                references.push({
+                  id: references.length + 1,
+                  name: obj.name,
+                  type: 'CustomObject',
+                  referenceType: "Object Reference"
+                });
+              }
+            }
+            
+            // Look for references to fields
+            const fields = metadata.filter(item => item.type === 'CustomField');
+            
+            for (const field of fields) {
+              // Check for field references
+              if (component.body.includes(field.name) || 
+                  component.body.includes(`${field.name}__c`)) {
+                
+                references.push({
+                  id: references.length + 1,
+                  name: field.name,
+                  type: 'CustomField',
+                  referenceType: "Field Reference"
+                });
+              }
+            }
+            
+            // Look for references to triggers that might be handled by this class
+            const triggers = metadata.filter(item => item.type === 'ApexTrigger');
+            
+            // Classes that contain "handler" or "service" in their name often handle triggers
+            if (componentName.toLowerCase().includes('handler') || 
+                componentName.toLowerCase().includes('service')) {
+              
+              for (const trigger of triggers) {
+                // If the trigger body contains a reference to this class
+                if (trigger.body && trigger.body.includes(componentName)) {
+                  references.push({
+                    id: references.length + 1,
+                    name: trigger.name,
+                    type: 'ApexTrigger',
+                    referenceType: "Handled Trigger"
+                  });
+                }
+              }
+            }
+          }
+          break;
+          
+        case 'ApexTrigger':
+          // For triggers, find classes that handle or are referenced by this trigger
+          if (component.body) {
+            // Look for classes referenced in the trigger
+            const apexClasses = metadata.filter(item => item.type === 'ApexClass');
+            
+            for (const cls of apexClasses) {
+              if (component.body.includes(cls.name)) {
+                references.push({
+                  id: references.length + 1,
+                  name: cls.name,
+                  type: 'ApexClass',
+                  referenceType: "Handler Class"
+                });
+              }
+            }
+            
+            // Find the object this trigger is for
+            // Triggers usually have format like "trigger AccountTrigger on Account"
+            const triggerOnMatch = component.body.match(/trigger\s+\w+\s+on\s+(\w+)(\s|\(|__c)/i);
+            
+            if (triggerOnMatch && triggerOnMatch[1]) {
+              const objectName = triggerOnMatch[1];
+              const matchedObject = metadata.find(item => 
+                item.type === 'CustomObject' && 
+                (item.name === objectName || item.name.replace('__c', '') === objectName)
+              );
+              
+              if (matchedObject) {
+                references.push({
+                  id: references.length + 1,
+                  name: matchedObject.name,
+                  type: 'CustomObject',
+                  referenceType: "Triggered Object"
+                });
+              }
+            }
+          }
+          break;
+          
+        case 'CustomObject':
+          // For custom objects, find fields, classes, and triggers that reference it
+          // Find child fields
+          const fields = metadata.filter(item => 
+            item.type === 'CustomField' && 
+            item.name.startsWith(`${componentName}.`)
+          );
+          
+          for (const field of fields) {
+            references.push({
+              id: references.length + 1,
+              name: field.name.replace(`${componentName}.`, ''),
+              type: 'CustomField',
+              referenceType: "Object Field"
+            });
+          }
+          
+          // Find triggers on this object
+          const triggers = metadata.filter(item => item.type === 'ApexTrigger');
+          
+          for (const trigger of triggers) {
+            if (trigger.body && 
+               (trigger.body.includes(`on ${componentName}`) || 
+                trigger.body.includes(`on ${componentName}__c`))) {
+              
+              references.push({
+                id: references.length + 1,
+                name: trigger.name,
+                type: 'ApexTrigger',
+                referenceType: "Object Trigger"
+              });
+            }
+          }
+          
+          // Find Apex classes that reference this object
+          const apexClasses = metadata.filter(item => item.type === 'ApexClass');
+          
+          for (const cls of apexClasses) {
+            if (cls.body && 
+               (cls.body.includes(componentName) || 
+                cls.body.includes(`${componentName}__c`) || 
+                cls.body.includes(`FROM ${componentName}`))) {
+              
+              references.push({
+                id: references.length + 1,
+                name: cls.name,
+                type: 'ApexClass',
+                referenceType: "Referenced In Code"
+              });
+            }
+          }
+          break;
+          
+        case 'CustomField':
+          // For fields, find classes and layouts that reference them
+          // Extract the object name from field name (e.g., "Account.Name" -> "Account")
+          const fieldParts = componentName.split('.');
+          if (fieldParts.length > 1) {
+            const objectName = fieldParts[0];
+            const fieldName = fieldParts[1];
+            
+            // Find the object this field belongs to
+            const parentObject = metadata.find(item => 
+              item.type === 'CustomObject' && item.name === objectName
+            );
+            
+            if (parentObject) {
+              references.push({
+                id: references.length + 1,
+                name: parentObject.name,
+                type: 'CustomObject',
+                referenceType: "Parent Object"
+              });
+            }
+            
+            // Find Apex classes that reference this field
+            const classes = metadata.filter(item => item.type === 'ApexClass');
+            
+            for (const cls of classes) {
+              if (cls.body && 
+                 (cls.body.includes(componentName) || 
+                  cls.body.includes(fieldName) && cls.body.includes(objectName))) {
+                
+                references.push({
+                  id: references.length + 1,
+                  name: cls.name,
+                  type: 'ApexClass',
+                  referenceType: "Field Reference"
+                });
+              }
+            }
+          }
+          break;
+          
+        // Add other component types as needed
+        default:
+          // For other types, return an empty array for now
+          break;
+      }
+      
+      // If we found no references through analysis but should have some relationships,
+      // look for possible relationships based on naming conventions
+      if (references.length === 0) {
+        // Find related items based on naming patterns
+        const relatedItems = metadata.filter(item => {
+          if (item.name === componentName) return false;
+          
+          // Check for naming relationships
+          // e.g., AccountService and Account, or Invoice__c and InvoiceLine__c
+          return item.name.includes(componentName) || 
+                 componentName.includes(item.name);
+        });
+        
+        // Add up to 3 related items based on naming
+        for (let i = 0; i < Math.min(3, relatedItems.length); i++) {
+          const item = relatedItems[i];
+          let referenceType = "Related Component";
+          
+          if (componentType === 'CustomObject' && item.type === 'CustomObject') {
+            referenceType = "Related Object";
+          } else if (componentType === 'ApexClass' && item.type === 'ApexClass') {
+            referenceType = "Related Class";
+          }
+          
+          references.push({
+            id: references.length + 1,
+            name: item.name,
+            type: item.type,
+            referenceType: referenceType
+          });
+        }
+      }
+    } catch (error) {
+      console.error(`Error analyzing dependencies for ${componentType} ${componentName}:`, error);
+      // Return empty array in case of analysis error
     }
     
     return references;
@@ -1177,37 +1564,253 @@ export class SalesforceService {
   
   // Generate reverse dependencies for a component based on real metadata
   private generateReverseDependencies(componentName: string, componentType: string, metadata: any[]): any[] {
-    // This would analyze metadata to find components that reference the given component
-    // For now, we'll simulate realistic reverse dependencies
+    // Find components that reference the given component
     const reverseDependencies = [];
-    let dependencyCount = Math.floor(Math.random() * 6) + 2; // Generate 2-7 dependencies
     
-    for (let i = 0; i < dependencyCount; i++) {
-      const relatedItems = metadata.filter(item => item.name !== componentName);
-      if (relatedItems.length > 0) {
-        const randomIndex = Math.floor(Math.random() * relatedItems.length);
-        const dependentItem = relatedItems[randomIndex];
-        
-        // Determine reference type based on component relationships
-        let referenceType = "Reference";
-        
-        if (componentType === 'ApexClass' && dependentItem.type === 'CustomObject') {
-          referenceType = "Object Reference";
-        } else if (componentType === 'ApexClass' && dependentItem.type === 'CustomField') {
-          referenceType = "Field Reference";
-        } else if (componentType === 'ApexClass' && dependentItem.type === 'ApexClass') {
-          referenceType = "Utility Reference";
-        } else if (componentType === 'CustomObject' && dependentItem.type === 'CustomField') {
-          referenceType = "Parent Object";
-        }
-        
-        reverseDependencies.push({
-          id: i + 1,
-          name: dependentItem.name,
-          type: dependentItem.type,
-          referenceType: referenceType
-        });
+    try {
+      // Different reverse dependency analysis strategies based on component type
+      switch (componentType) {
+        case 'ApexClass':
+          // Find triggers and other classes that reference this class
+          
+          // Check for classes that might extend or reference this class
+          const referencingClasses = metadata.filter(item => 
+            item.type === 'ApexClass' && 
+            item.name !== componentName &&
+            item.body && 
+            (item.body.includes(componentName) || 
+             item.body.includes(`extends ${componentName}`) ||
+             item.body.includes(`${componentName}.`))
+          );
+          
+          for (const cls of referencingClasses) {
+            // Determine the type of reference
+            let referenceType = "Class Reference";
+            
+            if (cls.body.includes(`extends ${componentName}`)) {
+              referenceType = "Extends Class";
+            } else if (cls.body.includes(`${componentName}.`)) {
+              referenceType = "Method Call";
+            }
+            
+            reverseDependencies.push({
+              id: reverseDependencies.length + 1,
+              name: cls.name,
+              type: 'ApexClass',
+              referenceType: referenceType
+            });
+          }
+          
+          // Check for triggers that reference this class
+          const referencingTriggers = metadata.filter(item => 
+            item.type === 'ApexTrigger' && 
+            item.body && 
+            item.body.includes(componentName)
+          );
+          
+          for (const trigger of referencingTriggers) {
+            reverseDependencies.push({
+              id: reverseDependencies.length + 1,
+              name: trigger.name,
+              type: 'ApexTrigger',
+              referenceType: "Uses Handler Class"
+            });
+          }
+          break;
+          
+        case 'ApexTrigger':
+          // Find classes that may handle this trigger
+          
+          // Classes that handle triggers often have similar names
+          // e.g., AccountTrigger might be handled by AccountTriggerHandler
+          const potentialHandlers = metadata.filter(item => 
+            item.type === 'ApexClass' && 
+            (item.name.includes(componentName) || 
+             (componentName.includes('Trigger') && 
+              item.name.includes(componentName.replace('Trigger', 'Handler'))))
+          );
+          
+          for (const handler of potentialHandlers) {
+            reverseDependencies.push({
+              id: reverseDependencies.length + 1,
+              name: handler.name,
+              type: 'ApexClass',
+              referenceType: "Trigger Handler"
+            });
+          }
+          
+          // Extract object name from trigger name (common pattern)
+          // e.g., AccountTrigger -> Account
+          const triggerNameMatch = componentName.match(/^(\w+)Trigger$/);
+          if (triggerNameMatch && triggerNameMatch[1]) {
+            const objectName = triggerNameMatch[1];
+            
+            // Find the object this trigger might be for
+            const objMatch = metadata.find(item => 
+              item.type === 'CustomObject' && 
+              (item.name === objectName || 
+               item.name.replace('__c', '') === objectName)
+            );
+            
+            if (objMatch) {
+              reverseDependencies.push({
+                id: reverseDependencies.length + 1,
+                name: objMatch.name,
+                type: 'CustomObject',
+                referenceType: "Triggered Object"
+              });
+            }
+          }
+          break;
+          
+        case 'CustomObject':
+          // Find components that reference this object
+          
+          // Look for classes that reference this object
+          const objectReferencingClasses = metadata.filter(item => 
+            item.type === 'ApexClass' && 
+            item.body && 
+            (item.body.includes(componentName) || 
+             item.body.includes(`${componentName}__c`) ||
+             item.body.includes(`FROM ${componentName}`))
+          );
+          
+          for (const cls of objectReferencingClasses) {
+            reverseDependencies.push({
+              id: reverseDependencies.length + 1,
+              name: cls.name,
+              type: 'ApexClass',
+              referenceType: "Uses Object"
+            });
+          }
+          
+          // Look for fields that belong to this object
+          const relatedFields = metadata.filter(item => 
+            item.type === 'CustomField' && 
+            item.name.startsWith(`${componentName}.`)
+          );
+          
+          for (const field of relatedFields) {
+            reverseDependencies.push({
+              id: reverseDependencies.length + 1,
+              name: field.name,
+              type: 'CustomField',
+              referenceType: "Object Field"
+            });
+          }
+          
+          // Look for triggers on this object
+          const objectTriggers = metadata.filter(item => 
+            item.type === 'ApexTrigger' && 
+            item.body && 
+            (item.body.includes(`on ${componentName}`) || 
+             item.body.includes(`on ${componentName}__c`))
+          );
+          
+          for (const trigger of objectTriggers) {
+            reverseDependencies.push({
+              id: reverseDependencies.length + 1,
+              name: trigger.name,
+              type: 'ApexTrigger',
+              referenceType: "Object Trigger"
+            });
+          }
+          break;
+          
+        case 'CustomField':
+          // Find components that reference this field
+          
+          // Extract object and field name
+          const fieldParts = componentName.split('.');
+          if (fieldParts.length === 2) {
+            const objectName = fieldParts[0];
+            const fieldName = fieldParts[1];
+            
+            // Find the parent object
+            const parentObject = metadata.find(item => 
+              item.type === 'CustomObject' && 
+              item.name === objectName
+            );
+            
+            if (parentObject) {
+              reverseDependencies.push({
+                id: reverseDependencies.length + 1,
+                name: parentObject.name,
+                type: 'CustomObject',
+                referenceType: "Field Owner"
+              });
+            }
+            
+            // Find classes that reference this field
+            const fieldReferencingClasses = metadata.filter(item => 
+              item.type === 'ApexClass' && 
+              item.body && 
+              ((item.body.includes(fieldName) && item.body.includes(objectName)) || 
+               item.body.includes(componentName))
+            );
+            
+            for (const cls of fieldReferencingClasses) {
+              reverseDependencies.push({
+                id: reverseDependencies.length + 1,
+                name: cls.name,
+                type: 'ApexClass',
+                referenceType: "Uses Field"
+              });
+            }
+          }
+          break;
+          
+        default:
+          // For other types, try to find references by name patterns
+          
+          // Look for components that might reference this one by name
+          const potentialReferences = metadata.filter(item => 
+            item.name !== componentName && 
+            item.body && 
+            item.body.includes(componentName)
+          );
+          
+          for (const ref of potentialReferences) {
+            reverseDependencies.push({
+              id: reverseDependencies.length + 1,
+              name: ref.name,
+              type: ref.type,
+              referenceType: "References Component"
+            });
+          }
+          break;
       }
+      
+      // If we didn't find any reverse dependencies, look for naming pattern relationships
+      if (reverseDependencies.length === 0) {
+        // Find components with related naming patterns
+        const relatedNameItems = metadata.filter(item => 
+          item.name !== componentName && 
+          (item.name.includes(componentName) || 
+           componentName.includes(item.name))
+        );
+        
+        // Add up to 3 related items
+        for (let i = 0; i < Math.min(3, relatedNameItems.length); i++) {
+          const item = relatedNameItems[i];
+          
+          let referenceType = "Related by Name";
+          if (item.type === componentType) {
+            referenceType = `Related ${componentType}`;
+          }
+          
+          reverseDependencies.push({
+            id: reverseDependencies.length + 1,
+            name: item.name,
+            type: item.type,
+            referenceType: referenceType
+          });
+        }
+      }
+      
+    } catch (error) {
+      console.error(`Error analyzing reverse dependencies for ${componentType} ${componentName}:`, error);
+      // Return empty array in case of analysis error
     }
     
     return reverseDependencies;
@@ -1289,15 +1892,175 @@ export class SalesforceService {
   
   /**
    * Process raw API usage data and limits into structured analytics
-   * This would be implemented with real data processing in production
+   * Uses actual EventLogFile data when available to generate usage metrics
    */
   private processApiUsageData(limits: Record<string, any>, apiRequests: Record<string, any>[]): Record<string, any> {
-    // In a real implementation, we would process the actual data
-    // from the EventLogFile records to build usage trends, 
-    // calculate error rates, identify top consumers, etc.
+    // Get base analytics with actual limits data
+    const analytics = this.createApiUsageAnalytics(limits);
     
-    // For now, we're using mock data with the correct structure
-    return this.createApiUsageAnalytics(limits);
+    // If we don't have API request data, return just the limits
+    if (!apiRequests || apiRequests.length === 0) {
+      return analytics;
+    }
+    
+    try {
+      // Process the actual API usage data from EventLogFile records
+      
+      // Count requests by method (GET, POST, etc.)
+      const methodCounts: Record<string, number> = {};
+      
+      // Count requests by type (REST, SOAP, etc.) - we'll try to determine from URI patterns
+      const typeCounts: Record<string, number> = {};
+      
+      // Track consumers (user or integration)
+      const consumerCounts: Record<string, number> = {};
+      
+      // Track errors
+      const errorCounts: Record<string, number> = {
+        'Rate Limit': 0,
+        'Authentication': 0,
+        'Validation': 0,
+        'Server': 0
+      };
+      
+      // Track usage by date
+      const usageByDate: Record<string, number> = {};
+      
+      // Total request count
+      let totalRequests = 0;
+      
+      // Process each API request record
+      for (const request of apiRequests) {
+        totalRequests++;
+        
+        // Process request method
+        const method = request.Method || 'UNKNOWN';
+        methodCounts[method] = (methodCounts[method] || 0) + 1;
+        
+        // Determine API type from URI and Method
+        let apiType = 'REST'; // Default
+        const uri = request.URI || '';
+        
+        if (uri.includes('/services/data/v')) {
+          apiType = 'REST';
+        } else if (uri.includes('/services/Soap/')) {
+          apiType = 'SOAP';
+        } else if (uri.includes('/services/async/')) {
+          apiType = 'Bulk';
+        } else if (uri.includes('/services/metadata/')) {
+          apiType = 'Metadata';
+        }
+        
+        typeCounts[apiType] = (typeCounts[apiType] || 0) + 1;
+        
+        // Track consumer (can be user or integration name)
+        // In real implementation, we would get this from additional query
+        const consumer = request.UserId || 'Unknown User';
+        consumerCounts[consumer] = (consumerCounts[consumer] || 0) + 1;
+        
+        // Track errors based on status code
+        const status = request.Status || 200;
+        if (status === 401 || status === 403) {
+          errorCounts['Authentication']++;
+        } else if (status === 429) {
+          errorCounts['Rate Limit']++;
+        } else if (status >= 400 && status < 500) {
+          errorCounts['Validation']++;
+        } else if (status >= 500) {
+          errorCounts['Server']++;
+        }
+        
+        // Track usage by date
+        const logDate = request.LogDate 
+          ? new Date(request.LogDate).toISOString().split('T')[0]
+          : 'Unknown';
+        
+        usageByDate[logDate] = (usageByDate[logDate] || 0) + 1;
+      }
+      
+      // Generate percentages and prepare for visualization
+      
+      // Request methods
+      const requestsByMethod = Object.entries(methodCounts).map(([method, count], index) => {
+        const percentage = Math.round((count / totalRequests) * 100);
+        // Generate colors using a simple pattern, but in a real implementation would use a proper color scheme
+        const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#6B7280', '#EF4444'];
+        return {
+          method,
+          count,
+          percentage,
+          color: colors[index % colors.length]
+        };
+      }).sort((a, b) => b.count - a.count);
+      
+      // Request types
+      const requestsByType = Object.entries(typeCounts).map(([type, count], index) => {
+        const percentage = Math.round((count / totalRequests) * 100);
+        const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
+        return {
+          type,
+          count,
+          percentage,
+          color: colors[index % colors.length]
+        };
+      }).sort((a, b) => b.count - a.count);
+      
+      // Top consumers
+      const topConsumers = Object.entries(consumerCounts)
+        .map(([name, requests]) => ({
+          name,
+          requests,
+          percentage: Math.round((requests / totalRequests) * 100)
+        }))
+        .sort((a, b) => b.requests - a.requests)
+        .slice(0, 5); // Top 5
+      
+      // Error rates
+      const errorRates = Object.entries(errorCounts).map(([type, count], index) => {
+        const percentage = totalRequests ? parseFloat((count / totalRequests * 100).toFixed(1)) : 0;
+        const colors = ['#EF4444', '#F59E0B', '#3B82F6', '#8B5CF6'];
+        return {
+          type,
+          count,
+          percentage,
+          color: colors[index % colors.length]
+        };
+      }).filter(error => error.count > 0);
+      
+      // Usage trend (last 7 days)
+      // Get a sorted list of dates
+      const dates = Object.keys(usageByDate).sort();
+      
+      // Fill in any missing dates in the last 7 days
+      const usageTrend = [];
+      const today = new Date();
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        usageTrend.push({
+          date: dateStr,
+          requests: usageByDate[dateStr] || 0,
+          limit: limits?.DailyApiRequests?.Max || 25000
+        });
+      }
+      
+      // Update the analytics with the real usage data
+      return {
+        ...analytics,
+        requestsByMethod: requestsByMethod.length > 0 ? requestsByMethod : analytics.requestsByMethod,
+        requestsByType: requestsByType.length > 0 ? requestsByType : analytics.requestsByType,
+        topConsumers: topConsumers.length > 0 ? topConsumers : analytics.topConsumers,
+        errorRates: errorRates.length > 0 ? errorRates : analytics.errorRates,
+        usageTrend: usageTrend.length > 0 ? usageTrend : analytics.usageTrend
+      };
+    } catch (error) {
+      console.error('Error processing API usage data:', error);
+      // Fall back to using just the limits if there's an error
+      return analytics;
+    }
   }
   
   /**
